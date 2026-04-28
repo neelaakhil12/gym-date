@@ -127,7 +127,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-black text-secondary mb-4">
-              How It <span className="text-primary italic">Works</span>
+              How It <span className="text-primary">Works</span>
             </h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
               Getting started with GymDate is as easy as 1-2-3. No long forms, no hidden charges.
@@ -158,7 +158,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div>
               <h2 className="text-3xl md:text-5xl font-black text-secondary mb-4">
-                Top Rated <span className="text-primary italic">Gyms</span>
+                Top Rated <span className="text-primary">Gyms</span>
               </h2>
               <p className="text-gray-500">Premium fitness spaces curated just for you.</p>
             </div>
@@ -181,7 +181,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-black text-white mb-4">
-              Explore <span className="text-primary italic">Cities</span>
+              Explore <span className="text-primary">Cities</span>
             </h2>
             <p className="text-gray-400">Available in all major metros across India.</p>
           </div>

@@ -112,7 +112,7 @@ export default function LoginPage() {
               <Dumbbell className="h-6 w-6 text-white" />
             </div>
             <span className="text-3xl font-black tracking-tighter text-secondary">
-              Gym<span className="text-primary italic">Date</span>
+              Gym<span className="text-primary">Date</span>
             </span>
           </Link>
 
