@@ -110,7 +110,7 @@ export default function GymDetailsPage() {
                 />
               </div>
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {galleryImages.map((img, idx) => (
+                {galleryImages.map((img: string, idx: number) => (
                   <button 
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
