@@ -34,7 +34,7 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative h-auto min-h-[75vh] md:h-[90vh] flex items-center pt-28 pb-8 md:pt-20 md:pb-0">
+      <section className="relative h-auto min-h-[75vh] md:h-[90vh] flex items-center pt-32 pb-8 md:pt-40 md:pb-0">
         <div className="absolute inset-0 z-0">
           <Image
             src="https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&q=80&w=2000"
