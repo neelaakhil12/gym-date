@@ -542,11 +542,15 @@ export default function AccountPage() {
                             <div className="p-8 flex flex-col items-center justify-center space-y-6 border-b border-dashed border-gray-100">
                               <div className="p-6 bg-white rounded-[32px] shadow-2xl shadow-secondary/5 border-2 border-slate-50 ring-8 ring-slate-50/50">
                                 <QRCodeSVG 
-                                  value={booking.id}
+                                  value={booking.ticket_code || booking.id}
                                   size={160} 
                                   level="H"
                                   includeMargin={false}
                                 />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Ticket ID</p>
+                                <p className="text-sm font-black text-slate-900 font-mono tracking-wider">{booking.ticket_code || booking.id.substring(0, 8).toUpperCase()}</p>
                               </div>
                               <div className="text-center">
                                 <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-2">Scan Code at Entry</p>

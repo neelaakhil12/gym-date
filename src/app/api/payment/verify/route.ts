@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     const today = startDate ? new Date(startDate) : new Date();
     today.setHours(0, 0, 0, 0); // normalize to start of day
     const endDate = computeEndDate(today, planName || "");
+    const ticketCode = `GD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     // ── 3. Find or Create Profile ────────────────────────────────────────
     let finalUserId = userId;
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_email: customerEmail,
+        ticket_code: ticketCode,
       })
       .select()
       .single();

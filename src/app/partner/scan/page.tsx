@@ -83,10 +83,11 @@ export default function PartnerScanner() {
       }
 
       // 3. First, check if the booking exists at all (ignoring gym for a second to see if it's a mismatch)
+      // We search by ID or the new ticket_code
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('*, profiles(full_name, avatar_url)')
-        .eq('id', bookingId)
+        .or(`id.eq.${bookingId},ticket_code.eq.${bookingId}`)
         .single();
 
       if (bookingError || !booking) {
