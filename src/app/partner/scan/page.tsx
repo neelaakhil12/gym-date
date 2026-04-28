@@ -202,7 +202,7 @@ export default function PartnerScanner() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Customer Name</p>
-                  <h4 className="text-xl font-black text-slate-900 leading-none">{scanResult.profiles?.full_name || 'Anonymous User'}</h4>
+                  <h4 className="text-xl font-black text-slate-900 leading-none">{scanResult.customer_name || 'Anonymous User'}</h4>
                 </div>
               </div>
 
