@@ -22,7 +22,7 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState<'commission' | 'revenue' | 'users' | 'cities' | null>(null);
   
   // City Form State
-  const [cityForm, setCityForm] = useState({ id: '', name: '', is_featured: true });
+  const [cityForm, setCityForm] = useState({ id: '', name: '', is_featured: true, is_coming_soon: false });
   const [cityImageFile, setCityImageFile] = useState<File | null>(null);
   const [cityImagePreview, setCityImagePreview] = useState<string>('');
   const [editingCityId, setEditingCityId] = useState<string | null>(null);
@@ -114,6 +114,7 @@ export default function AdminDashboard() {
     
     const formData = new FormData(e.currentTarget);
     formData.set("is_featured", cityForm.is_featured ? "true" : "false");
+    formData.set("is_coming_soon", cityForm.is_coming_soon ? "true" : "false");
     // Pass the existing image URL as fallback if no new file picked
     formData.set("existingImageUrl", cityImagePreview);
     if (cityImageFile) {
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
 
     if (result.success) {
       toast.success(editingCityId ? "City updated!" : "City added!");
-      setCityForm({ id: '', name: '', is_featured: true });
+      setCityForm({ id: '', name: '', is_featured: true, is_coming_soon: false });
       setCityImageFile(null);
       setCityImagePreview('');
       setEditingCityId(null);
@@ -479,15 +480,30 @@ export default function AdminDashboard() {
                     />
                   </label>
                 </div>
-                <div className="flex items-center space-x-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                  <input 
-                    type="checkbox"
-                    id="is_featured"
-                    checked={cityForm.is_featured}
-                    onChange={(e) => setCityForm({...cityForm, is_featured: e.target.checked})}
-                    className="w-5 h-5 accent-primary"
-                  />
-                  <label htmlFor="is_featured" className="text-sm font-bold text-secondary">Feature on Homepage</label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <input 
+                      type="checkbox"
+                      id="is_featured"
+                      checked={cityForm.is_featured}
+                      onChange={(e) => setCityForm({...cityForm, is_featured: e.target.checked})}
+                      className="w-5 h-5 accent-primary"
+                    />
+                    <label htmlFor="is_featured" className="text-sm font-bold text-secondary">Feature on Homepage</label>
+                  </div>
+                  <div className="flex items-center space-x-3 bg-orange-50 p-4 rounded-xl border border-orange-200 shadow-sm">
+                    <input 
+                      type="checkbox"
+                      id="is_coming_soon"
+                      checked={cityForm.is_coming_soon}
+                      onChange={(e) => setCityForm({...cityForm, is_coming_soon: e.target.checked})}
+                      className="w-5 h-5 accent-orange-500"
+                    />
+                    <div>
+                      <label htmlFor="is_coming_soon" className="text-sm font-bold text-secondary cursor-pointer">Coming Soon</label>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Shows blurred image with badge</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="pt-4 flex gap-3">
                   <button 
@@ -502,7 +518,7 @@ export default function AdminDashboard() {
                       type="button"
                       onClick={() => {
                         setEditingCityId(null);
-                        setCityForm({ id: '', name: '', is_featured: true });
+                        setCityForm({ id: '', name: '', is_featured: true, is_coming_soon: false });
                         setCityImageFile(null);
                         setCityImagePreview('');
                       }}
@@ -538,7 +554,7 @@ export default function AdminDashboard() {
                       <button 
                         onClick={() => {
                           setEditingCityId(city.id);
-                          setCityForm({ id: city.id, name: city.name, is_featured: !!city.is_featured });
+                          setCityForm({ id: city.id, name: city.name, is_featured: !!city.is_featured, is_coming_soon: !!city.is_coming_soon });
                           setCityImageFile(null);
                           setCityImagePreview(city.image || '');
                         }}

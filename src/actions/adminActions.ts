@@ -113,6 +113,7 @@ export async function addCity(formData: FormData) {
   try {
     const name = formData.get("name") as string;
     const is_featured = formData.get("is_featured") === "true";
+    const is_coming_soon = formData.get("is_coming_soon") === "true";
     const imageFile = formData.get("image") as File;
     const existingUrl = formData.get("existingImageUrl") as string;
 
@@ -124,7 +125,7 @@ export async function addCity(formData: FormData) {
 
     const { error } = await supabaseAdmin
       .from("cities")
-      .insert([{ name, image: imageUrl, is_featured }]);
+      .insert([{ name, image: imageUrl, is_featured, is_coming_soon }]);
 
     if (error) throw error;
     revalidatePath("/");
@@ -140,6 +141,7 @@ export async function updateCity(id: string, formData: FormData) {
   try {
     const name = formData.get("name") as string;
     const is_featured = formData.get("is_featured") === "true";
+    const is_coming_soon = formData.get("is_coming_soon") === "true";
     const imageFile = formData.get("image") as File;
     const existingUrl = formData.get("existingImageUrl") as string;
 
@@ -151,7 +153,7 @@ export async function updateCity(id: string, formData: FormData) {
 
     const { error } = await supabaseAdmin
       .from("cities")
-      .update({ name, image: imageUrl, is_featured })
+      .update({ name, image: imageUrl, is_featured, is_coming_soon })
       .eq("id", id);
 
     if (error) throw error;
