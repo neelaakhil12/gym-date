@@ -105,11 +105,7 @@ export default function PartnerPage() {
               ))}
             </div>
 
-            <div className="bg-secondary rounded-3xl p-8 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl" />
-              <h4 className="text-xl font-bold mb-2 italic">"Joining GymDate was the best decision for my studio. Our footfall increased by 40% in just 3 months."</h4>
-              <p className="text-gray-400 text-sm">— Rahul Sharma, Owner of FitLife Studio</p>
-            </div>
+
           </div>
 
           <div className="bg-white p-8 md:p-12 rounded-[40px] shadow-2xl shadow-primary/5 border border-gray-100">

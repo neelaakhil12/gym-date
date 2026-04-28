@@ -19,22 +19,7 @@ export default function AboutPage() {
             <p className="text-gray-500 text-lg leading-relaxed mb-8">
               We are not just a booking platform; we are a movement dedicated to breaking the barriers of traditional gym memberships. Whether you're a traveler, a busy professional, or someone who loves variety in their workouts, GymDate provides you with the key to unlock every top-tier gym in the country.
             </p>
-            <div className="flex items-center space-x-6">
-              <div className="flex -space-x-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-12 w-12 rounded-full border-4 border-white overflow-hidden relative">
-                    <Image
-                      src={`https://i.pravatar.cc/100?u=${i}`}
-                      alt="User"
-                      fill
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="text-sm font-bold text-secondary">
-                Joined by <span className="text-primary">50,000+</span> members
-              </div>
-            </div>
+
           </div>
           <div className="relative h-[500px] rounded-[40px] overflow-hidden shadow-2xl">
             <Image
@@ -124,7 +109,7 @@ export default function AboutPage() {
           <div className="relative z-10 max-w-2xl">
             <h2 className="text-3xl md:text-5xl font-black mb-8">The GymDate <span className="text-primary">Story</span></h2>
             <div className="space-y-6 text-gray-300 leading-relaxed text-lg">
-              <p>Founded in 2024, GymDate started with a simple but powerful observation: people want to stay fit, but traditional gym memberships are too rigid, expensive, and restrictive for modern lifestyles.</p>
+              <p>Founded in 2025, GymDate started with a simple but powerful observation: people want to stay fit, but traditional gym memberships are too rigid, expensive, and restrictive for modern lifestyles.</p>
               <p>We set out to build a platform that gives power back to the user. By partnering with the best gyms in every city, we've created a seamless digital network that moves with you, whether you're at home, work, or traveling across India.</p>
               <p>Our vision is to build a world where fitness is as easy as booking a cab. Today, we are proud to be India's fastest-growing flexible gym booking platform, helping thousands of people achieve their fitness goals on their own terms, without being tied down by yearly contracts.</p>
               <p>From local weightlifting rooms to premium luxury fitness centers, GymDate brings the entire Indian fitness ecosystem to your fingertips.</p>
