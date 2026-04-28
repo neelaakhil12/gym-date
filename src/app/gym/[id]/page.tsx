@@ -188,7 +188,7 @@ export default function GymDetailsPage() {
               <div className="mb-12">
                 <h3 className="text-xl font-bold text-secondary mb-5">Amenities</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {gym.amenities.map((amenity, idx) => (
+                  {gym.amenities.map((amenity: string, idx: number) => (
                     <div key={idx} className="flex items-center bg-gray-100/50 p-4 rounded-2xl border border-gray-100 text-sm font-medium text-gray-700">
                       <div className="text-primary mr-3">
                         {getAmenityIcon(amenity)}
@@ -238,7 +238,7 @@ export default function GymDetailsPage() {
                     <p className="text-[10px] text-red-600 mt-1">This gym is not accepting bookings at the moment.</p>
                   </div>
                 ) : plans.length > 0 ? (
-                  plans.map((plan, idx) => (
+                  plans.map((plan: any, idx: number) => (
                     <label 
                       key={plan.id} 
                       className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-colors ${selectedPlanIdx === idx ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 hover:border-gray-300 text-gray-600'}`}
