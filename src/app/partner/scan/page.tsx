@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { supabase, getPartnerGym } from "@/lib/supabase";
+import { verifyTicketAction } from "@/actions/ticketActions";
 import { 
   X, 
   Camera, 
@@ -67,9 +68,9 @@ export default function PartnerScanner() {
     setError(null);
 
     try {
-      // 1. Get the current partner's gym_id
-      const partnerGym = await getPartnerGym();
-      if (!partnerGym) throw new Error("Partner gym not found.");
+      // 1. Get current partner ID
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Please log in to scan tickets.");
 
       // 2. Extract booking_id from decodedText (it might be a full URL or just the ID)
       let bookingId = decodedText.trim();
@@ -82,43 +83,15 @@ export default function PartnerScanner() {
         bookingId = urlParts[urlParts.length - 1].split('?')[0];
       }
 
-      // 3. First, check if the booking exists at all
-      let bookingData = null;
-      
-      // Try searching by ID if it's a UUID
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
-      if (isUUID) {
-        const { data } = await supabase
-          .from('bookings')
-          .select('*, profiles(full_name, avatar_url)')
-          .eq('id', bookingId)
-          .single();
-        bookingData = data;
+      // 3. Call secure server action
+      const result = await verifyTicketAction(bookingId, session.user.id);
+
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      // If not found by ID, try searching by ticket_code
-      if (!bookingData) {
-        const { data } = await supabase
-          .from('bookings')
-          .select('*, profiles(full_name, avatar_url)')
-          .eq('ticket_code', bookingId)
-          .single();
-        bookingData = data;
-      }
-
-      if (!bookingData) {
-        throw new Error("Invalid Ticket: No booking found with this ID.");
-      }
-
-      const booking = bookingData;
-
-      // 4. SECURITY: Verify this booking belongs to THIS partner's gym
-      if (booking.gym_id !== partnerGym.id) {
-        console.error("Gym Mismatch:", { bookingGym: booking.gym_id, partnerGym: partnerGym.id });
-        throw new Error("Access Denied: This ticket belongs to a different gym.");
-      }
-
-      setScanResult(booking);
+      setScanResult(result.booking);
+      if (result.gymName) setGymName(result.gymName);
     } catch (err: any) {
       setError(err.message);
     } finally {
