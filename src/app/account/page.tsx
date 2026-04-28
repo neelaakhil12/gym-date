@@ -38,6 +38,7 @@ import { useSession, signOut } from "next-auth/react";
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState("profile");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [gyms, setGyms] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -212,9 +213,46 @@ export default function AccountPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           
+          {/* Mobile Sidebar Toggle Button */}
+          <div className="lg:hidden flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                {tabs.find(t => t.id === activeTab)?.icon}
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Account Menu</p>
+                <h4 className="font-black text-secondary leading-none">{tabs.find(t => t.id === activeTab)?.label}</h4>
+              </div>
+            </div>
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-3 bg-secondary text-white rounded-xl shadow-lg shadow-secondary/20"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+          </div>
+
           {/* Sidebar */}
-          <aside className="w-full lg:w-80 shrink-0">
-            <div className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 sticky top-28">
+          <aside className={`fixed inset-0 z-[150] lg:relative lg:inset-auto lg:z-0 lg:w-80 shrink-0 transition-all duration-300 ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}>
+            {/* Backdrop for mobile */}
+            <div 
+              className={`absolute inset-0 bg-secondary/80 backdrop-blur-sm lg:hidden transition-opacity ${
+                isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            
+            <div className="relative h-full bg-white lg:bg-transparent w-72 lg:w-full p-8 shadow-2xl lg:shadow-none border-r lg:border-none border-gray-100 overflow-y-auto lg:overflow-visible lg:p-0">
+              <div className="bg-white lg:rounded-[32px] lg:p-8 lg:shadow-sm lg:border lg:border-gray-100 sticky top-28">
+                {/* Close button for mobile */}
+                <button 
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="lg:hidden absolute top-4 right-4 p-2 bg-gray-50 rounded-lg text-gray-400"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
               {/* Profile Card Mini */}
               <div className="flex items-center space-x-4 mb-10 border-b pb-8 border-gray-50">
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center text-white shadow-lg">
@@ -231,7 +269,10 @@ export default function AccountPage() {
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setIsSidebarOpen(false); // Close sidebar on mobile after selection
+                    }}
                     className={`w-full flex items-center space-x-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${
                       activeTab === tab.id 
                         ? "bg-primary text-white shadow-lg shadow-primary/20" 
@@ -259,13 +300,14 @@ export default function AccountPage() {
                   <HelpCircle className="w-4 h-4" />
                   <span>Contact Support</span>
                 </button>
+                </div>
               </div>
             </div>
           </aside>
 
           {/* Content Area */}
-          <main className="flex-1">
-            <div className="bg-white rounded-[40px] p-10 min-h-[700px] shadow-sm border border-gray-100">
+          <main className="flex-1 w-full overflow-hidden">
+            <div className="bg-white rounded-[32px] lg:rounded-[40px] p-6 lg:p-10 min-h-[500px] lg:min-h-[700px] shadow-sm border border-gray-100">
               
               {/* Header inside content */}
               <div className="flex justify-between items-center mb-10 pb-8 border-b border-gray-50">
