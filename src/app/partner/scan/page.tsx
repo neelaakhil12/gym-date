@@ -12,7 +12,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Dumbbell,
-  ShieldCheck
+  ShieldCheck,
+  CreditCard
 } from "lucide-react";
 import Link from "next/link";
 
