@@ -77,6 +77,9 @@ export async function sendPasswordResetEmail(email: string, redirectTo: string =
 }
 export async function sendPartnerWelcomeEmail(email: string, gymName: string, password: string) {
   try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
     const info = await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: email,
