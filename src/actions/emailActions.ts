@@ -27,11 +27,14 @@ const transporter = nodemailer.createTransport({
 export async function sendPasswordResetEmail(email: string, redirectTo: string = "/partner/reset-password") {
   try {
     // 1. Generate the recovery link via Supabase Admin
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}${redirectTo}`
+        redirectTo: `${siteUrl}${redirectTo}`
       }
     });
 
@@ -93,7 +96,7 @@ export async function sendPartnerWelcomeEmail(email: string, gymName: string, pa
 
           <p>You can log in to your dashboard here:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/partner/login" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to Partner Dashboard</a>
+            <a href="${siteUrl}/partner/login" style="background-color: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to Partner Dashboard</a>
           </div>
           
           <p>Please make sure to change your password after your first login.</p>

@@ -48,11 +48,41 @@ export async function POST(req: NextRequest) {
     today.setHours(0, 0, 0, 0); // normalize to start of day
     const endDate = computeEndDate(today, planName || "");
 
-    // ── 3. Insert booking into Supabase ───────────────────────────────────
+    // ── 3. Find or Create Profile ────────────────────────────────────────
+    let finalUserId = userId;
+    if (!finalUserId && customerEmail) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('email', customerEmail)
+        .single();
+      
+      if (profile) {
+        finalUserId = profile.id;
+      } else {
+        // Create a new profile if it doesn't exist
+        const { data: newProfile, error: createError } = await supabaseAdmin
+          .from('profiles')
+          .insert({
+            email: customerEmail,
+            full_name: customerName,
+            phone: customerPhone,
+            role_id: 'user'
+          })
+          .select('id')
+          .single();
+        
+        if (!createError && newProfile) {
+          finalUserId = newProfile.id;
+        }
+      }
+    }
+
+    // ── 4. Insert booking into Supabase ───────────────────────────────────
     const { data: booking, error } = await supabaseAdmin
       .from("bookings")
       .insert({
-        user_id: userId,
+        user_id: finalUserId || null,
         gym_id: gymId,
         plan_name: planName,
         amount: Number(amount),
@@ -75,7 +105,7 @@ export async function POST(req: NextRequest) {
       const { data: bookingFallback, error: fallbackError } = await supabaseAdmin
         .from("bookings")
         .insert({
-          user_id: userId,
+          user_id: finalUserId || null,
           gym_id: gymId,
           plan_name: planName,
           amount: Number(amount),
