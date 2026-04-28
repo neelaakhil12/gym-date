@@ -11,23 +11,26 @@ import { gyms as mockGyms, cities as mockCities, pricingPlans as mockPricingPlan
 import GymCard from "@/components/GymCard";
 import CityCard from "@/components/CityCard";
 import { TypeAnimation } from "react-type-animation";
-import { getPlatformStats } from "@/actions/adminActions";
+import { getPlatformStats, getSectionVisibility } from "@/actions/adminActions";
 import AnimatedCounter from "@/components/AnimatedCounter";
 
 export default function Home() {
   const [gyms, setGyms] = useState(mockGyms);
   const [cities, setCities] = useState(mockCities);
   const [platformStats, setPlatformStats] = useState<any[]>([]);
+  const [isStatsVisible, setIsStatsVisible] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       const dbGyms = await getGyms();
       const dbCities = await getCities();
       const dbStats = await getPlatformStats();
+      const visibility = await getSectionVisibility();
       
       setGyms(dbGyms);
       setCities(dbCities);
       setPlatformStats(dbStats);
+      setIsStatsVisible(visibility);
     }
     loadData();
   }, []);
@@ -95,32 +98,34 @@ export default function Home() {
       </section>
 
       {/* Stats Strip - right after hero */}
-      <section className="bg-primary py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {platformStats.length > 0 ? platformStats.map((stat, idx) => (
-              <div key={idx} className="text-white text-center">
-                <div className="text-3xl md:text-4xl font-black mb-1">
-                  <AnimatedCounter value={stat.value} />
+      {isStatsVisible && (
+        <section className="bg-primary py-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {platformStats.length > 0 ? platformStats.map((stat, idx) => (
+                <div key={idx} className="text-white text-center">
+                  <div className="text-3xl md:text-4xl font-black mb-1">
+                    <AnimatedCounter value={stat.value} />
+                  </div>
+                  <div className="text-white/60 font-bold uppercase tracking-widest text-xs">{stat.label}</div>
                 </div>
-                <div className="text-white/60 font-bold uppercase tracking-widest text-xs">{stat.label}</div>
-              </div>
-            )) : [
-              { label: "Gyms", value: "500+" },
-              { label: "Cities", value: "25+" },
-              { label: "Members", value: "50k+" },
-              { label: "Bookings", value: "1M+" }
-            ].map((stat, idx) => (
-              <div key={idx} className="text-white text-center">
-                <div className="text-3xl md:text-4xl font-black mb-1">
-                  <AnimatedCounter value={stat.value} />
+              )) : [
+                { label: "Gyms", value: "500+" },
+                { label: "Cities", value: "25+" },
+                { label: "Members", value: "50k+" },
+                { label: "Bookings", value: "1M+" }
+              ].map((stat, idx) => (
+                <div key={idx} className="text-white text-center">
+                  <div className="text-3xl md:text-4xl font-black mb-1">
+                    <AnimatedCounter value={stat.value} />
+                  </div>
+                  <div className="text-white/60 font-bold uppercase tracking-widest text-xs">{stat.label}</div>
                 </div>
-                <div className="text-white/60 font-bold uppercase tracking-widest text-xs">{stat.label}</div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* How It Works Section */}
       <section className="py-24 bg-white">

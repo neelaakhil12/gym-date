@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getAdminStats, getAllBookings, getGyms, getUniqueUsersCount } from "@/lib/supabase";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2 } from "lucide-react";
-import { getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity } from "@/actions/adminActions";
+import { getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility } from "@/actions/adminActions";
 import { getCities } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 
@@ -27,6 +27,8 @@ export default function AdminDashboard() {
   const [cityImagePreview, setCityImagePreview] = useState<string>('');
   const [editingCityId, setEditingCityId] = useState<string | null>(null);
   const [processingCity, setProcessingCity] = useState(false);
+  const [isStatsVisible, setIsStatsVisible] = useState(true);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -39,11 +41,13 @@ export default function AdminDashboard() {
       const allBookings = await getAllBookings();
       const pStats = await getPlatformStats();
       const allCities = await getCities();
+      const visibility = await getSectionVisibility();
       
       setGymData(allGyms);
       setBookings(allBookings);
       setPlatformStats(pStats);
       setCitiesData(allCities);
+      setIsStatsVisible(visibility);
       setLoading(false);
     }
     loadData();
@@ -90,6 +94,18 @@ export default function AdminDashboard() {
       toast.error(result.error || "Failed to update stats");
     }
     setSavingStats(false);
+  };
+  
+  const handleToggleVisibility = async (val: boolean) => {
+    setUpdatingVisibility(true);
+    const result = await updateSectionVisibility(val);
+    if (result.success) {
+      setIsStatsVisible(val);
+      toast.success(val ? "Stats section is now VISIBLE on website" : "Stats section is now HIDDEN from website");
+    } else {
+      toast.error(result.error || "Failed to update visibility");
+    }
+    setUpdatingVisibility(false);
   };
 
   const handleCityAction = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -291,14 +307,28 @@ export default function AdminDashboard() {
             </h2>
             <p className="text-sm text-gray-500">Edit the numbers shown in the red stats section of the home page.</p>
           </div>
-          <button 
-            onClick={handleUpdateStats}
-            disabled={savingStats}
-            className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all disabled:opacity-50"
-          >
-            {savingStats ? <Clock className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>{savingStats ? "Saving..." : "Save Changes"}</span>
-          </button>
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Show Section</span>
+              <button 
+                onClick={() => handleToggleVisibility(!isStatsVisible)}
+                disabled={updatingVisibility}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isStatsVisible ? 'bg-primary' : 'bg-gray-300'}`}
+              >
+                <span className={`${isStatsVisible ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+              </button>
+            </div>
+
+            <button 
+              onClick={handleUpdateStats}
+              disabled={savingStats}
+              className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all disabled:opacity-50"
+            >
+              {savingStats ? <Clock className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>{savingStats ? "Saving..." : "Save Changes"}</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

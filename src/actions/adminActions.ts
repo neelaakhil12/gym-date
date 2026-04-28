@@ -41,6 +41,7 @@ export async function getPlatformStats() {
     const { data, error } = await supabaseAdmin
       .from("platform_stats")
       .select("*")
+      .neq("id", "00000000-0000-0000-0000-000000000000")
       .order("display_order", { ascending: true });
 
     if (error) throw error;
@@ -48,6 +49,38 @@ export async function getPlatformStats() {
   } catch (err) {
     console.error("Error fetching stats:", err);
     return [];
+  }
+}
+
+export async function getSectionVisibility() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("platform_stats")
+      .select("value")
+      .eq("id", "00000000-0000-0000-0000-000000000000")
+      .single();
+
+    if (error) throw error;
+    return data.value === "true";
+  } catch (err) {
+    console.error("Error fetching visibility:", err);
+    return true; // Default to true
+  }
+}
+
+export async function updateSectionVisibility(isVisible: boolean) {
+  try {
+    const { error } = await supabaseAdmin
+      .from("platform_stats")
+      .update({ value: isVisible ? "true" : "false" })
+      .eq("id", "00000000-0000-0000-0000-000000000000");
+
+    if (error) throw error;
+    revalidatePath("/");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error updating visibility:", err);
+    return { error: "Failed to update visibility." };
   }
 }
 
