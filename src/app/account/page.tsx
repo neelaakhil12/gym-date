@@ -542,7 +542,7 @@ export default function AccountPage() {
                             <div className="p-8 flex flex-col items-center justify-center space-y-6 border-b border-dashed border-gray-100">
                               <div className="p-6 bg-white rounded-[32px] shadow-2xl shadow-secondary/5 border-2 border-slate-50 ring-8 ring-slate-50/50">
                                 <QRCodeSVG 
-                                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/verify/${booking.id}`}
+                                  value={booking.id}
                                   size={160} 
                                   level="H"
                                   includeMargin={false}

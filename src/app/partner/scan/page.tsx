@@ -58,24 +58,33 @@ export default function PartnerScanner() {
       const partnerGym = await getPartnerGym();
       if (!partnerGym) throw new Error("Partner gym not found.");
 
-      // 2. Extract booking_id from decodedText (it might be a full URL)
-      let bookingId = decodedText;
-      if (decodedText.includes('/verify/')) {
-        bookingId = decodedText.split('/verify/')[1].split('?')[0];
-      } else if (decodedText.includes('://')) {
-        // Handle other possible URL formats
-        const urlParts = decodedText.split('/');
+      // 2. Extract booking_id from decodedText (it might be a full URL or just the ID)
+      let bookingId = decodedText.trim();
+      
+      // Handle URL formats if present
+      if (bookingId.includes('/verify/')) {
+        bookingId = bookingId.split('/verify/')[1].split('?')[0];
+      } else if (bookingId.includes('://')) {
+        const urlParts = bookingId.split('/');
         bookingId = urlParts[urlParts.length - 1].split('?')[0];
       }
 
+      // 3. First, check if the booking exists at all (ignoring gym for a second to see if it's a mismatch)
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('*, profiles(full_name, avatar_url)')
         .eq('id', bookingId)
-        .eq('gym_id', partnerGym.id) // SECURITY: Only allow scanning for THIS gym
         .single();
 
-      if (bookingError) throw new Error("Invalid Ticket or Booking not found.");
+      if (bookingError || !booking) {
+        throw new Error("Invalid Ticket: No booking found with this ID.");
+      }
+
+      // 4. SECURITY: Verify this booking belongs to THIS partner's gym
+      if (booking.gym_id !== partnerGym.id) {
+        console.error("Gym Mismatch:", { bookingGym: booking.gym_id, partnerGym: partnerGym.id });
+        throw new Error("Access Denied: This ticket belongs to a different gym.");
+      }
 
       setScanResult(booking);
     } catch (err: any) {
