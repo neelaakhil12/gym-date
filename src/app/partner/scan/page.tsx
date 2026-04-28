@@ -58,11 +58,20 @@ export default function PartnerScanner() {
       const partnerGym = await getPartnerGym();
       if (!partnerGym) throw new Error("Partner gym not found.");
 
-      // 2. Assuming decodedText is the booking_id, fetch and verify
+      // 2. Extract booking_id from decodedText (it might be a full URL)
+      let bookingId = decodedText;
+      if (decodedText.includes('/verify/')) {
+        bookingId = decodedText.split('/verify/')[1].split('?')[0];
+      } else if (decodedText.includes('://')) {
+        // Handle other possible URL formats
+        const urlParts = decodedText.split('/');
+        bookingId = urlParts[urlParts.length - 1].split('?')[0];
+      }
+
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .select('*, profiles(full_name, avatar_url)')
-        .eq('id', decodedText)
+        .eq('id', bookingId)
         .eq('gym_id', partnerGym.id) // SECURITY: Only allow scanning for THIS gym
         .single();
 
