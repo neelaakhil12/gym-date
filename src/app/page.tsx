@@ -90,21 +90,6 @@ export default function Home() {
               </Link>
             </div>
             
-            {/* Quick Search */}
-            <div className="hidden sm:flex bg-white p-2 rounded-2xl sm:rounded-full shadow-2xl flex-col sm:flex-row gap-2 max-w-xl mx-auto lg:mx-0">
-              <div className="flex-grow flex items-center px-4 py-2 border-b sm:border-b-0 sm:border-r border-gray-100">
-                <MapPin className="h-5 w-5 text-primary mr-3" />
-                <input
-                  type="text"
-                  placeholder="Enter city or area..."
-                  className="w-full bg-transparent border-none focus:ring-0 text-secondary font-medium placeholder:text-gray-400"
-                />
-              </div>
-              <button className="bg-secondary text-white p-4 rounded-xl sm:rounded-full hover:bg-primary transition-all flex items-center justify-center space-x-2 group">
-                <Search className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                <span className="sm:hidden font-bold">Search Gyms</span>
-              </button>
-            </div>
           </motion.div>
         </div>
       </section>
