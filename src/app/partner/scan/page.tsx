@@ -47,7 +47,20 @@ export default function PartnerScanner() {
     };
   }, [isScanning]);
 
+  const [gymName, setGymName] = useState<string>("");
+
+  useEffect(() => {
+    getPartnerGym().then(gym => {
+      if (gym) setGymName(gym.name);
+    });
+  }, []);
+
   async function onScanSuccess(decodedText: string) {
+    // Store raw text for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).lastScannedText = decodedText;
+    }
+
     // Stop scanning once we have a result
     setIsScanning(false);
     setLoading(true);
@@ -106,7 +119,9 @@ export default function PartnerScanner() {
         <Link href="/partner/dashboard" className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </Link>
-        <h1 className="text-xl font-black uppercase tracking-tighter">Entry Scanner</h1>
+        <h1 className="text-xl font-black uppercase tracking-tighter">
+          {gymName ? `${gymName} Scanner` : "Entry Scanner"}
+        </h1>
         <div className="w-10"></div>
       </div>
 
@@ -156,6 +171,10 @@ export default function PartnerScanner() {
             <div>
               <h3 className="text-xl font-black text-red-500 uppercase tracking-tight">Access Denied</h3>
               <p className="text-slate-400 mt-1">{error}</p>
+              <div className="mt-4 p-3 bg-black/20 rounded-xl">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1">Scanned Data:</p>
+                <p className="text-[10px] font-mono text-slate-300 break-all">{(window as any).lastScannedText || 'Unknown'}</p>
+              </div>
             </div>
             <button 
               onClick={() => { setError(null); setIsScanning(true); }}
