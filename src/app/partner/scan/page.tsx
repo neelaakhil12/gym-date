@@ -82,17 +82,35 @@ export default function PartnerScanner() {
         bookingId = urlParts[urlParts.length - 1].split('?')[0];
       }
 
-      // 3. First, check if the booking exists at all (ignoring gym for a second to see if it's a mismatch)
-      // We search by ID or the new ticket_code
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .select('*, profiles(full_name, avatar_url)')
-        .or(`id.eq.${bookingId},ticket_code.eq.${bookingId}`)
-        .single();
+      // 3. First, check if the booking exists at all
+      let bookingData = null;
+      
+      // Try searching by ID if it's a UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId);
+      if (isUUID) {
+        const { data } = await supabase
+          .from('bookings')
+          .select('*, profiles(full_name, avatar_url)')
+          .eq('id', bookingId)
+          .single();
+        bookingData = data;
+      }
 
-      if (bookingError || !booking) {
+      // If not found by ID, try searching by ticket_code
+      if (!bookingData) {
+        const { data } = await supabase
+          .from('bookings')
+          .select('*, profiles(full_name, avatar_url)')
+          .eq('ticket_code', bookingId)
+          .single();
+        bookingData = data;
+      }
+
+      if (!bookingData) {
         throw new Error("Invalid Ticket: No booking found with this ID.");
       }
+
+      const booking = bookingData;
 
       // 4. SECURITY: Verify this booking belongs to THIS partner's gym
       if (booking.gym_id !== partnerGym.id) {
