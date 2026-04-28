@@ -26,32 +26,45 @@ export async function verifyTicketAction(ticketCode: string, partnerId: string) 
       return { error: "Authorized gym not found for this partner." };
     }
 
-    // 2. Find the booking by ID or Ticket Code
+    // 2. Find the booking by ID or Ticket Code (Simple lookup first)
     let bookingData = null;
     
-    // Try UUID first
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketCode);
-    if (isUUID) {
-      const { data } = await supabaseAdmin
-        .from('bookings')
-        .select('*, profiles(full_name, avatar_url)')
-        .eq('id', ticketCode)
-        .single();
-      bookingData = data;
+    // Try Ticket Code first (case-insensitive)
+    const { data: byCode } = await supabaseAdmin
+      .from('bookings')
+      .select('*')
+      .ilike('ticket_code', ticketCode.trim())
+      .single();
+    
+    if (byCode) {
+      bookingData = byCode;
+    } else {
+      // Try UUID
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketCode.trim());
+      if (isUUID) {
+        const { data: byId } = await supabaseAdmin
+          .from('bookings')
+          .select('*')
+          .eq('id', ticketCode.trim())
+          .single();
+        bookingData = byId;
+      }
     }
 
-    // Try Ticket Code if not found or not UUID
     if (!bookingData) {
-      const { data } = await supabaseAdmin
-        .from('bookings')
-        .select('*, profiles(full_name, avatar_url)')
-        .eq('ticket_code', ticketCode)
-        .single();
-      bookingData = data;
+      return { error: `Invalid Ticket: Ticket "${ticketCode}" not found in system.` };
     }
 
-    if (!bookingData) {
-      return { error: `Invalid Ticket: No booking found for code ${ticketCode}` };
+    // 2.5 Fetch profile if it exists (separately to avoid join issues)
+    if (bookingData.user_id) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', bookingData.user_id)
+        .single();
+      if (profile) {
+        (bookingData as any).profiles = profile;
+      }
     }
 
     // 3. Security Check: Gym Mismatch
