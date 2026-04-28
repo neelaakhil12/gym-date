@@ -72,8 +72,22 @@ export async function verifyTicketAction(ticketCode: string, partnerId: string) 
       return { error: `Access Denied: This ticket belongs to a different gym.` };
     }
 
-    // 4. Return success with booking data
-    return { success: true, booking: bookingData, gymName: gym.name };
+    // 4. Expiration Check: Ensure subscription is still valid
+    const now = new Date();
+    const endDate = new Date(bookingData.end_date);
+    if (now > endDate) {
+      return { error: `Access Denied: This subscription expired on ${endDate.toLocaleDateString()}.` };
+    }
+
+    // 5. Ensure name is populated (fallback to profile if booking name is empty)
+    const displayName = bookingData.customer_name || (bookingData as any).profiles?.full_name || "Anonymous User";
+    const finalBooking = {
+      ...bookingData,
+      customer_name: displayName // Override with the best available name
+    };
+
+    // 6. Return success with booking data
+    return { success: true, booking: finalBooking, gymName: gym.name };
 
   } catch (err: any) {
     console.error("Verification error:", err);
