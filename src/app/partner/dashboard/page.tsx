@@ -46,7 +46,7 @@ export default function PartnerDashboard() {
       setBookings(bookingData || []);
       
       const commissionRate = data.commission_rate || 10;
-      const netTotal = bookingData?.reduce((sum, b) => {
+      const netTotal = bookingData?.reduce((sum: number, b: any) => {
         const amount = Number(b.amount) || Number(b.total_price) || 0;
         return sum + (amount * (1 - commissionRate / 100));
       }, 0) || 0;
