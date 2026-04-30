@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
+import { signIn } from "next-auth/react";
+
 export default function PartnerLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,23 +23,15 @@ export default function PartnerLogin() {
     setError("");
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const res = await signIn("credentials", {
+        redirect: false,
         email,
         password,
+        role: "partner", // specify role check
       });
 
-      if (signInError) throw signInError;
-
-      // Verify the user is actually a partner
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role_id')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError || profileData?.role_id !== 'partner') {
-        await supabase.auth.signOut();
-        throw new Error("Access denied. You do not have partner privileges.");
+      if (res?.error) {
+        throw new Error(res.error);
       }
 
       router.push("/partner/dashboard");

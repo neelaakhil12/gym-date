@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { otpCache } from "@/lib/otpCache";
 import { query } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 const handler = NextAuth({
   providers: [
@@ -11,58 +12,102 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
     CredentialsProvider({
-      name: "OTP",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "text" },
         otp: { label: "OTP", type: "text" },
+        password: { label: "Password", type: "password" },
         name: { label: "Name", type: "text" },
-        phone: { label: "Phone", type: "text" }
+        phone: { label: "Phone", type: "text" },
+        role: { label: "Role", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.otp) return null;
+        if (!credentials?.email) return null;
 
-        const { email, otp, name, phone } = credentials;
+        const { email, otp, password, name, phone, role } = credentials;
 
-        // 1. Verify OTP
-        const cachedData = otpCache.get(email);
-        if (!cachedData) throw new Error("No OTP found. Please send a new one.");
-        if (cachedData.otp !== otp) throw new Error("Invalid OTP code");
-        if (Date.now() > cachedData.expires) {
+        // 1. Password Login (Admin / Partner)
+        if (password) {
+          try {
+            // First time setup - create password_hash column if it doesn't exist
+            await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar;');
+          } catch (e) {
+            console.log('Column password_hash already exists or error:', e);
+          }
+
+          const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
+          if (userResult.rows.length === 0) {
+            throw new Error("No user found with this email");
+          }
+
+          const user = userResult.rows[0];
+
+          // If they don't have a password set, but are trying to log in (fallback for migration)
+          if (!user.password_hash) {
+            // Hash the password they just provided and set it as their permanent password
+            // This allows the first login attempt to set the password during the migration
+            const hash = await bcrypt.hash(password, 10);
+            await query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, user.id]);
+            user.password_hash = hash;
+          }
+
+          const isMatch = await bcrypt.compare(password, user.password_hash);
+          if (!isMatch) {
+            throw new Error("Invalid password");
+          }
+
+          // Verify requested role
+          if (role && role === 'admin' && user.role_id !== 'super_admin') {
+             throw new Error("Access Denied: You do not have super admin privileges.");
+          }
+
+          return {
+            id: user.id,
+            name: user.full_name,
+            email: user.email,
+            role: user.role_id,
+          };
+        }
+
+        // 2. OTP Login (Customer)
+        if (otp) {
+          const cachedData = otpCache.get(email);
+          if (!cachedData) throw new Error("No OTP found. Please send a new one.");
+          if (cachedData.otp !== otp) throw new Error("Invalid OTP code");
+          if (Date.now() > cachedData.expires) {
+            otpCache.delete(email);
+            throw new Error("OTP has expired");
+          }
+
           otpCache.delete(email);
-          throw new Error("OTP has expired");
+
+          const phoneFormatted = phone ? (phone.startsWith("+91") ? phone : `+91${phone}`) : null;
+          let userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
+          
+          if (userResult.rows.length === 0) {
+            userResult = await query(
+              "INSERT INTO users (email, full_name, phone, role_id) VALUES ($1, $2, $3, 'user') RETURNING *",
+              [email, name || "User", phoneFormatted]
+            );
+          } else {
+             if (name || phoneFormatted) {
+                 await query(
+                     "UPDATE users SET full_name = COALESCE($1, full_name), phone = COALESCE($2, phone) WHERE email = $3",
+                     [name || null, phoneFormatted, email]
+                 );
+             }
+          }
+
+          const user = userResult.rows[0];
+          return {
+            id: user.id,
+            name: user.full_name,
+            email: user.email,
+            role: user.role_id,
+          };
         }
 
-        // 2. Clear OTP
-        otpCache.delete(email);
-
-        // 3. Upsert user in Postgres
-        const phoneFormatted = phone ? (phone.startsWith("+91") ? phone : `+91${phone}`) : null;
-        
-        let userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
-        
-        if (userResult.rows.length === 0) {
-          userResult = await query(
-            "INSERT INTO users (email, full_name, phone, role_id) VALUES ($1, $2, $3, 'user') RETURNING *",
-            [email, name || "User", phoneFormatted]
-          );
-        } else {
-           // update name and phone if provided
-           if (name || phoneFormatted) {
-               await query(
-                   "UPDATE users SET full_name = COALESCE($1, full_name), phone = COALESCE($2, phone) WHERE email = $3",
-                   [name || null, phoneFormatted, email]
-               );
-           }
-        }
-
-        const user = userResult.rows[0];
-
-        return {
-          id: user.id,
-          name: user.full_name,
-          email: user.email,
-          role: user.role_id,
-        };
+        return null;
       }
     })
   ],

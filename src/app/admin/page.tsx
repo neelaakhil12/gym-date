@@ -44,38 +44,19 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      // 1. Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // 1. Sign in with NextAuth Credentials Provider
+      const res = await signIn("credentials", {
+        redirect: false,
         email,
         password,
+        role: "admin", // Tell the provider this is an admin login attempt
       });
 
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error("Login failed");
+      if (res?.error) {
+        throw new Error(res.error);
       }
 
-      // 2. Verify Super Admin Role
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role_id")
-        .eq("id", authData.user.id)
-        .single();
-
-      if (profileError || !profile) {
-        // Fallback check if profiles are not strictly enforced yet, 
-        // but normally we should throw here. For now let's enforce it.
-        throw new Error("Could not verify admin role. Please contact support.");
-      }
-
-      if (profile.role_id !== "super_admin") {
-        // Sign them out immediately if they are not a super admin
-        await supabase.auth.signOut();
-        throw new Error("Access Denied: You do not have super admin privileges.");
-      }
-
-      // 3. Success -> Redirect
+      // 2. Success -> Redirect
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.error(err);
