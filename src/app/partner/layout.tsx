@@ -12,7 +12,7 @@ import {
   CreditCard,
   Wallet
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { useSession, signOut } from "next-auth/react";
 
 const partnerLinks = [
   { name: "My Gym Overview", href: "/partner/dashboard", icon: Store },
@@ -27,29 +27,32 @@ export default function PartnerLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    // We only want to show the layout if we are inside the dashboard or deeper
-    // Not on the login page itself
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const publicPartnerRoutes = ["/partner", "/partner/login", "/partner/forgot-password", "/partner/reset-password"];
-        if (!publicPartnerRoutes.includes(pathname)) {
-          router.push("/partner/login");
-        }
-      } else {
-        setEmail(session.user.email || "Partner");
+    if (status === "loading") return;
+
+    if (!session) {
+      const publicPartnerRoutes = ["/partner", "/partner/login", "/partner/forgot-password", "/partner/reset-password"];
+      if (!publicPartnerRoutes.includes(pathname)) {
+        router.push("/partner/login");
       }
-    };
-    checkAuth();
-  }, [pathname, router]);
+      return;
+    }
+
+    // Role check
+    if (session.user?.role !== "partner" && !pathname.startsWith("/partner/login")) {
+      // If logged in but not a partner, maybe they are admin? If so, kick to admin dashboard or logout
+      // For now, if they are not partner, just logout or redirect
+      if (pathname.startsWith("/partner/dashboard")) {
+         router.push("/");
+      }
+    }
+  }, [session, status, pathname, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/partner/login");
+    await signOut({ callbackUrl: "/partner/login" });
   };
 
   // If we are on login or auth recovery pages, don't show the dashboard sidebar
@@ -120,11 +123,11 @@ export default function PartnerLayout({
           <div className="p-4 border-t border-white/10 bg-black/20">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-sm">
-                {email ? email.charAt(0).toUpperCase() : "P"}
+                {session?.user?.email ? session.user.email.charAt(0).toUpperCase() : "P"}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  {email || "Gym Partner"}
+                  {session?.user?.email || "Gym Partner"}
                 </p>
                 <p className="text-[10px] text-gray-400 truncate uppercase tracking-wider">Partner Account</p>
               </div>

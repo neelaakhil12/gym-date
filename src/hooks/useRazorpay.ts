@@ -41,12 +41,8 @@ export function useRazorpay() {
     const { gymId, gymName, planName, amount, startDate, onSuccess, onFailure } = options;
 
     // ── 1. Ensure user is logged in ──────────────────────────────────────
-    const {
-      data: { session: supabaseSession },
-    } = await supabase.auth.getSession();
-
-    const email = supabaseSession?.user?.email || nextAuthSession?.user?.email;
-    const userId = supabaseSession?.user?.id || "";
+    const email = nextAuthSession?.user?.email;
+    const userId = (nextAuthSession?.user as any)?.id || "";
 
     if (!email) {
       onFailure?.("Please log in to complete your booking.");
@@ -91,7 +87,7 @@ export function useRazorpay() {
       order_id: order.orderId,
       prefill: {
         email: email,
-        name: supabaseSession?.user?.user_metadata?.full_name || nextAuthSession?.user?.name || "",
+        name: nextAuthSession?.user?.name || "",
       },
       theme: {
         color: "#e50914",

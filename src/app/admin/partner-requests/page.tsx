@@ -13,7 +13,7 @@ import {
   MessageSquare,
   Users
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getPartnerRequests, updatePartnerRequestStatus } from "@/actions/adminActions";
 import { toast } from "react-hot-toast";
 
 interface PartnerRequest {
@@ -34,13 +34,8 @@ export default function PartnerRequestsPage() {
 
   const fetchRequests = async () => {
     try {
-      const { data, error } = await supabase
-        .from("partner_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setRequests(data || []);
+      const data = await getPartnerRequests();
+      setRequests(data);
     } catch (error) {
       console.error("Error fetching requests:", error);
       toast.error("Failed to load leads");
@@ -55,20 +50,16 @@ export default function PartnerRequestsPage() {
 
   const updateStatus = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from("partner_requests")
-        .update({ status: newStatus })
-        .eq("id", id);
-
-      if (error) throw error;
+      const result = await updatePartnerRequestStatus(id, newStatus);
+      if (result.error) throw new Error(result.error);
       
       setRequests(requests.map(req => 
         req.id === id ? { ...req, status: newStatus } : req
       ));
       toast.success(`Status updated to ${newStatus}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating status:", error);
-      toast.error("Failed to update status");
+      toast.error(error.message || "Failed to update status");
     }
   };
 

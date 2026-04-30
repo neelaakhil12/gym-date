@@ -9,7 +9,7 @@ import {
   User,
   Store
 } from "lucide-react";
-import { getAllProfiles } from "@/lib/supabase";
+import { getAllProfiles } from "@/actions/adminActions";
 
 export default function AdminUsers() {
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -124,7 +124,7 @@ export default function AdminUsers() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(profile.role_id)}`}>
-                          {profile.roles?.name || profile.role_id}
+                          {profile.role_name || profile.role_id}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

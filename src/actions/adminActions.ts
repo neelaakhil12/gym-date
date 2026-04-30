@@ -259,3 +259,28 @@ export async function getPartnerGym(partnerId: string) {
     return null;
   }
 }
+export async function getPartnerRequests() {
+  try {
+    const result = await query(
+      "SELECT * FROM partner_requests ORDER BY created_at DESC"
+    );
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching partner requests", error);
+    return [];
+  }
+}
+
+export async function updatePartnerRequestStatus(id: string, status: string) {
+  try {
+    await query(
+      "UPDATE partner_requests SET status = $1 WHERE id = $2",
+      [status, id]
+    );
+    revalidatePath("/admin/partner-requests");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating partner request status", error);
+    return { error: error.message || "Failed to update status." };
+  }
+}
