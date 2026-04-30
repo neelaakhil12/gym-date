@@ -10,7 +10,7 @@ function logDbError(context: string, error: unknown) {
 
 export async function getGyms() {
   try {
-    const result = await query('SELECT * FROM gyms ORDER BY created_at DESC');
+    const result = await require("./db").query('SELECT * FROM gyms ORDER BY created_at DESC');
     if (!result.rows || result.rows.length === 0) return mockGyms;
     return result.rows;
   } catch (error) {
@@ -21,7 +21,7 @@ export async function getGyms() {
 
 export async function getGymById(id: string) {
   try {
-    const result = await query('SELECT * FROM gyms WHERE id = $1', [id]);
+    const result = await require("./db").query('SELECT * FROM gyms WHERE id = $1', [id]);
     if (!result.rows || result.rows.length === 0) return mockGyms.find(g => g.id === id) || null;
     return result.rows[0];
   } catch (error) {
@@ -32,7 +32,7 @@ export async function getGymById(id: string) {
 
 export async function getCities() {
   try {
-    const result = await query('SELECT * FROM cities ORDER BY created_at DESC');
+    const result = await require("./db").query('SELECT * FROM cities ORDER BY created_at DESC');
     if (!result.rows || result.rows.length === 0) return mockCities;
     return result.rows;
   } catch (error) {
@@ -43,7 +43,7 @@ export async function getCities() {
 
 export async function getPricingPlans() {
   try {
-    const result = await query('SELECT * FROM pricing_plans');
+    const result = await require("./db").query('SELECT * FROM pricing_plans');
     if (!result.rows || result.rows.length === 0) return mockPricingPlans;
     return result.rows;
   } catch (error) {
@@ -54,7 +54,7 @@ export async function getPricingPlans() {
 
 export async function getPricingPlansByGymId(gymId: string) {
   try {
-    const result = await query(
+    const result = await require("./db").query(
       'SELECT * FROM pricing_plans WHERE gym_id = $1 ORDER BY price ASC',
       [gymId]
     );
@@ -69,13 +69,13 @@ export async function getPricingPlansByGymId(gymId: string) {
 export async function getAdminStats() {
   try {
     // 1. Wallet Balance
-    const wallet = await query("SELECT balance FROM wallet WHERE id = 'platform_wallet'");
+    const wallet = await require("./db").query("SELECT balance FROM wallet WHERE id = 'platform_wallet'");
     
     // 2. Total Gyms
-    const gymsCount = await query('SELECT COUNT(*) FROM gyms');
+    const gymsCount = await require("./db").query('SELECT COUNT(*) FROM gyms');
     
     // 3. Total Users
-    const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
+    const usersCount = await require("./db").query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
 
     return {
       walletBalance: wallet.rows[0]?.balance || 0,
@@ -90,7 +90,7 @@ export async function getAdminStats() {
 
 export async function getAllProfiles() {
   try {
-    const result = await query(
+    const result = await require("./db").query(
       'SELECT u.*, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.created_at DESC'
     );
     return result.rows || [];
@@ -102,7 +102,7 @@ export async function getAllProfiles() {
 
 export async function getAllBookings() {
   try {
-    const result = await query(
+    const result = await require("./db").query(
       `SELECT b.*, u.email as user_email, g.name as gym_name
        FROM bookings b
        LEFT JOIN users u ON b.user_id = u.id
@@ -118,7 +118,7 @@ export async function getAllBookings() {
 
 export async function getPartnerGym(partnerId: string) {
   try {
-    const result = await query(
+    const result = await require("./db").query(
       'SELECT * FROM gyms WHERE partner_id = $1 LIMIT 1',
       [partnerId]
     );
@@ -131,7 +131,7 @@ export async function getPartnerGym(partnerId: string) {
 
 export async function getUniqueUsersCount() {
   try {
-    const result = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
+    const result = await require("./db").query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
     return parseInt(result.rows[0]?.count) || 0;
   } catch (error) {
     logDbError('Error fetching unique users count', error);

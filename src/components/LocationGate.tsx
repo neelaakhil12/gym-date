@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { MapPin, Crosshair, Search, Loader2, Navigation } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 
 export default function LocationGate({ children }: { children: React.ReactNode }) {
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
-  const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -23,8 +21,7 @@ export default function LocationGate({ children }: { children: React.ReactNode }
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const userEmail = session?.user?.email || nextAuthSession?.user?.email;
+      const userEmail = nextAuthSession?.user?.email;
 
       if (!userEmail) {
         setLoading(false);
@@ -77,7 +74,7 @@ export default function LocationGate({ children }: { children: React.ReactNode }
         const { latitude, longitude } = position.coords;
         
         try {
-          const email = nextAuthSession?.user?.email || (await supabase.auth.getSession()).data.session?.user?.email;
+          const email = nextAuthSession?.user?.email;
           
           // Reverse geocode to get a readable address
           let readableAddress = "Current Location";
@@ -143,7 +140,7 @@ export default function LocationGate({ children }: { children: React.ReactNode }
 
     setLocating(true);
     try {
-      const email = nextAuthSession?.user?.email || (await supabase.auth.getSession()).data.session?.user?.email;
+      const email = nextAuthSession?.user?.email;
       const response = await fetch('/api/user/sync-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

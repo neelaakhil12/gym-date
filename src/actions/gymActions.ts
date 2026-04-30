@@ -262,3 +262,26 @@ export async function updateGymOffer(gymId: string, hasOffer: boolean, offerPerc
     return { error: "Failed to update gym offer." };
   }
 }
+
+export async function getGlobalAmenities() {
+  try {
+    const { query } = require('@/lib/db');
+    const result = await query('SELECT name FROM amenities ORDER BY name');
+    return result.rows.length > 0 ? result.rows : [
+      { name: 'Cardio Equipment' }, { name: 'Free Weights' }, { name: 'AC' },
+      { name: 'Parking' }, { name: 'Locker Room' }, { name: 'Showers' },
+      { name: 'Personal Training' }, { name: 'Water Cooler' }
+    ];
+  } catch (err) {
+    return [
+      { name: 'Cardio Equipment' }, { name: 'Free Weights' }, { name: 'AC' },
+      { name: 'Parking' }, { name: 'Locker Room' }, { name: 'Showers' },
+      { name: 'Personal Training' }, { name: 'Water Cooler' }
+    ];
+  }
+}
+
+export async function getCoordinatesFromGoogle(locationStr: string) {
+  return { success: false, error: 'Google Maps API temporarily disabled in self-hosted mode.' };
+}
+
