@@ -106,13 +106,8 @@ export default function EditGymPage() {
   useEffect(() => {
     async function loadGymData() {
       try {
-        const { data: gym, error: gymError } = await supabase
-          .from("gyms")
-          .select("*")
-          .eq("id", gymId)
-          .single();
-
-        if (gymError) throw gymError;
+        const gym = await getGymById(gymId);
+        if (!gym) throw new Error("Gym not found");
 
         setGymName(gym.name || "");
         setLocation(gym.location || "");
@@ -137,18 +132,13 @@ export default function EditGymPage() {
         setCommissionRate(gym.commission_rate?.toString() || "10");
 
         // Fetch pricing plans
-        const { data: plans, error: plansError } = await supabase
-          .from("pricing_plans")
-          .select("*")
-          .eq("gym_id", gymId);
+        const plansData = await getPricingPlansByGymId(gymId);
 
-        if (plansError) throw plansError;
-
-        if (plans && plans.length > 0) {
-          const formattedPlans = plans.map((p: any) => ({
+        if (plansData && plansData.length > 0) {
+          const formattedPlans = plansData.map((p: any) => ({
             id: p.id,
             name: p.name,
-            price: p.price.replace(/[^0-9]/g, '')
+            price: p.price.toString().replace(/[^0-9]/g, '')
           }));
           setPlans(formattedPlans);
         } else {
@@ -163,7 +153,7 @@ export default function EditGymPage() {
 
       } catch (err: any) {
         console.error(err);
-        setError("Failed to load gym data.");
+        setError(err.message || "Failed to load gym data.");
       } finally {
         setInitialLoading(false);
       }
