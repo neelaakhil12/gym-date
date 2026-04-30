@@ -40,7 +40,7 @@ export default function PartnerPage() {
       // Redirect to WhatsApp
       const message = `Hello GymDate! I am ${data.ownerName}, owner of ${data.gymName} in ${data.city}. I just submitted my registration on your website and would like to discuss the onboarding process.`;
       const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/9100061091?text=${encodedMessage}`;
+      const whatsappUrl = `https://wa.me/8143186677?text=${encodedMessage}`;
       
       // Small delay to let the toast show
       setTimeout(() => {
@@ -53,7 +53,7 @@ export default function PartnerPage() {
   };
 
   return (
-    <div className="min-h-screen pt-32 pb-20 bg-gray-50">
+    <div className="min-h-screen pt-44 pb-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ... (rest of the page) */}
         <div className="text-center mb-20">
@@ -184,9 +184,6 @@ export default function PartnerPage() {
           </div>
         </div>
       </div>
-      
-      {/* Floating WhatsApp Button */}
-      <WhatsAppButton />
     </div>
   );
 }

@@ -9,8 +9,8 @@ interface WhatsAppButtonProps {
 }
 
 export default function WhatsAppButton({ 
-  phoneNumber = "9100061091", // Default business number
-  message = "Hello! I am interested in partnering with GymDate." 
+  phoneNumber = "8143186677", // Default business number
+  message = "Hello! I am interested in GymDate. Can you help me?" 
 }: WhatsAppButtonProps) {
   const openWhatsApp = () => {
     const encodedMessage = encodeURIComponent(message);

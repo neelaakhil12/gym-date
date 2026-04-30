@@ -1,33 +1,18 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
+import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 export async function updatePlatformStats(stats: { id: string; label: string; value: string }[]) {
   try {
     for (const stat of stats) {
-      const { error } = await supabaseAdmin
-        .from("platform_stats")
-        .update({ 
-          label: stat.label,
-          value: stat.value 
-        })
-        .eq("id", stat.id);
-
-      if (error) throw error;
+      await query(
+        "UPDATE platform_stats SET label = $1, value = $2 WHERE id = $3",
+        [stat.label, stat.value, stat.id]
+      );
     }
-
     revalidatePath("/");
     return { success: true };
   } catch (err: any) {
@@ -38,14 +23,10 @@ export async function updatePlatformStats(stats: { id: string; label: string; va
 
 export async function getPlatformStats() {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("platform_stats")
-      .select("*")
-      .neq("id", "00000000-0000-0000-0000-000000000000")
-      .order("display_order", { ascending: true });
-
-    if (error) throw error;
-    return data;
+    const result = await query(
+      "SELECT * FROM platform_stats WHERE id != '00000000-0000-0000-0000-000000000000' ORDER BY display_order ASC"
+    );
+    return result.rows;
   } catch (err) {
     console.error("Error fetching stats:", err);
     return [];
@@ -54,14 +35,10 @@ export async function getPlatformStats() {
 
 export async function getSectionVisibility() {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("platform_stats")
-      .select("value")
-      .eq("id", "00000000-0000-0000-0000-000000000000")
-      .single();
-
-    if (error) throw error;
-    return data.value === "true";
+    const result = await query(
+      "SELECT value FROM platform_stats WHERE id = '00000000-0000-0000-0000-000000000000'"
+    );
+    return result.rows[0]?.value === "true";
   } catch (err) {
     console.error("Error fetching visibility:", err);
     return true; // Default to true
@@ -70,12 +47,10 @@ export async function getSectionVisibility() {
 
 export async function updateSectionVisibility(isVisible: boolean) {
   try {
-    const { error } = await supabaseAdmin
-      .from("platform_stats")
-      .update({ value: isVisible ? "true" : "false" })
-      .eq("id", "00000000-0000-0000-0000-000000000000");
-
-    if (error) throw error;
+    await query(
+      "UPDATE platform_stats SET value = $1 WHERE id = '00000000-0000-0000-0000-000000000000'",
+      [isVisible ? "true" : "false"]
+    );
     revalidatePath("/");
     return { success: true };
   } catch (err: any) {
@@ -84,25 +59,23 @@ export async function updateSectionVisibility(isVisible: boolean) {
   }
 }
 
-// Helper to upload city image to Supabase Storage
+// Helper to upload city image to local disk
 async function uploadCityImage(file: File): Promise<string | null> {
   if (!file || file.size === 0) return null;
   try {
-    const fileExt = file.name.split(".").pop() || "jpg";
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `cities/${fileName}`;
+    // In production, this directory must exist on the VPS
+    const uploadDir = process.env.UPLOAD_DIR || './public/uploads/cities';
+    await mkdir(uploadDir, { recursive: true });
+    
+    const ext = file.name.split(".").pop() || "jpg";
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filePath, buffer);
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("gym-images")
-      .upload(filePath, file);
-
-    if (uploadError) {
-      console.error("City image upload error:", uploadError);
-      return null;
-    }
-
-    const { data } = supabaseAdmin.storage.from("gym-images").getPublicUrl(filePath);
-    return data.publicUrl;
+    const baseUrl = process.env.NEXT_PUBLIC_UPLOAD_URL || '/uploads';
+    return `${baseUrl}/cities/${fileName}`;
   } catch (err) {
     console.error("Error uploading city image:", err);
     return null;
@@ -123,11 +96,11 @@ export async function addCity(formData: FormData) {
       if (uploaded) imageUrl = uploaded;
     }
 
-    const { error } = await supabaseAdmin
-      .from("cities")
-      .insert([{ name, image: imageUrl, is_featured, is_coming_soon }]);
+    await query(
+      "INSERT INTO cities (name, image, is_featured, is_coming_soon) VALUES ($1, $2, $3, $4)",
+      [name, imageUrl, is_featured, is_coming_soon]
+    );
 
-    if (error) throw error;
     revalidatePath("/");
     revalidatePath("/explore");
     return { success: true };
@@ -151,12 +124,11 @@ export async function updateCity(id: string, formData: FormData) {
       if (uploaded) imageUrl = uploaded;
     }
 
-    const { error } = await supabaseAdmin
-      .from("cities")
-      .update({ name, image: imageUrl, is_featured, is_coming_soon })
-      .eq("id", id);
+    await query(
+      "UPDATE cities SET name = $1, image = $2, is_featured = $3, is_coming_soon = $4 WHERE id = $5",
+      [name, imageUrl, is_featured, is_coming_soon, id]
+    );
 
-    if (error) throw error;
     revalidatePath("/");
     revalidatePath("/explore");
     return { success: true };
@@ -168,17 +140,55 @@ export async function updateCity(id: string, formData: FormData) {
 
 export async function deleteCity(id: string) {
   try {
-    const { error } = await supabaseAdmin
-      .from("cities")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
+    await query("DELETE FROM cities WHERE id = $1", [id]);
     revalidatePath("/");
     revalidatePath("/explore");
     return { success: true };
   } catch (err: any) {
     console.error("Error deleting city:", err);
     return { error: err.message || "Failed to delete city." };
+  }
+}
+
+export async function deleteBooking(id: string) {
+  try {
+    await query("DELETE FROM bookings WHERE id = $1", [id]);
+    revalidatePath("/admin/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error deleting booking:", err);
+    return { error: err.message || "Failed to delete transaction." };
+  }
+}
+
+export async function getGlobalAmenities() {
+  try {
+    const result = await query("SELECT * FROM amenities ORDER BY name ASC");
+    return result.rows;
+  } catch (err) {
+    console.error("Error fetching global amenities:", err);
+    return [];
+  }
+}
+
+export async function addGlobalAmenity(name: string) {
+  try {
+    await query("INSERT INTO amenities (name) VALUES ($1)", [name]);
+    revalidatePath("/admin/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error adding global amenity:", err);
+    return { error: err.message || "Failed to add amenity." };
+  }
+}
+
+export async function deleteGlobalAmenity(id: string) {
+  try {
+    await query("DELETE FROM amenities WHERE id = $1", [id]);
+    revalidatePath("/admin/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error deleting global amenity:", err);
+    return { error: err.message || "Failed to delete amenity." };
   }
 }

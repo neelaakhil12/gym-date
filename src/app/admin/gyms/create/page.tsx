@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Dumbbell, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent } from "lucide-react";
-import { createGymAndPartner, getCoordinatesFromGoogle } from "@/actions/gymActions";
+import { createGymAndPartner, getCoordinatesFromGoogle, getGlobalAmenities } from "@/actions/gymActions";
 
 export default function CreateGymPage() {
   const router = useRouter();
@@ -12,11 +12,20 @@ export default function CreateGymPage() {
   const [error, setError] = useState("");
   const [customAmenities, setCustomAmenities] = useState<string[]>([]);
   const [newAmenity, setNewAmenity] = useState("");
+  const [defaultAmenitiesList, setDefaultAmenitiesList] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [locating, setLocating] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
+
+  React.useEffect(() => {
+    async function fetchAmenities() {
+      const data = await getGlobalAmenities();
+      setDefaultAmenitiesList(data.map((a: any) => a.name));
+    }
+    fetchAmenities();
+  }, []);
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
@@ -458,11 +467,7 @@ export default function CreateGymPage() {
                 <p className="text-xs text-gray-500">Select all the facilities available at this gym.</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {[
-                  "AC", "Personal Trainer", "Parking", "Locker Room", 
-                  "WiFi", "Supplements", "Steam Room", "Sauna", 
-                  "Yoga Mats", "Zumba Classes", "Shower", "Crossfit Rig"
-                ].map((amenity) => (
+                {defaultAmenitiesList.map((amenity) => (
                   <label key={amenity} className="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                     <input 
                       type="checkbox" 

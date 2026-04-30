@@ -4,7 +4,7 @@ import { Target, Heart, Award, ShieldCheck, Zap, Users, Sparkles, MapPin, CheckC
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen pt-32 pb-20 bg-white">
+    <div className="min-h-screen pt-44 pb-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Mission Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-32">

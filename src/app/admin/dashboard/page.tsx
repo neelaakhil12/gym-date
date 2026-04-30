@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getAdminStats, getAllBookings, getGyms, getUniqueUsersCount } from "@/lib/supabase";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2 } from "lucide-react";
-import { getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility } from "@/actions/adminActions";
+import { getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
 import { getCities } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 
@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   const [citiesData, setCitiesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingStats, setSavingStats] = useState(false);
-  const [showModal, setShowModal] = useState<'commission' | 'revenue' | 'users' | 'cities' | null>(null);
+  const [showModal, setShowModal] = useState<'commission' | 'revenue' | 'users' | 'cities' | 'amenities' | null>(null);
   
   // City Form State
   const [cityForm, setCityForm] = useState({ id: '', name: '', is_featured: true, is_coming_soon: false });
@@ -29,6 +29,9 @@ export default function AdminDashboard() {
   const [processingCity, setProcessingCity] = useState(false);
   const [isStatsVisible, setIsStatsVisible] = useState(true);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
+  const [globalAmenities, setGlobalAmenities] = useState<any[]>([]);
+  const [newGlobalAmenity, setNewGlobalAmenity] = useState("");
+  const [processingAmenity, setProcessingAmenity] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -42,12 +45,14 @@ export default function AdminDashboard() {
       const pStats = await getPlatformStats();
       const allCities = await getCities();
       const visibility = await getSectionVisibility();
+      const amenities = await getGlobalAmenities();
       
       setGymData(allGyms);
       setBookings(allBookings);
       setPlatformStats(pStats);
       setCitiesData(allCities);
       setIsStatsVisible(visibility);
+      setGlobalAmenities(amenities);
       setLoading(false);
     }
     loadData();
@@ -153,6 +158,48 @@ export default function AdminDashboard() {
     } else {
       toast.error(result.error);
     }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this transaction record?")) return;
+    
+    const result = await deleteBooking(id);
+    if (result.success) {
+      toast.success("Transaction deleted!");
+      const updatedBookings = await getAllBookings();
+      setBookings(updatedBookings);
+    } else {
+      toast.error(result.error);
+    }
+  };
+
+  const handleAddGlobalAmenity = async () => {
+    if (!newGlobalAmenity.trim()) return;
+    setProcessingAmenity(true);
+    const result = await addGlobalAmenity(newGlobalAmenity.trim());
+    if (result.success) {
+      toast.success("Amenity added!");
+      setNewGlobalAmenity("");
+      const updated = await getGlobalAmenities();
+      setGlobalAmenities(updated);
+    } else {
+      toast.error(result.error);
+    }
+    setProcessingAmenity(false);
+  };
+
+  const handleDeleteGlobalAmenity = async (id: string) => {
+    if (!confirm("Delete this amenity from the global list? It won't remove it from existing gyms but will hide it from new selections.")) return;
+    setProcessingAmenity(true);
+    const result = await deleteGlobalAmenity(id);
+    if (result.success) {
+      toast.success("Amenity deleted!");
+      const updated = await getGlobalAmenities();
+      setGlobalAmenities(updated);
+    } else {
+      toast.error(result.error);
+    }
+    setProcessingAmenity(false);
   };
 
   if (loading) {
@@ -293,6 +340,31 @@ export default function AdminDashboard() {
             >
               <Edit2 className="w-4 h-4" />
               <span>Manage Cities</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Amenities Card */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
+            <Plus className="w-24 h-24 text-secondary" />
+          </div>
+          <div className="relative z-10">
+            <div className="w-12 h-12 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-4">
+              <Plus className="w-6 h-6 text-orange-500" />
+            </div>
+            <p className="text-sm font-bold text-gray-500">Global Amenities</p>
+            <div className="mt-2">
+              <h3 className="text-3xl font-black text-secondary">
+                {globalAmenities.length}
+              </h3>
+            </div>
+            <button 
+              onClick={() => setShowModal('amenities')}
+              className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Manage Amenities</span>
             </button>
           </div>
         </div>
@@ -577,6 +649,60 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Amenities Management Modal */}
+      {showModal === 'amenities' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(null)}></div>
+          <div className="relative bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-gray-200">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <h2 className="text-xl font-black text-secondary">Manage Platform Amenities</h2>
+              <button onClick={() => setShowModal(null)} className="p-2 hover:bg-gray-200 rounded-xl transition-colors">
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-8 space-y-8">
+              {/* Add New Amenity */}
+              <div className="flex space-x-3">
+                <input 
+                  type="text"
+                  value={newGlobalAmenity}
+                  onChange={(e) => setNewGlobalAmenity(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddGlobalAmenity()}
+                  placeholder="Enter new amenity name (e.g. Swimming Pool)"
+                  className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold focus:border-primary outline-none"
+                />
+                <button 
+                  onClick={handleAddGlobalAmenity}
+                  disabled={processingAmenity || !newGlobalAmenity.trim()}
+                  className="bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all disabled:opacity-50"
+                >
+                  {processingAmenity ? '...' : 'Add'}
+                </button>
+              </div>
+
+              {/* Grid of existing amenities with delete option */}
+              <div className="grid grid-cols-2 gap-3 max-h-[40vh] overflow-y-auto pr-2">
+                {globalAmenities.map((amenity) => (
+                  <div key={amenity.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
+                    <span className="font-bold text-secondary">{amenity.name}</span>
+                    <button 
+                      onClick={() => handleDeleteGlobalAmenity(amenity.id)}
+                      className="p-2 text-gray-300 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                      title="Delete Global Amenity"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-100 bg-gray-50/50 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Amenities: {globalAmenities.length}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recent Gyms Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
@@ -663,7 +789,7 @@ export default function AdminDashboard() {
                 <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Gym & Plan</th>
                 <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
                 <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Invoice</th>
+                <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -698,13 +824,22 @@ export default function AdminDashboard() {
                       {new Date(booking.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-10 py-6 text-right">
-                      <button 
-                        onClick={() => generateInvoicePDF(booking)}
-                        className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm group-hover:shadow-md"
-                        title="Download Invoice PDF"
-                      >
-                        <FileDown className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end space-x-2">
+                        <button 
+                          onClick={() => generateInvoicePDF(booking)}
+                          className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm group-hover:shadow-md"
+                          title="Download Invoice PDF"
+                        >
+                          <FileDown className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteBooking(booking.id)}
+                          className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm group-hover:shadow-md"
+                          title="Delete Transaction"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

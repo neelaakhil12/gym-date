@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Dumbbell, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent } from "lucide-react";
-import { updateGym, getCoordinatesFromGoogle } from "@/actions/gymActions";
+import { updateGym, getCoordinatesFromGoogle, getGlobalAmenities } from "@/actions/gymActions";
 import { supabase } from "@/lib/supabase";
 
 export default function EditGymPage() {
@@ -100,12 +100,7 @@ export default function EditGymPage() {
   
   const [plans, setPlans] = useState<{id?: string, name: string, price: string}[]>([]);
 
-  // Pre-defined amenities to check against
-  const defaultAmenitiesList = [
-    "AC", "Personal Trainer", "Parking", "Locker Room", 
-    "WiFi", "Supplements", "Steam Room", "Sauna", 
-    "Yoga Mats", "Zumba Classes", "Shower", "Crossfit Rig"
-  ];
+  const [defaultAmenitiesList, setDefaultAmenitiesList] = useState<string[]>([]);
   const [checkedDefaultAmenities, setCheckedDefaultAmenities] = useState<string[]>([]);
 
   useEffect(() => {
@@ -127,10 +122,15 @@ export default function EditGymPage() {
         setExistingPrimaryImage(gym.image || "");
         setExistingGalleryUrls(gym.gallery || []);
 
+        // Fetch global amenities
+        const globalAmenitiesData = await getGlobalAmenities();
+        const globalNames = globalAmenitiesData.map((a: any) => a.name);
+        setDefaultAmenitiesList(globalNames);
+
         // Split amenities into default and custom
         const dbAmenities = gym.amenities || [];
-        const checkedDefaults = dbAmenities.filter((a: string) => defaultAmenitiesList.includes(a));
-        const customs = dbAmenities.filter((a: string) => !defaultAmenitiesList.includes(a));
+        const checkedDefaults = dbAmenities.filter((a: string) => globalNames.includes(a));
+        const customs = dbAmenities.filter((a: string) => !globalNames.includes(a));
         
         setCheckedDefaultAmenities(checkedDefaults);
         setCustomAmenities(customs);

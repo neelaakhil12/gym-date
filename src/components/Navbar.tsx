@@ -82,11 +82,11 @@ const Navbar = () => {
           {/* Logo */}
           <Link href="/" className="flex items-center group mt-1.5">
             <Image
-              src="/logo.png"
+              src="/brand-logo.png"
               alt="GymDate Logo"
-              width={145}
-              height={46}
-              className="w-32 h-auto object-contain transform transition-all group-hover:scale-105"
+              width={200}
+              height={64}
+              className="w-48 h-auto object-contain transform transition-all group-hover:scale-105"
               priority
             />
           </Link>

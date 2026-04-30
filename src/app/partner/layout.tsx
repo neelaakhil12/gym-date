@@ -77,10 +77,14 @@ export default function PartnerLayout({
         <div className="h-full flex flex-col">
           {/* Sidebar Header */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
-            <span className="text-xl font-black text-white flex items-center">
-              <Store className="w-5 h-5 mr-2 text-primary" />
-              Partner Admin
-            </span>
+            <Link href="/partner/dashboard" className="flex items-center">
+              <img 
+                src="/brand-logo.png" 
+                alt="GymDate Logo" 
+                className="h-10 w-auto brightness-0 invert object-contain"
+              />
+              <span className="ml-2 text-sm font-black tracking-tighter text-white uppercase opacity-50">Partner</span>
+            </Link>
             <button 
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden text-gray-400 hover:text-white"

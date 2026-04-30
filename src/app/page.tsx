@@ -18,7 +18,7 @@ export default function Home() {
   const [gyms, setGyms] = useState(mockGyms);
   const [cities, setCities] = useState(mockCities);
   const [platformStats, setPlatformStats] = useState<any[]>([]);
-  const [isStatsVisible, setIsStatsVisible] = useState(true);
+  const [isStatsVisible, setIsStatsVisible] = useState<boolean | null>(null);
 
   useEffect(() => {
     async function loadData() {

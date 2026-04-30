@@ -88,12 +88,11 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center text-primary mb-6">
-          <Lock className="w-12 h-12" />
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-black text-secondary tracking-tighter">
+            GYMDATE <span className="text-primary">SUPER ADMIN</span>
+          </h1>
         </div>
-        <h2 className="text-center text-3xl font-black text-secondary">
-          Super Admin Panel
-        </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Sign in to manage the GymDate platform
         </p>

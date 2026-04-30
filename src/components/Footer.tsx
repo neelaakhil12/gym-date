@@ -20,11 +20,11 @@ const Footer = () => {
           <div className="space-y-6">
             <Link href="/" className="block mt-2">
               <Image
-                src="/logo.png"
+                src="/brand-logo.png"
                 alt="GymDate Logo"
-                width={200}
-                height={60}
-                className="object-contain"
+                width={250}
+                height={80}
+                className="w-56 h-auto object-contain"
               />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
@@ -69,17 +69,17 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-bold mb-6">Get In Touch</h4>
             <ul className="space-y-4 text-gray-400">
-              <li className="flex items-center space-x-3">
-                <MapPin className="h-5 w-5 text-primary" />
-                <span className="text-sm">Sector 5, HSR Layout, Bangalore</span>
+              <li className="flex items-start space-x-3">
+                <MapPin className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <span className="text-sm">5-2-6, Lakshmi Devi Peta, Opp Durga Devi Temple, Anakapali, Visakhapatnam 531001, Andhra Pradesh</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-primary" />
-                <span className="text-sm">+91 98765 43210</span>
+                <Phone className="h-5 w-5 text-primary flex-shrink-0" />
+                <a href="tel:+918143186677" className="text-sm hover:text-primary transition-colors">+91 81431 86677</a>
               </li>
               <li className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-primary" />
-                <span className="text-sm">support@gymdate.com</span>
+                <Mail className="h-5 w-5 text-primary flex-shrink-0" />
+                <a href="mailto:founder@gymdate.in" className="text-sm hover:text-primary transition-colors">founder@gymdate.in</a>
               </li>
             </ul>
           </div>

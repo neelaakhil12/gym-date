@@ -27,7 +27,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen pt-32 pb-20 bg-white">
+    <div className="min-h-screen pt-44 pb-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-20">
           <h1 className="text-4xl md:text-6xl font-black text-secondary mb-6">
@@ -50,17 +50,21 @@ export default function ContactPage() {
 
             <div className="space-y-6">
               {[
-                { icon: Phone, label: "Phone", value: "+91 98765 43210", color: "bg-blue-50 text-blue-600" },
-                { icon: Mail, label: "Email", value: "support@gymdate.com", color: "bg-primary/5 text-primary" },
-                { icon: MapPin, label: "Office", value: "Sector 5, HSR Layout, Bangalore", color: "bg-purple-50 text-purple-600" }
+                { icon: Phone, label: "Phone", value: "+91 81431 86677", color: "bg-blue-50 text-blue-600", href: "tel:+918143186677" },
+                { icon: Mail, label: "Email", value: "founder@gymdate.in", color: "bg-primary/5 text-primary", href: "mailto:founder@gymdate.in" },
+                { icon: MapPin, label: "Office", value: "5-2-6, Lakshmi Devi Peta, Opp Durga Devi Temple, Anakapali, Visakhapatnam 531001, Andhra Pradesh", color: "bg-purple-50 text-purple-600", href: null }
               ].map((item, idx) => (
                 <div key={idx} className="flex items-start space-x-4">
-                  <div className={`p-3 rounded-xl ${item.color}`}>
+                  <div className={`p-3 rounded-xl flex-shrink-0 ${item.color}`}>
                     <item.icon className="h-6 w-6" />
                   </div>
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
-                    <p className="font-bold text-secondary">{item.value}</p>
+                    {item.href ? (
+                      <a href={item.href} className="font-bold text-secondary hover:text-primary transition-colors">{item.value}</a>
+                    ) : (
+                      <p className="font-bold text-secondary">{item.value}</p>
+                    )}
                   </div>
                 </div>
               ))}

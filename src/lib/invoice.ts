@@ -32,7 +32,7 @@ export async function generateInvoicePDF(booking: any) {
 
   // Try to embed logo
   try {
-    const logoBase64 = await toBase64("/logo.png");
+    const logoBase64 = await toBase64("/brand-logo.png");
     // Place logo on the left side of the header
     doc.addImage(logoBase64, "PNG", 12, 8, 36, 32);
   } catch {

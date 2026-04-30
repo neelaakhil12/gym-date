@@ -50,8 +50,12 @@ export default function PartnerLogin() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex justify-center mb-6">
-          <Store className="w-12 h-12 text-primary" />
+        <Link href="/" className="flex justify-center mb-8">
+          <img 
+            src="/brand-logo.png" 
+            alt="GymDate Logo" 
+            className="h-20 w-auto object-contain"
+          />
         </Link>
         <h2 className="text-center text-3xl font-black text-secondary">
           Gym Partner Login

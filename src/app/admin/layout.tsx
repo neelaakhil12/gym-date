@@ -100,7 +100,11 @@ export default function AdminLayout({
         <div className="h-full flex flex-col">
           {/* Sidebar Header */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
-            <span className="text-xl font-black text-white">GymDate Admin</span>
+            <Link href="/admin/dashboard" className="flex items-center">
+              <span className="text-xl font-black text-white tracking-tighter">
+                GYMDATE <span className="text-primary">SUPER ADMIN</span>
+              </span>
+            </Link>
             <button 
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden text-gray-300 hover:text-white"

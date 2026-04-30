@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { 
   Dumbbell, 
   Mail, 
@@ -55,18 +54,20 @@ export default function LoginPage() {
     setMessage({ type: "", text: "" });
 
     try {
-      const response = await fetch("/api/auth/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp, name, phone }),
+      const res = await signIn("credentials", {
+        redirect: false,
+        email,
+        otp,
+        name,
+        phone,
       });
 
-      const result = await response.json();
+      if (res?.error) {
+        throw new Error(res.error);
+      }
 
-      if (!result.success) throw new Error(result.error);
-
-      // Successfully verified! Follow the login link to set the session.
-      window.location.href = result.loginLink;
+      // Successfully verified! Redirect to account page.
+      window.location.href = "/account";
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Invalid OTP." });
     } finally {
