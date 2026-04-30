@@ -1,12 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, XCircle, Calendar, CreditCard, Dumbbell, MapPin, ShieldCheck, User } from "lucide-react";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { query } from "@/lib/db";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -15,17 +10,24 @@ interface Props {
 export default async function VerifyBookingPage({ params }: Props) {
   const { id } = await params;
 
-  const { data: booking, error } = await supabaseAdmin
-    .from("bookings")
-    .select(`
-      *,
-      profiles(full_name, avatar_url),
-      gyms(name, location, image)
-    `)
-    .eq("id", id)
-    .single();
+  let booking = null;
+  try {
+    const result = await query(
+      `SELECT b.*, 
+       json_build_object('full_name', u.full_name, 'avatar_url', null) as profiles,
+       json_build_object('name', g.name, 'location', g.location, 'image', g.image) as gyms
+       FROM bookings b
+       LEFT JOIN users u ON b.user_id = u.id
+       LEFT JOIN gyms g ON b.gym_id = g.id
+       WHERE b.id = $1`,
+      [id]
+    );
+    booking = result.rows[0];
+  } catch (err) {
+    console.error("Error fetching booking for verification", err);
+  }
 
-  if (error || !booking) {
+  if (!booking) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
         <div className="text-center space-y-6 max-w-sm w-full">
@@ -47,7 +49,7 @@ export default async function VerifyBookingPage({ params }: Props) {
   const now = new Date();
   const endDate = new Date(booking.end_date);
   const startDate = new Date(booking.start_date);
-  const isActive = booking.status === "active" && now >= startDate && now <= endDate;
+  const isActive = booking.status === "completed" && now >= startDate && now <= endDate;
   const isExpired = now > endDate;
 
   return (

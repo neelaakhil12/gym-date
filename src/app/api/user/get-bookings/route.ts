@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { query } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,37 +13,29 @@ export async function GET(req: NextRequest) {
 
     console.log(`[GetBookings] Fetching bookings for: ${email}`);
 
-    // 1. Try to get profile ID first
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    // 2. Fetch bookings
-    // We search by user_id (if profile exists) OR by customer_email directly (Case-Insensitive)
-    let query = supabaseAdmin
-      .from('bookings')
-      .select('*, gyms(name, location)')
-      .order('created_at', { ascending: false });
-
-    if (profile) {
-      // Use ilike for case-insensitive email matching
-      query = query.or(`user_id.eq.${profile.id},customer_email.ilike.${email}`);
-    } else {
-      query = query.ilike('customer_email', email);
+    // Fetch user id first
+    const userResult = await query('SELECT id FROM users WHERE email = $1', [email]);
+    
+    if (userResult.rows.length === 0) {
+      return NextResponse.json({ success: true, bookings: [] });
     }
 
-    const { data: bookings, error: bookingError } = await query;
+    const userId = userResult.rows[0].id;
 
-    if (bookingError) {
-      console.error("[GetBookings] Database error:", bookingError);
-      return NextResponse.json({ success: false, error: bookingError.message }, { status: 500 });
-    }
+    // Fetch bookings with gym details
+    const bookingsResult = await query(
+      `SELECT b.*, 
+       json_build_object('name', g.name, 'location', g.location) as gyms
+       FROM bookings b
+       LEFT JOIN gyms g ON b.gym_id = g.id
+       WHERE b.user_id = $1
+       ORDER BY b.created_at DESC`,
+      [userId]
+    );
 
-    console.log(`[GetBookings] Found ${bookings?.length || 0} bookings for ${email}`);
+    console.log(`[GetBookings] Found ${bookingsResult.rows.length} bookings for ${email}`);
 
-    return NextResponse.json({ success: true, bookings: bookings || [] });
+    return NextResponse.json({ success: true, bookings: bookingsResult.rows || [] });
   } catch (error: any) {
     console.error("[GetBookings] Critical error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { query } from "@/lib/db";
 
 export async function GET(req: Request) {
   try {
@@ -15,17 +10,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, error: "Gym ID is required" }, { status: 400 });
     }
 
-    const { data: plans, error } = await supabaseAdmin
-      .from('pricing_plans')
-      .select('*')
-      .eq('gym_id', gymId)
-      .order('price', { ascending: true });
-
-    if (error) throw error;
+    const result = await query(
+      'SELECT * FROM pricing_plans WHERE gym_id = $1 ORDER BY price ASC',
+      [gymId]
+    );
 
     return NextResponse.json({ 
       success: true, 
-      plans: plans || [] 
+      plans: result.rows || [] 
     });
   } catch (error: any) {
     console.error("Get Plans Error:", error);
