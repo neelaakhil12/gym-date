@@ -281,7 +281,7 @@ export async function getGlobalAmenities() {
   }
 }
 
-export async function getCoordinatesFromGoogle(locationStr: string) {
+export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ success: boolean; lat?: number; lng?: number; error?: string; }> {
   return { success: false, error: 'Google Maps API temporarily disabled in self-hosted mode.' };
 }
 

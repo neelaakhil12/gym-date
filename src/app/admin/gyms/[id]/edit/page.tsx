@@ -145,7 +145,7 @@ export default function EditGymPage() {
         if (plansError) throw plansError;
 
         if (plans && plans.length > 0) {
-          const formattedPlans = plans.map(p => ({
+          const formattedPlans = plans.map((p: any) => ({
             id: p.id,
             name: p.name,
             price: p.price.replace(/[^0-9]/g, '')
