@@ -37,7 +37,8 @@ export default function AdminLogin() {
         throw new Error(res.error);
       }
 
-      router.push("/admin/dashboard");
+      // 2. Success -> Force redirect to Admin Dashboard
+      window.location.href = "/admin/dashboard";
     } catch (err: any) {
       console.error(err);
       setError(err.message || "An unexpected error occurred during login.");
