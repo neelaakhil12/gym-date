@@ -11,15 +11,18 @@ export async function POST(req: Request) {
 
     const formattedPhone = phone && phone.startsWith('+91') ? phone : (phone ? `+91${phone}` : null);
 
-    // Using basic users table without lat/lng to prevent schema crashes
+    // Save all profile data including location
     const result = await query(
-      `INSERT INTO users (email, full_name, phone, role_id)
-       VALUES ($1, $2, $3, 'user')
+      `INSERT INTO users (email, full_name, phone, latitude, longitude, address, role_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'user')
        ON CONFLICT (email) DO UPDATE SET
        full_name = COALESCE(EXCLUDED.full_name, users.full_name),
-       phone = COALESCE(EXCLUDED.phone, users.phone)
+       phone = COALESCE(EXCLUDED.phone, users.phone),
+       latitude = COALESCE(EXCLUDED.latitude, users.latitude),
+       longitude = COALESCE(EXCLUDED.longitude, users.longitude),
+       address = COALESCE(EXCLUDED.address, users.address)
        RETURNING *`,
-      [email, name || null, formattedPhone]
+      [email, name || null, formattedPhone, lat || null, lng || null, address || null]
     );
 
     return NextResponse.json({ success: true, user: result.rows[0] });

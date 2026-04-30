@@ -19,7 +19,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      hasLocation: true, // Auto-pass location check since we don't have lat/lng in users table yet
       profile: profile || null
     });
   } catch (error: any) {

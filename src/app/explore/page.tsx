@@ -43,15 +43,14 @@ export default function ExplorePage() {
     const fetchUserLocation = async () => {
       // 1. Try to get from Profile first
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const email = session?.user?.email || nextAuthSession?.user?.email;
+        const email = nextAuthSession?.user?.email;
         if (email) {
           const response = await fetch(`/api/user/get-profile?email=${email}`);
           const result = await response.json();
           if (result.success && result.profile?.latitude) {
             setUserLocation({ 
-              lat: result.profile.latitude, 
-              lng: result.profile.longitude 
+              lat: parseFloat(result.profile.latitude), 
+              lng: parseFloat(result.profile.longitude) 
             });
             return; // Found in profile, we're good
           }
