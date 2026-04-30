@@ -282,6 +282,41 @@ export async function getGlobalAmenities() {
 }
 
 export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ success: boolean; lat?: number; lng?: number; error?: string; }> {
-  return { success: false, error: 'Google Maps API temporarily disabled in self-hosted mode.' };
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: 'Google Maps API key is missing.' };
+    }
+
+    // Clean up the location string if it's a maps URL
+    let query = locationStr;
+    if (locationStr.includes('google.com/maps')) {
+      // Try to extract coordinates from URL if present
+      const coordMatch = locationStr.match(/@([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
+      if (coordMatch) {
+        return { 
+          success: true, 
+          lat: parseFloat(coordMatch[1]), 
+          lng: parseFloat(coordMatch[2]) 
+        };
+      }
+    }
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
+    );
+
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results.length > 0) {
+      const { lat, lng } = data.results[0].geometry.location;
+      return { success: true, lat, lng };
+    }
+
+    return { success: false, error: data.error_message || data.status || 'Location not found.' };
+  } catch (error: any) {
+    console.error("Geocoding Error:", error);
+    return { success: false, error: error.message || 'Failed to connect to Google Maps API.' };
+  }
 }
 
