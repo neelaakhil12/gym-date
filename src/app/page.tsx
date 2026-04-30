@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Search, MapPin, ArrowRight, ShieldCheck, Zap, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getGyms, getCities, getPricingPlans } from "@/lib/supabase";
+import { getGyms, getCities, getPricingPlans } from "@/actions/publicActions";
 import { gyms as mockGyms, cities as mockCities, pricingPlans as mockPricingPlans } from "@/data/mockData";
 import GymCard from "@/components/GymCard";
 import CityCard from "@/components/CityCard";

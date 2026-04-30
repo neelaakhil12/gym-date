@@ -192,3 +192,70 @@ export async function deleteGlobalAmenity(id: string) {
     return { error: err.message || "Failed to delete amenity." };
   }
 }
+
+export async function getAdminStats() {
+  try {
+    const wallet = await query("SELECT balance FROM wallet WHERE id = 'platform_wallet'");
+    const gymsCount = await query("SELECT COUNT(*) FROM gyms");
+    const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
+    return {
+      walletBalance: wallet.rows[0]?.balance || 0,
+      totalGyms: parseInt(gymsCount.rows[0]?.count) || 0,
+      totalUsers: parseInt(usersCount.rows[0]?.count) || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching admin stats", error);
+    return { walletBalance: 0, totalGyms: 0, totalUsers: 0 };
+  }
+}
+
+export async function getAllBookings() {
+  try {
+    const result = await query(
+      `SELECT b.*, u.email as user_email, g.name as gym_name
+       FROM bookings b
+       LEFT JOIN users u ON b.user_id = u.id
+       LEFT JOIN gyms g ON b.gym_id = g.id
+       ORDER BY b.created_at DESC`
+    );
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching bookings", error);
+    return [];
+  }
+}
+
+export async function getAllProfiles() {
+  try {
+    const result = await query(
+      "SELECT u.*, r.name as role_name FROM users u LEFT JOIN roles r ON u.role_id = r.id ORDER BY u.created_at DESC"
+    );
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching profiles", error);
+    return [];
+  }
+}
+
+export async function getUniqueUsersCount() {
+  try {
+    const result = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
+    return parseInt(result.rows[0]?.count) || 0;
+  } catch (error) {
+    console.error("Error fetching unique users count", error);
+    return 0;
+  }
+}
+
+export async function getPartnerGym(partnerId: string) {
+  try {
+    const result = await query(
+      "SELECT * FROM gyms WHERE partner_id = $1 LIMIT 1",
+      [partnerId]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error("Error fetching partner gym", error);
+    return null;
+  }
+}

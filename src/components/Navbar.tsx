@@ -29,21 +29,7 @@ const Navbar = () => {
   const pathname = usePathname();
   const { data: nextAuthSession } = useSession();
 
-  const [supabaseSession, setSupabaseSession] = useState<any>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSupabaseSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSupabaseSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const hasSession = !!supabaseSession || !!nextAuthSession;
+  const hasSession = !!nextAuthSession;
 
   // Generate Initials
   const getInitials = (name: string) => {
@@ -55,7 +41,7 @@ const Navbar = () => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const displayName = nextAuthSession?.user?.name || supabaseSession?.user?.user_metadata?.full_name || "Gym User";
+  const displayName = nextAuthSession?.user?.name || "Gym User";
   const initials = getInitials(displayName);
 
   useEffect(() => {

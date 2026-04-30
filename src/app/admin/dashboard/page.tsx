@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { getAdminStats, getAllBookings, getGyms, getUniqueUsersCount } from "@/lib/supabase";
+import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
+import { getGyms, getCities } from "@/actions/publicActions";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2 } from "lucide-react";
-import { getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
-import { getCities } from "@/lib/supabase";
+import { toast } from "react-hot-toast";
 import { toast } from "react-hot-toast";
 
 // Platform Analytics Dashboard Refresh Fix

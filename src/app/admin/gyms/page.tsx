@@ -15,7 +15,7 @@ import {
   Trash2,
   Percent
 } from "lucide-react";
-import { getGyms } from "@/lib/supabase";
+import { getGyms } from "@/actions/publicActions";
 import { deleteGym, updateGymOffer } from "@/actions/gymActions";
 
 export default function AdminGyms() {

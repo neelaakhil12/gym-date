@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, Star, MapPin, Clock, User, Wifi, Wind, Car, ShieldCheck, Dumbbell, Droplets, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { getGymById, getPricingPlansByGymId } from "@/lib/supabase";
+import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { pricingPlans as mockPlans } from "@/data/mockData";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";

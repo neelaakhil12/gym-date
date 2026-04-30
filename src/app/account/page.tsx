@@ -30,7 +30,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { supabase } from "@/lib/supabase";
+
 import { generateInvoicePDF } from "@/lib/invoice";
 import { gyms as mockGyms } from "@/data/mockData";
 import { getGyms } from "@/lib/supabase";
@@ -52,8 +52,7 @@ export default function AccountPage() {
   useEffect(() => {
     const fetchUserAndGyms = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        let email = session?.user?.email || nextAuthSession?.user?.email;
+        let email = nextAuthSession?.user?.email;
 
         // Fetch real gyms using the helper (which has mock fallback)
         const dbGyms = await getGyms();
@@ -154,11 +153,8 @@ export default function AccountPage() {
 
   const handleLogout = async () => {
     try {
-      // Clear both Supabase and NextAuth sessions
-      await Promise.all([
-        supabase.auth.signOut(),
-        signOut({ redirect: false })
-      ]);
+      // Clear NextAuth session
+      await signOut({ redirect: false });
       // Redirect to home
       window.location.href = "/";
     } catch (error) {
