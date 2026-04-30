@@ -16,7 +16,7 @@ import { gyms as mockGyms } from "@/data/mockData";
 import GymCard from "@/components/GymCard";
 import BookingModal from "@/components/BookingModal";
 import { useSession } from "next-auth/react";
-import { supabase } from "@/actions/publicActions";
+import { supabase } from "@/lib/supabase";
 
 const filters = {
   distance: ["1km", "3km", "5km", "10km", "20km"],

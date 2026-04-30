@@ -7,7 +7,6 @@ import { getGyms, getCities } from "@/actions/publicActions";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { toast } from "react-hot-toast";
 
 // Platform Analytics Dashboard Refresh Fix
 
