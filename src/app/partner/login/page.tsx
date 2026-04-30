@@ -1,21 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Store } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-
-import { signIn } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 
 export default function PartnerLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated" && (session?.user as any)?.role === "partner") {
+      router.push("/partner/dashboard");
+    }
+  }, [session, status, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +31,7 @@ export default function PartnerLogin() {
         redirect: false,
         email,
         password,
-        role: "partner", // specify role check
+        role: "partner",
       });
 
       if (res?.error) {

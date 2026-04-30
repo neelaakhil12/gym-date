@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Lock } from "lucide-react";
-
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useSession, signIn } from "next-auth/react";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -15,28 +12,13 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { data: nextAuthSession } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
-    const checkExistingAdmin = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userEmail = session?.user?.email || nextAuthSession?.user?.email;
-
-        if (userEmail) {
-          const response = await fetch(`/api/user/get-profile?email=${userEmail}`);
-          const result = await response.json();
-          
-          if (result.success && result.profile?.role_id === "super_admin") {
-            router.push("/admin/dashboard");
-          }
-        }
-      } catch (err) {
-        console.error("Error checking existing admin session:", err);
-      }
-    };
-    checkExistingAdmin();
-  }, [nextAuthSession, router]);
+    if (status === "authenticated" && (session?.user as any)?.role === "super_admin") {
+      router.push("/admin/dashboard");
+    }
+  }, [session, status, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,19 +26,17 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      // 1. Sign in with NextAuth Credentials Provider
       const res = await signIn("credentials", {
         redirect: false,
         email,
         password,
-        role: "admin", // Tell the provider this is an admin login attempt
+        role: "admin",
       });
 
       if (res?.error) {
         throw new Error(res.error);
       }
 
-      // 2. Success -> Redirect
       router.push("/admin/dashboard");
     } catch (err: any) {
       console.error(err);
