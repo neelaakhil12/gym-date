@@ -34,25 +34,30 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function loadData() {
-      setLoading(true);
-      
-      const adminStats = await getAdminStats();
-      setStats(adminStats);
+      try {
+        setLoading(true);
+        
+        const adminStats = await getAdminStats();
+        setStats(adminStats);
 
-      const allGyms = await getGyms();
-      const allBookings = await getAllBookings();
-      const pStats = await getPlatformStats();
-      const allCities = await getCities();
-      const visibility = await getSectionVisibility();
-      const amenities = await getGlobalAmenities();
-      
-      setGymData(allGyms);
-      setBookings(allBookings);
-      setPlatformStats(pStats);
-      setCitiesData(allCities);
-      setIsStatsVisible(visibility);
-      setGlobalAmenities(amenities);
-      setLoading(false);
+        const allGyms = await getGyms();
+        const allBookings = await getAllBookings();
+        const pStats = await getPlatformStats();
+        const allCities = await getCities();
+        const visibility = await getSectionVisibility();
+        const amenities = await getGlobalAmenities();
+        
+        setGymData(allGyms);
+        setBookings(allBookings);
+        setPlatformStats(pStats);
+        setCitiesData(allCities);
+        setIsStatsVisible(visibility);
+        setGlobalAmenities(amenities);
+      } catch (err) {
+        console.error("Dashboard Load Error:", err);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, []);

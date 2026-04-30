@@ -15,7 +15,7 @@ import {
   Banknote,
   ClipboardList
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { useSession, signOut } from "next-auth/react";
 
 const adminLinks = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -34,45 +34,29 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const publicAdminPaths = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
+    const publicAdminPaths = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
+    
+    if (status === "loading") return;
 
-      if (!session) {
-        if (!publicAdminPaths.includes(pathname)) {
-          router.push("/admin");
-        }
-        return;
-      }
-
-      // Session exists — but we MUST verify it's the super admin, not a regular user
+    if (!session) {
       if (!publicAdminPaths.includes(pathname)) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role_id")
-          .eq("id", session.user.id)
-          .single();
-
-        if (!profile || profile.role_id !== "super_admin") {
-          // Sign them out of Supabase and kick back to login
-          await supabase.auth.signOut();
-          router.push("/admin");
-          return;
-        }
-
-        setEmail(session.user.email || "Super Admin");
+        router.push("/admin");
       }
-    };
-    checkAuth();
-  }, [pathname, router]);
+      return;
+    }
+
+    // Role check (Super Admin only)
+    if (session.user?.role !== "super_admin" && !publicAdminPaths.includes(pathname)) {
+      signOut({ callbackUrl: "/admin" });
+    }
+  }, [session, status, pathname, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/admin");
+    await signOut({ callbackUrl: "/admin" });
   };
 
   // If we are on a public admin page, don't show the dashboard sidebar
@@ -144,7 +128,7 @@ export default function AdminLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  {email || "Super Admin"}
+                  {session?.user?.email || "Super Admin"}
                 </p>
                 <p className="text-xs text-gray-400 truncate">Platform Manager</p>
               </div>
