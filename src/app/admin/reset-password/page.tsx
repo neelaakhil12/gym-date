@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Lock, CheckCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { resetPasswordWithToken } from "@/actions/authActions";
 import { useSearchParams } from "next/navigation";
 
-export default function AdminResetPassword() {
+function AdminResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,10 +70,10 @@ export default function AdminResetPassword() {
           <ShieldCheck className="w-8 h-8 text-secondary" />
         </div>
         <h2 className="text-3xl font-black text-secondary">
-          Set Admin Password
+          Set New Password
         </h2>
         <p className="mt-2 text-sm text-gray-600">
-          Create a new secure password for your Super Admin account.
+          Create a strong password for your admin account.
         </p>
       </div>
 
@@ -89,9 +89,9 @@ export default function AdminResetPassword() {
             <div className="text-center py-4">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">Password Updated!</h3>
-              <p className="text-sm text-gray-500 mb-6">Your admin password has been successfully reset. Redirecting to admin login...</p>
+              <p className="text-sm text-gray-500 mb-6">The admin password has been successfully reset. Redirecting you to login...</p>
               <Link href="/admin" className="text-secondary font-bold hover:underline">
-                Go to admin login now
+                Go to login now
               </Link>
             </div>
           ) : (
@@ -140,5 +140,17 @@ export default function AdminResetPassword() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminResetPassword() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-secondary"></div>
+      </div>
+    }>
+      <AdminResetPasswordForm />
+    </Suspense>
   );
 }

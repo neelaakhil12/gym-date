@@ -1,13 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Lock, CheckCircle } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { resetPasswordWithToken } from "@/actions/authActions";
-import { useSearchParams } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
 
-export default function ResetPassword() {
+function ResetPasswordForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -140,5 +135,17 @@ export default function ResetPassword() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

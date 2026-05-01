@@ -57,14 +57,12 @@ export async function createGymAndPartner(formData: FormData) {
     const checkUser = await query("SELECT id FROM users WHERE email = $1", [partnerEmail]);
     if (checkUser.rows.length > 0) {
       partnerId = checkUser.rows[0].id;
-      // Ensure they have the partner role
-      await query("UPDATE users SET role_id = 'partner' WHERE id = $1", [partnerId]);
+      // Ensure they have the partner role and update password
+      await query("UPDATE users SET role_id = 'partner', password_hash = $1 WHERE id = $2", [hashedPassword, partnerId]);
     } else {
-      // It's safe to add a 'password' column if it doesn't exist, we'll try updating, if error we'll add it later
-      // But actually we should just insert to users
       const insertUser = await query(
-        "INSERT INTO users (email, role_id) VALUES ($1, 'partner') RETURNING id",
-        [partnerEmail]
+        "INSERT INTO users (email, role_id, password_hash) VALUES ($1, 'partner', $2) RETURNING id",
+        [partnerEmail, hashedPassword]
       );
       partnerId = insertUser.rows[0].id;
     }
