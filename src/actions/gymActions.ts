@@ -10,7 +10,8 @@ import path from "path";
 async function uploadImage(file: File): Promise<string | null> {
   if (!file || file.size === 0) return null;
   try {
-    const uploadDir = process.env.UPLOAD_DIR || './public/uploads/gyms';
+    // Ensure we are using an absolute path to the public directory
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'gyms');
     await mkdir(uploadDir, { recursive: true });
     
     const ext = file.name.split(".").pop() || "jpg";
@@ -20,8 +21,8 @@ async function uploadImage(file: File): Promise<string | null> {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
 
-    const baseUrl = process.env.NEXT_PUBLIC_UPLOAD_URL || '/uploads';
-    return `${baseUrl}/gyms/${fileName}`;
+    // Return the URL relative to the public root
+    return `/uploads/gyms/${fileName}`;
   } catch (error) {
     console.error("Error uploading image:", error);
     return null;
@@ -351,6 +352,8 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
 export async function deleteGlobalAmenity(name: string) {
   try {
     const { query } = require('@/lib/db');
+    // We don't check rowCount here, we just want to ensure it's GONE from the DB.
+    // If it was mock data, it won't be in the DB, so deleting it is technically a success.
     await query('DELETE FROM amenities WHERE name = $1', [name]);
     return { success: true };
   } catch (err: any) {
