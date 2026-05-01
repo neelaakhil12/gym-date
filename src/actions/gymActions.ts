@@ -292,9 +292,28 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
 
     console.log('SERVER ACTION: Fetching coordinates for:', locationStr);
 
-    // 1. If it's a regular Google Maps URL, try to extract coordinates directly from the string
-    // This is faster than calling the API
-    const coordMatch = locationStr.match(/@([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
+    let query = locationStr.trim();
+
+    // 1. Handle short links (goo.gl, maps.app.goo.gl)
+    if (query.includes('goo.gl') || query.includes('maps.app.goo.gl')) {
+      try {
+        console.log('SERVER ACTION: Resolving short link...');
+        const resolveResponse = await fetch(query, { 
+          method: 'HEAD', 
+          redirect: 'follow',
+          headers: { 'User-Agent': 'Mozilla/5.0' } 
+        });
+        if (resolveResponse.url) {
+          query = resolveResponse.url;
+          console.log('SERVER ACTION: Resolved to:', query);
+        }
+      } catch (e) {
+        console.error('SERVER ACTION: Failed to resolve short link:', e);
+      }
+    }
+
+    // 2. If it's a regular Google Maps URL (either original or resolved), try regex extraction
+    const coordMatch = query.match(/@([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
     if (coordMatch) {
       console.log('SERVER ACTION: Extracted coordinates from URL regex');
       return { 
@@ -303,10 +322,6 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
         lng: parseFloat(coordMatch[2]) 
       };
     }
-
-    // 2. Clean up the query
-    // If it's a short link or a search URL, we let Google Geocoding API handle it as the "address"
-    const query = locationStr.trim();
 
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
