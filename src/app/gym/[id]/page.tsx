@@ -102,11 +102,10 @@ export default function GymDetailsPage() {
             {/* Gallery */}
             <div className="mb-10">
               <div className="relative h-[300px] md:h-[500px] rounded-[32px] overflow-hidden mb-4 shadow-sm border border-gray-100">
-                <Image 
+                <img 
                   src={galleryImages[selectedImage]} 
                   alt={gym.name}
-                  fill
-                  className="object-cover transition-opacity duration-300"
+                  className="w-full h-full object-cover transition-opacity duration-300"
                 />
               </div>
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -116,7 +115,7 @@ export default function GymDetailsPage() {
                     onClick={() => setSelectedImage(idx)}
                     className={`relative w-24 h-16 md:w-32 md:h-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all ${selectedImage === idx ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'}`}
                   >
-                    <Image src={img} alt={`Thumbnail ${idx}`} fill className="object-cover" />
+                    <img src={img} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
