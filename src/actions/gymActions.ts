@@ -91,12 +91,13 @@ export async function createGymAndPartner(formData: FormData) {
 
     const gymInsert = await query(
       `INSERT INTO gyms 
-       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', 0, 0) RETURNING id`,
+       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', 0, 0, $9, $10) RETURNING id`,
       [
         partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
         description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
-        galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"]
+        galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"],
+        lat, lng
       ]
     );
 
@@ -184,11 +185,16 @@ export async function updateGym(gymId: string, formData: FormData) {
       }
     }
 
+    const latStr = formData.get("lat") as string;
+    const lngStr = formData.get("lng") as string;
+    const lat = latStr && !isNaN(parseFloat(latStr)) ? parseFloat(latStr) : null;
+    const lng = lngStr && !isNaN(parseFloat(lngStr)) ? parseFloat(lngStr) : null;
+
     await query(
-      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7 WHERE id = $8",
+      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9 WHERE id = $10",
       [
         gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, gymId
+        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, gymId
       ]
     );
 
