@@ -16,11 +16,10 @@ const GymCard: React.FC<GymCardProps> = ({ gym, onBuyNow }) => {
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 card-hover group cursor-pointer h-full flex flex-col">
           {/* Image Section */}
           <div className="relative h-56 w-full bg-gray-100 flex-shrink-0">
-            <Image
+            <img
               src={gym.image || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800"}
               alt={gym.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             />
             
             <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
