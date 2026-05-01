@@ -10,6 +10,13 @@ const handler = NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      authorization: {
+        params: {
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -42,13 +49,9 @@ const handler = NextAuth({
 
           const user = userResult.rows[0];
 
-          // If they don't have a password set, but are trying to log in (fallback for migration)
+          // If they don't have a password set, they must use the forgot password flow
           if (!user.password_hash) {
-            // Hash the password they just provided and set it as their permanent password
-            // This allows the first login attempt to set the password during the migration
-            const hash = await bcrypt.hash(password, 10);
-            await query("UPDATE users SET password_hash = $1 WHERE id = $2", [hash, user.id]);
-            user.password_hash = hash;
+            throw new Error("No password set for this account. Please use forgot password.");
           }
 
           const isMatch = await bcrypt.compare(password, user.password_hash);
