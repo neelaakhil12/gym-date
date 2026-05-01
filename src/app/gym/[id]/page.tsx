@@ -96,7 +96,7 @@ export default function GymDetailsPage() {
           Back to Explore
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           {/* Left Column (Images & Info) */}
           <div className="lg:col-span-2">
             {/* Gallery */}
