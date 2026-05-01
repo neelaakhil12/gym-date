@@ -202,7 +202,17 @@ export default function GymDetailsPage() {
             {gym.description && (
               <div className="mb-12">
                 <h3 className="text-xl font-bold text-secondary mb-5">About</h3>
-                <div className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">{gym.description}</div>
+                <div className="text-gray-600 leading-relaxed text-sm">
+                  {gym.description.split('\n').filter((line: string) => line.trim() !== '').length > 1 ? (
+                    <ul className="list-disc pl-5 space-y-2">
+                      {gym.description.split('\n').filter((line: string) => line.trim() !== '').map((line: string, idx: number) => (
+                        <li key={idx}>{line.trim()}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="whitespace-pre-line">{gym.description}</p>
+                  )}
+                </div>
               </div>
             )}
 
