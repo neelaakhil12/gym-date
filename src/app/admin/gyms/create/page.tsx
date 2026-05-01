@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Dumbbell, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent } from "lucide-react";
-import { createGymAndPartner, getCoordinatesFromGoogle, getGlobalAmenities } from "@/actions/gymActions";
+import { createGymAndPartner, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
 
 export default function CreateGymPage() {
   const router = useRouter();
@@ -26,6 +26,20 @@ export default function CreateGymPage() {
     }
     fetchAmenities();
   }, []);
+
+  const handleGlobalAmenityDelete = async (amenityName: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (confirm(`Are you sure you want to permanently delete "${amenityName}" from the global system?`)) {
+      const result = await deleteGlobalAmenity(amenityName);
+      if (result.success) {
+        setDefaultAmenitiesList(prev => prev.filter(a => a !== amenityName));
+      } else {
+        alert(result.error || "Failed to delete amenity");
+      }
+    }
+  };
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
@@ -468,14 +482,23 @@ export default function CreateGymPage() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {defaultAmenitiesList.map((amenity) => (
-                  <label key={amenity} className="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input 
-                      type="checkbox" 
-                      name="amenities" 
-                      value={amenity}
-                      className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                    />
-                    <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
+                  <label key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <div className="flex items-center space-x-3">
+                      <input 
+                        type="checkbox" 
+                        name="amenities" 
+                        value={amenity}
+                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleGlobalAmenityDelete(amenity, e)}
+                      className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </label>
                 ))}
                 {customAmenities.map((amenity) => (

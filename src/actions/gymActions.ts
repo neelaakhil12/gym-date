@@ -347,3 +347,14 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
   }
 }
 
+
+export async function deleteGlobalAmenity(name: string) {
+  try {
+    const { query } = require('@/lib/db');
+    await query('DELETE FROM amenities WHERE name = $1', [name]);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error deleting amenity:", err);
+    return { error: "Failed to delete amenity." };
+  }
+}
