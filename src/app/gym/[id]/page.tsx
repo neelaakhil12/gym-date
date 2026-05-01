@@ -293,7 +293,7 @@ export default function GymDetailsPage() {
                 ) : gym.status === "Closed" ? (
                   "Currently Closed"
                 ) : selectedPlanIdx !== null && plans[selectedPlanIdx] ? (
-                  `Pay ₹${Number(plans[selectedPlanIdx].price).toLocaleString()} — Book Now`
+                  "Pay ₹" + Number(plans[selectedPlanIdx].price).toLocaleString() + " — Book Now"
                 ) : (
                   'Select a Plan'
                 )}
