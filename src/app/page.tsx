@@ -173,9 +173,19 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {gyms.map((gym) => (
+            {gyms.slice(0, 4).map((gym) => (
               <GymCard key={gym.id} gym={gym} />
             ))}
+          </div>
+
+          <div className="flex justify-center mt-12">
+            <Link 
+              href="/explore" 
+              className="bg-primary text-white px-8 py-3 md:px-10 md:py-4 rounded-full text-sm md:text-lg font-bold hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center space-x-2"
+            >
+              <span>View More Gyms</span>
+              <ArrowRight className="h-5 w-5" />
+            </Link>
           </div>
         </div>
       </section>
