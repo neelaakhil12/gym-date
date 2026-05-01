@@ -10,8 +10,8 @@ import path from "path";
 async function uploadImage(file: File): Promise<string | null> {
   if (!file || file.size === 0) return null;
   try {
-    // Ensure we are using an absolute path to the public directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'gyms');
+    // Save to the persistent directory handled by Nginx
+    const uploadDir = '/var/www/gymdate_uploads/gyms';
     await mkdir(uploadDir, { recursive: true });
     
     const ext = file.name.split(".").pop() || "jpg";
@@ -21,7 +21,7 @@ async function uploadImage(file: File): Promise<string | null> {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
 
-    // Return the URL relative to the public root
+    // Return the URL that Nginx will serve
     return `/uploads/gyms/${fileName}`;
   } catch (error) {
     console.error("Error uploading image:", error);
