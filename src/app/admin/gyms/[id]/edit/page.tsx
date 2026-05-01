@@ -51,7 +51,8 @@ export default function EditGymPage() {
         console.error(error);
         alert("Unable to retrieve your location. Please ensure GPS is enabled.");
         setLocating(false);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 

@@ -305,7 +305,7 @@ export default function ExplorePage() {
                           if (navigator.geolocation) {
                             navigator.geolocation.getCurrentPosition((pos) => {
                               setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                            });
+                            }, (err) => console.error(err), { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
                           }
                         }}
                         className="mt-4 px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20"
