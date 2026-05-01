@@ -82,7 +82,7 @@ export default function GymDetailsPage() {
 
   const isClosed = gym.status === "Closed";
   const selectedPlan = selectedPlanIdx !== null ? plans[selectedPlanIdx] : null;
-  const selectedPrice = selectedPlan ? Number(selectedPlan.price) : 0;
+  const selectedPrice = selectedPlan ? Number(String(selectedPlan.price).replace(/[^0-9.]/g, '')) : 0;
 
   let buttonLabel = "Select a Plan";
   if (paymentLoading) {
@@ -125,8 +125,8 @@ export default function GymDetailsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-28 md:pt-36 pb-20">
+    <div className="bg-gray-50 min-h-screen">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
         <button
           onClick={() => router.back()}
           className="flex items-center text-gray-500 hover:text-secondary mb-8 transition-colors text-sm font-medium"
@@ -264,7 +264,7 @@ export default function GymDetailsPage() {
                         <span className={"text-sm " + (selectedPlanIdx === idx ? "font-medium" : "")}>{plan.name}</span>
                       </div>
                       <span className={"text-sm font-bold " + (selectedPlanIdx === idx ? "text-secondary" : "text-gray-900")}>
-                        {"Rs." + Number(plan.price).toLocaleString()}
+                        {"Rs." + Number(String(plan.price).replace(/[^0-9.]/g, '')).toLocaleString()}
                       </span>
                     </label>
                   ))
