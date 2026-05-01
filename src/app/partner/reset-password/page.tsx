@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import { Lock, CheckCircle } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { resetPasswordWithToken } from "@/actions/authActions";
 
 function ResetPasswordForm() {
   const [password, setPassword] = useState("");
