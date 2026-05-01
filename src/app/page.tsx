@@ -15,8 +15,8 @@ import { getPlatformStats, getSectionVisibility } from "@/actions/adminActions";
 import AnimatedCounter from "@/components/AnimatedCounter";
 
 export default function Home() {
-  const [gyms, setGyms] = useState(mockGyms);
-  const [cities, setCities] = useState(mockCities);
+  const [gyms, setGyms] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
   const [platformStats, setPlatformStats] = useState<any[]>([]);
   const [isStatsVisible, setIsStatsVisible] = useState<boolean | null>(null);
 
