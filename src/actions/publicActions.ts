@@ -15,8 +15,22 @@ export async function getGyms() {
 
 export async function getGymById(id: string) {
   try {
+    console.log("Fetching gym by ID:", id);
     const result = await query('SELECT * FROM gyms WHERE id = $1', [id]);
-    return result.rows.length > 0 ? result.rows[0] : mockGyms.find(g => g.id === id) || null;
+    if (result.rows.length > 0) {
+      console.log("Gym found in database:", result.rows[0].name);
+      return result.rows[0];
+    }
+    
+    console.log("Gym not found in database, checking mock data...");
+    const mockGym = mockGyms.find(g => g.id === id);
+    if (mockGym) {
+      console.log("Gym found in mock data:", mockGym.name);
+      return mockGym;
+    }
+    
+    console.log("Gym not found anywhere for ID:", id);
+    return null;
   } catch (error) {
     console.error('Error fetching gym by id:', error);
     return mockGyms.find(g => g.id === id) || null;
