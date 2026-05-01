@@ -6,8 +6,6 @@ import Image from "next/image";
 import { ArrowLeft, Star, MapPin, Clock, User, Wifi, Wind, Car, ShieldCheck, Dumbbell, Droplets, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { pricingPlans as mockPlans } from "@/data/mockData";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useRazorpay } from "@/hooks/useRazorpay";
 
 // Helper function to map string amenities to icons
@@ -84,8 +82,6 @@ export default function GymDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
-      
       <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-28 md:pt-36 pb-20">
         {/* Back Button */}
         <button 
@@ -312,9 +308,6 @@ export default function GymDetailsPage() {
             </div>
           </div>
         </div>
-      </main>
-      
-      <Footer />
     </div>
   );
 }
