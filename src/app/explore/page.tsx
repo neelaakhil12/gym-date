@@ -299,6 +299,18 @@ export default function ExplorePage() {
                         ? "We need your location to show gyms within a specific distance." 
                         : "We couldn't find any gyms matching your criteria. Try adjusting your filters."}
                     </p>
+                    <div className="text-xs text-left bg-gray-100 p-4 mt-4 rounded w-full overflow-auto text-black">
+                      <p><strong>Debug Info:</strong></p>
+                      <p>User Loc: {JSON.stringify(userLocation)}</p>
+                      <p>Gyms in DB: {gyms.length}</p>
+                      {gymsWithDistance.slice(0, 3).map((g, i) => (
+                        <div key={i} className="mt-2 border-t border-gray-300 pt-2">
+                          <p>Gym: {g.name}</p>
+                          <p>Lat: {String(g.lat)} | Lng: {String(g.lng)}</p>
+                          <p>Distance: {String(g.calculatedDistance)}</p>
+                        </div>
+                      ))}
+                    </div>
                     {activeDistance !== "all" && !userLocation && (
                       <button 
                         onClick={() => {
