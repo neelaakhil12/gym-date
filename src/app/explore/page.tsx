@@ -91,7 +91,7 @@ export default function ExplorePage() {
   const gymsWithDistance = gyms.map(gym => ({
     ...gym,
     calculatedDistance: (userLocation && gym.lat && gym.lng)
-      ? calculateDistance(userLocation.lat, userLocation.lng, gym.lat, gym.lng)
+      ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(gym.lat as string), parseFloat(gym.lng as string))
       : null
   }));
 
