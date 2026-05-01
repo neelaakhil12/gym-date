@@ -286,32 +286,43 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
   try {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
+      console.error('SERVER ACTION: Google Maps API key is missing.');
       return { success: false, error: 'Google Maps API key is missing.' };
     }
 
-    // Clean up the location string if it's a maps URL
-    let query = locationStr;
-    if (locationStr.includes('google.com/maps')) {
-      // Try to extract coordinates from URL if present
-      const coordMatch = locationStr.match(/@([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
-      if (coordMatch) {
-        return { 
-          success: true, 
-          lat: parseFloat(coordMatch[1]), 
-          lng: parseFloat(coordMatch[2]) 
-        };
-      }
+    console.log('SERVER ACTION: Fetching coordinates for:', locationStr);
+
+    // 1. If it's a regular Google Maps URL, try to extract coordinates directly from the string
+    // This is faster than calling the API
+    const coordMatch = locationStr.match(/@([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
+    if (coordMatch) {
+      console.log('SERVER ACTION: Extracted coordinates from URL regex');
+      return { 
+        success: true, 
+        lat: parseFloat(coordMatch[1]), 
+        lng: parseFloat(coordMatch[2]) 
+      };
     }
+
+    // 2. Clean up the query
+    // If it's a short link or a search URL, we let Google Geocoding API handle it as the "address"
+    const query = locationStr.trim();
 
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
     );
 
     const data = await response.json();
+    console.log('SERVER ACTION: Google API status:', data.status);
 
     if (data.status === 'OK' && data.results.length > 0) {
       const { lat, lng } = data.results[0].geometry.location;
+      console.log('SERVER ACTION: Found coordinates:', lat, lng);
       return { success: true, lat, lng };
+    }
+
+    if (data.status === 'ZERO_RESULTS') {
+      return { success: false, error: 'Google could not find this location. Try entering the city name instead.' };
     }
 
     return { success: false, error: data.error_message || data.status || 'Location not found.' };
