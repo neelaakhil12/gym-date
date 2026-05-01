@@ -231,6 +231,7 @@ export async function deleteGym(gymId: string) {
     
     revalidatePath("/admin/gyms");
     revalidatePath("/explore");
+    revalidatePath("/");
     return { success: true };
   } catch (err: any) {
     console.error("Error in deleteGym process:", err);

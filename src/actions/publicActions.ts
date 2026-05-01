@@ -6,10 +6,10 @@ import { gyms as mockGyms, cities as mockCities, pricingPlans as mockPricingPlan
 export async function getGyms() {
   try {
     const result = await query('SELECT * FROM gyms ORDER BY created_at DESC');
-    return result.rows.length > 0 ? result.rows : mockGyms;
+    return result.rows; // Return whatever is in the DB, even if empty
   } catch (error) {
     console.error('Error fetching gyms:', error);
-    return mockGyms;
+    return mockGyms; // Only fallback to mock if the DB connection fails
   }
 }
 
