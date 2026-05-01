@@ -351,9 +351,7 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
 
 export async function deleteGlobalAmenity(name: string) {
   try {
-    const { query } = require('@/lib/db');
-    // We don't check rowCount here, we just want to ensure it's GONE from the DB.
-    // If it was mock data, it won't be in the DB, so deleting it is technically a success.
+    // We use the 'query' imported at the top of the file
     await query('DELETE FROM amenities WHERE name = $1', [name]);
     return { success: true };
   } catch (err: any) {
