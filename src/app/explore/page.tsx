@@ -140,8 +140,8 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-10">
-          <aside className="w-full lg:w-64 space-y-8">
+        <div className="flex flex-col lg:flex-row gap-10 items-start">
+          <aside className="w-full lg:w-64 space-y-8 lg:sticky lg:top-36">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-secondary uppercase tracking-tighter italic">Filters</h3>
