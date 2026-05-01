@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Lock, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { resetPasswordWithToken } from "@/actions/authActions";
+import { useSearchParams } from "next/navigation";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -13,21 +14,23 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const token = searchParams.get("token");
+  const email = searchParams.get("email");
 
   useEffect(() => {
-    // Check if we are actually in a recovery session
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        // If no session, it might be that the token expired or is invalid
-        // But sometimes Supabase takes a second to process the hash
-      }
-    };
-    checkSession();
-  }, []);
+    if (!token || !email) {
+      setError("Invalid reset link. Please request a new one.");
+    }
+  }, [token, email]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!token || !email) {
+      setError("Invalid reset link.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -41,11 +44,12 @@ export default function ResetPassword() {
     setError("");
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
-      });
+      const result = await resetPasswordWithToken(email, token, password);
 
-      if (updateError) throw updateError;
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
 
       setSuccess(true);
       // Wait a bit and redirect
@@ -53,7 +57,7 @@ export default function ResetPassword() {
         router.push("/partner/login");
       }, 3000);
     } catch (err: any) {
-      setError(err.message || "Failed to update password.");
+      setError("Failed to update password. Please try again.");
     } finally {
       setLoading(false);
     }
