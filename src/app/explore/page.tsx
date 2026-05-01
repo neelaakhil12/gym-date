@@ -99,7 +99,7 @@ export default function ExplorePage() {
     // Distance Filter
     if (activeDistance !== "all") {
       const maxDistance = parseInt(activeDistance);
-      if (!gym.calculatedDistance || gym.calculatedDistance > maxDistance) return false;
+      if (gym.calculatedDistance === null || isNaN(gym.calculatedDistance) || gym.calculatedDistance > maxDistance) return false;
     }
 
     // Name Search
