@@ -13,8 +13,6 @@ const handler = NextAuth({
       authorization: {
         params: {
           prompt: "select_account",
-          access_type: "offline",
-          response_type: "code"
         }
       }
     }),
