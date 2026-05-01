@@ -161,24 +161,8 @@ export default function GymDetailsPage() {
             {gym.description && (
               <div className="mb-12">
                 <h3 className="text-xl font-bold text-secondary mb-5">About</h3>
-                <div className="text-gray-600 leading-relaxed text-sm">
-                  {gym.description.split('\n').map((line: string, idx: number) => {
-                    const trimmed = line.trim();
-                    if (!trimmed) return <div key={idx} className="h-2"></div>;
-                    
-                    // Detect if line is a point (starts with number, dash, asterisk, or bullet)
-                    if (/^([-*•]|\d+\.)/.test(trimmed)) {
-                      const cleanText = trimmed.replace(/^([-*•]|\d+\.)\s*/, '');
-                      return (
-                        <div key={idx} className="flex items-start mt-1.5 ml-2">
-                          <span className="mr-2 font-bold text-primary">•</span>
-                          <span>{cleanText}</span>
-                        </div>
-                      );
-                    }
-                    
-                    return <p key={idx} className="mt-3 first:mt-0">{trimmed}</p>;
-                  })}
+                <div className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
+                  {gym.description}
                 </div>
               </div>
             )}

@@ -457,10 +457,10 @@ export default function EditGymPage() {
                 </div>
                 <textarea
                   name="description"
-                  rows={4}
+                  rows={8}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all resize-none"
+                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                 />
               </div>
             </div>
