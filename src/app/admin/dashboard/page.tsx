@@ -549,7 +549,7 @@ export default function AdminDashboard() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(null)}></div>
           <div className="relative bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden border border-gray-200 flex flex-col md:flex-row h-[80vh]">
             {/* Left: Form */}
-            <div className="w-full md:w-1/3 p-8 border-r border-gray-100 bg-gray-50/50">
+            <div className="w-full md:w-1/3 p-8 border-r border-gray-100 bg-gray-50/50 overflow-y-auto scrollbar-hide">
               <h3 className="text-lg font-black text-secondary mb-6">{editingCityId ? 'Edit City' : 'Add New City'}</h3>
               <form onSubmit={handleCityAction} className="space-y-6">
                 <div className="space-y-2">
