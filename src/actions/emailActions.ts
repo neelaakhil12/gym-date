@@ -11,6 +11,18 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Verify connection configuration
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("SMTP Verify Error:", error);
+  } else {
+    console.log("SMTP Server is ready to take our messages");
+  }
 });
 
 import crypto from "crypto";
