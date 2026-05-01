@@ -330,6 +330,17 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
       };
     }
 
+    // 3. If it's a directions link, the destination is stored in !3d and !4d
+    const destinationMatch = query.match(/!3d([-+]?\d+\.\d+)!4d([-+]?\d+\.\d+)/);
+    if (destinationMatch) {
+      console.log('SERVER ACTION: Extracted destination coordinates from directions URL');
+      return { 
+        success: true, 
+        lat: parseFloat(destinationMatch[1]), 
+        lng: parseFloat(destinationMatch[2]) 
+      };
+    }
+
     const response = await fetch(
       `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`
     );
