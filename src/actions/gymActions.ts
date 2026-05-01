@@ -319,26 +319,34 @@ export async function getCoordinatesFromGoogle(locationStr: string): Promise<{ s
       }
     }
 
-    // 2. If it's a regular Google Maps URL (either original or resolved), try regex extraction
+    // 2. Try various regex patterns to extract coordinates from the URL
+    
+    // Pattern A: standard @lat,lng format
     const coordMatch = query.match(/@([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
     if (coordMatch) {
-      console.log('SERVER ACTION: Extracted coordinates from URL regex');
-      return { 
-        success: true, 
-        lat: parseFloat(coordMatch[1]), 
-        lng: parseFloat(coordMatch[2]) 
-      };
+      console.log('SERVER ACTION: Extracted coordinates from @lat,lng regex');
+      return { success: true, lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) };
     }
 
-    // 3. If it's a directions link, the destination is stored in !3d and !4d
+    // Pattern B: directions destination !3d and !4d tags
     const destinationMatch = query.match(/!3d([-+]?\d+\.\d+)!4d([-+]?\d+\.\d+)/);
     if (destinationMatch) {
-      console.log('SERVER ACTION: Extracted destination coordinates from directions URL');
-      return { 
-        success: true, 
-        lat: parseFloat(destinationMatch[1]), 
-        lng: parseFloat(destinationMatch[2]) 
-      };
+      console.log('SERVER ACTION: Extracted destination coordinates from !3d,!4d regex');
+      return { success: true, lat: parseFloat(destinationMatch[1]), lng: parseFloat(destinationMatch[2]) };
+    }
+
+    // Pattern C: /place/lat,lng format
+    const placeMatch = query.match(/\/place\/([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
+    if (placeMatch) {
+      console.log('SERVER ACTION: Extracted coordinates from /place/lat,lng regex');
+      return { success: true, lat: parseFloat(placeMatch[1]), lng: parseFloat(placeMatch[2]) };
+    }
+
+    // Pattern D: raw lat,lng in the query string
+    const rawMatch = query.match(/query=([-+]?\d+\.\d+),([-+]?\d+\.\d+)/);
+    if (rawMatch) {
+      console.log('SERVER ACTION: Extracted coordinates from query=lat,lng regex');
+      return { success: true, lat: parseFloat(rawMatch[1]), lng: parseFloat(rawMatch[2]) };
     }
 
     const response = await fetch(
