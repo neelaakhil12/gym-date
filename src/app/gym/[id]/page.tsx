@@ -210,7 +210,7 @@ export default function GymDetailsPage() {
           </div>
 
           {/* Right Column (Booking Sidebar) */}
-          <div className="lg:relative self-start">
+          <div className="lg:relative">
             <div className="bg-white rounded-[32px] p-6 md:p-8 border border-gray-100 shadow-sm lg:sticky lg:top-24 z-10">
               <h3 className="text-xl font-bold text-secondary mb-6">Select a Plan</h3>
               
