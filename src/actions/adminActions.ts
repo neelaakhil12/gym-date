@@ -21,6 +21,36 @@ export async function updatePlatformStats(stats: { id: string; label: string; va
   }
 }
 
+export async function addPlatformStat(label: string, value: string) {
+  try {
+    await query(
+      "INSERT INTO platform_stats (label, value) VALUES ($1, $2)",
+      [label, value]
+    );
+    revalidatePath("/");
+    revalidatePath("/admin/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error adding platform stat:", err);
+    return { error: "Failed to add stat." };
+  }
+}
+
+export async function deletePlatformStat(id: string) {
+  try {
+    await query(
+      "DELETE FROM platform_stats WHERE id = $1",
+      [id]
+    );
+    revalidatePath("/");
+    revalidatePath("/admin/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error deleting platform stat:", err);
+    return { error: "Failed to delete stat." };
+  }
+}
+
 export async function getPlatformStats() {
   try {
     const result = await query(
@@ -63,7 +93,6 @@ export async function updateSectionVisibility(isVisible: boolean) {
 async function uploadCityImage(file: File): Promise<string | null> {
   if (!file || file.size === 0) return null;
   try {
-    // In production, this directory must exist on the VPS
     const uploadDir = process.env.UPLOAD_DIR || './public/uploads/cities';
     await mkdir(uploadDir, { recursive: true });
     

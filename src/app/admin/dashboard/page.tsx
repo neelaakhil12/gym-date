@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
+import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addPlatformStat, deletePlatformStat, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
 import { getGyms, getCities } from "@/actions/publicActions";
 import { generateInvoicePDF } from "@/lib/invoice";
-import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2 } from "lucide-react";
+import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2, PlusCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 // Platform Analytics Dashboard Refresh Fix
@@ -101,6 +101,32 @@ export default function AdminDashboard() {
       toast.success("Platform stats updated successfully!");
     } else {
       toast.error(result.error || "Failed to update stats");
+    }
+    setSavingStats(false);
+  };
+
+  const handleAddStat = async () => {
+    setSavingStats(true);
+    const result = await addPlatformStat("New Stat", "0");
+    if (result.success) {
+      const updated = await getPlatformStats();
+      setPlatformStats(updated);
+      toast.success("New stat slot added!");
+    } else {
+      toast.error(result.error);
+    }
+    setSavingStats(false);
+  };
+
+  const handleDeleteStat = async (id: string) => {
+    if (!confirm("Delete this stat card?")) return;
+    setSavingStats(true);
+    const result = await deletePlatformStat(id);
+    if (result.success) {
+      setPlatformStats(platformStats.filter(s => s.id !== id));
+      toast.success("Stat deleted!");
+    } else {
+      toast.error(result.error);
     }
     setSavingStats(false);
   };
@@ -410,7 +436,13 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {platformStats.map((stat, idx) => (
-            <div key={stat.id} className="space-y-3 p-5 bg-gray-50 rounded-2xl border border-gray-100">
+            <div key={stat.id} className="group relative space-y-3 p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-primary/30 transition-all">
+              <button 
+                onClick={() => handleDeleteStat(stat.id)}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 hover:bg-red-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Label</label>
                 <input 
@@ -441,6 +473,16 @@ export default function AdminDashboard() {
               </div>
             </div>
           ))}
+          
+          {/* Add New Stat Card */}
+          <button 
+            onClick={handleAddStat}
+            disabled={savingStats}
+            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group min-h-[140px]"
+          >
+            <PlusCircle className="w-8 h-8 text-gray-300 group-hover:text-primary transition-colors" />
+            <span className="text-xs font-bold text-gray-400 group-hover:text-primary">Add New Stat</span>
+          </button>
         </div>
       </div>
 
