@@ -220,7 +220,7 @@ export default function ExplorePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredGyms.length > 0 ? filteredGyms.map((gym) => (
                     <div key={gym.id} className="relative group bg-white rounded-[40px] border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-black/5 transition-all duration-500 flex flex-col">
-                      <Link href={`/gyms/${gym.id}`} className="block">
+                      <Link href={`/gym/${gym.id}`} className="block">
                         <div className="relative h-64 overflow-hidden">
                           <img 
                             src={gym.image} 
