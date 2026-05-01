@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Dumbbell, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent } from "lucide-react";
 import { updateGym, getCoordinatesFromGoogle, getGlobalAmenities } from "@/actions/gymActions";
+import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { supabase } from "@/lib/supabase";
 
 export default function EditGymPage() {
