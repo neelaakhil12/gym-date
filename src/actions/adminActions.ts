@@ -77,7 +77,7 @@ export async function getPartnerGym() {
     if (!session?.user) return null;
     
     const userId = (session.user as any).id;
-    const result = await query("SELECT * FROM gyms WHERE partner_id = $1 LIMIT 1", [userId]);
+    const result = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [userId]);
     return result.rows[0] || null;
   } catch (error) {
     console.error("Error fetching partner gym", error);

@@ -8,7 +8,7 @@ import {
   Receipt,
   Search
 } from "lucide-react";
-import { getAllBookings, getAdminStats } from "@/lib/supabase";
+import { getAllBookings, getAdminStats } from "@/actions/adminActions";
 
 export default function AdminRevenue() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -32,8 +32,9 @@ export default function AdminRevenue() {
 
   const filteredBookings = bookings.filter(booking => 
     booking.plan_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    booking.gyms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    booking.profiles?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    booking.gym_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    booking.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    booking.customer_email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -140,10 +141,11 @@ export default function AdminRevenue() {
                         {booking.id?.substring(0, 8).toUpperCase()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-secondary">{booking.profiles?.email || 'Unknown User'}</div>
+                        <div className="text-sm font-medium text-secondary">{booking.customer_name}</div>
+                        <div className="text-xs text-gray-400">{booking.customer_email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-bold text-secondary">{booking.gyms?.name || 'Global Plan'}</div>
+                        <div className="text-sm font-bold text-secondary">{booking.gym_name || 'Global Plan'}</div>
                         <div className="text-xs text-gray-500">{booking.plan_name}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">

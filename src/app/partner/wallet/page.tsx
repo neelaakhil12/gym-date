@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload } from "lucide-react";
-import { getPartnerGym, supabase } from "@/lib/supabase";
+import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
+import { query } from "@/lib/db"; // For direct DB access if needed in server components, but this is a client component
+// We will use the server actions instead
 
 export default function PartnerWallet() {
   const [gym, setGym] = useState<any>(null);
@@ -33,29 +35,17 @@ export default function PartnerWallet() {
       setGym(gymData);
       
       if (gymData) {
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('gym_id', gymData.id)
-          .single();
+        // Fetch real bookings to calculate balance
+        const bookings = await getPartnerBookings(gymData.id);
+        const commissionRate = gymData.commission_rate || 10;
         
-        if (wallet) {
-          setBalance(wallet.balance);
-        } else {
-          const { data: bookings } = await supabase
-            .from('bookings')
-            .select('amount, total_price')
-            .eq('gym_id', gymData.id);
-          
-          const commissionRate = gymData.commission_rate || 10;
-          const total = bookings?.reduce((sum, b) => {
-            const amount = parseFloat(b.amount) || parseFloat(b.total_price) || 0;
-            const commission = amount * (commissionRate / 100);
-            return sum + (amount - commission);
-          }, 0) || 0;
-          
-          setBalance(Math.floor(total));
-        }
+        const total = bookings?.reduce((sum: number, b: any) => {
+          const amount = parseFloat(b.amount) || parseFloat(b.total_price) || 0;
+          const commission = amount * (commissionRate / 100);
+          return sum + (amount - commission);
+        }, 0) || 0;
+        
+        setBalance(Math.floor(total));
       }
       setLoading(false);
     }

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { CreditCard, DollarSign, Calendar, Users, ArrowUpRight } from "lucide-react";
-import { getPartnerGym, supabase } from "@/lib/supabase";
+import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
 
 export default function PartnerBookings() {
   const [gym, setGym] = useState<any>(null);
@@ -16,13 +16,7 @@ export default function PartnerBookings() {
       setGym(gymData);
       
       if (gymData) {
-        // Fetch real bookings for this gym
-        const { data } = await supabase
-          .from('bookings')
-          .select('*, profiles(email)')
-          .eq('gym_id', gymData.id)
-          .order('created_at', { ascending: false });
-        
+        const data = await getPartnerBookings(gymData.id);
         setBookings(data || []);
       }
       setLoading(false);
