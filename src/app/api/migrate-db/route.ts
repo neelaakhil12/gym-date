@@ -17,11 +17,12 @@ export async function GET() {
     `);
 
     // Create bookings table if it doesn't exist
+    await query(`DROP TABLE IF EXISTS bookings;`);
     await query(`
       CREATE TABLE IF NOT EXISTS bookings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id),
-        gym_id UUID REFERENCES gyms(id),
+        user_id TEXT,
+        gym_id TEXT,
         plan_name TEXT NOT NULL,
         amount NUMERIC NOT NULL,
         status TEXT DEFAULT 'pending',
