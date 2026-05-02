@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Lock } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 
@@ -64,7 +65,15 @@ export default function AdminLogin() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-gray-100">
           {error && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm text-center font-medium">
-              {error}
+              {error.includes("forgot password") ? (
+                <>
+                  {error.split("forgot password")[0]}
+                  <Link href="/admin/forgot-password" title="Go to forgot password" className="underline hover:text-red-800">
+                    forgot password
+                  </Link>
+                  {error.split("forgot password")[1]}
+                </>
+              ) : error}
             </div>
           )}
           <form className="space-y-6" onSubmit={handleLogin}>
@@ -93,12 +102,12 @@ export default function AdminLogin() {
                 />
               </div>
               <div className="flex justify-end mt-2">
-                <a 
+                <Link 
                   href="/admin/forgot-password" 
                   className="text-sm font-semibold text-primary hover:text-red-700 transition-colors cursor-pointer"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 

@@ -29,6 +29,20 @@ import crypto from "crypto";
 
 export async function sendPasswordResetEmail(email: string, redirectTo: string = "/partner/reset-password") {
   try {
+    // 0. Ensure table exists
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS password_resets (
+          email VARCHAR NOT NULL,
+          token VARCHAR NOT NULL,
+          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          PRIMARY KEY (email, token)
+        );
+      `);
+    } catch (e) {
+      console.error("Error creating password_resets table:", e);
+    }
+
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://gymdate.in');
 
@@ -77,8 +91,8 @@ export async function sendPasswordResetEmail(email: string, redirectTo: string =
 
     return { success: true, message: "Reset link sent! Please check your email." };
   } catch (err: any) {
-    console.error("SMTP error:", err);
-    return { error: "Failed to send reset link. Please check your SMTP settings." };
+    console.error("Reset Email Error:", err);
+    return { error: err.message || "Failed to send reset link. Please check your SMTP settings." };
   }
 }
 

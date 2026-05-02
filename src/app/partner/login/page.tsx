@@ -67,7 +67,15 @@ export default function PartnerLogin() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-gray-100">
           {error && (
             <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-xl border border-red-100 text-sm font-semibold text-center">
-              {error}
+              {error.includes("forgot password") ? (
+                <>
+                  {error.split("forgot password")[0]}
+                  <Link href="/partner/forgot-password" title="Go to forgot password" className="underline hover:text-red-800">
+                    forgot password
+                  </Link>
+                  {error.split("forgot password")[1]}
+                </>
+              ) : error}
             </div>
           )}
           <form className="space-y-6" onSubmit={handleLogin}>
@@ -96,12 +104,12 @@ export default function PartnerLogin() {
                 />
               </div>
               <div className="flex justify-end mt-2">
-                <a 
+                <Link 
                   href="/partner/forgot-password" 
                   className="text-sm font-semibold text-primary hover:text-red-700 transition-colors cursor-pointer"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 
