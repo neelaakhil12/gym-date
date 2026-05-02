@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload } from "lucide-react";
-import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
+import { getPartnerGym, getPartnerBookings, createPayoutRequest } from "@/actions/adminActions";
 import { supabase } from "@/lib/supabase";
 
 export default function PartnerWallet() {
@@ -117,11 +117,9 @@ export default function PartnerWallet() {
         payload.qr_code_url = qrCodeUrl;
       }
 
-      const { error } = await supabase
-        .from('payout_requests')
-        .insert(payload);
+      const result = await createPayoutRequest(payload);
 
-      if (error) throw error;
+      if (result.error) throw new Error(result.error);
 
       setMessage({ type: "success", text: "Withdrawal request sent successfully!" });
       setTimeout(() => {

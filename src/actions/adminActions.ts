@@ -344,3 +344,46 @@ export async function updatePayoutStatus(id: string, newStatus: string) {
     return { error: error.message };
   }
 }
+
+export async function createPayoutRequest(payload: any) {
+  try {
+    // Ensure table exists on local postgres
+    await query(`
+      CREATE TABLE IF NOT EXISTS payout_requests (
+        id VARCHAR(50) PRIMARY KEY,
+        gym_id VARCHAR(50) REFERENCES gyms(id),
+        amount NUMERIC NOT NULL,
+        payout_method VARCHAR(20) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        bank_name VARCHAR(100),
+        account_holder VARCHAR(100),
+        account_number VARCHAR(50),
+        ifsc_code VARCHAR(20),
+        upi_id VARCHAR(100),
+        mobile_number VARCHAR(20),
+        qr_code_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Use crypto.randomUUID or a simple random string for ID
+    const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    
+    await query(`
+      INSERT INTO payout_requests (
+        id, gym_id, amount, payout_method, status,
+        bank_name, account_holder, account_number, ifsc_code,
+        upi_id, mobile_number, qr_code_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `, [
+      id, payload.gym_id, payload.amount, payload.payout_method, payload.status || 'pending',
+      payload.bank_name || null, payload.account_holder || null, payload.account_number || null, payload.ifsc_code || null,
+      payload.upi_id || null, payload.mobile_number || null, payload.qr_code_url || null
+    ]);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error creating payout request", error);
+    return { error: error.message };
+  }
+}
