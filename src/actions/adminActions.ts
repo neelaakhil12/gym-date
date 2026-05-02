@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function updatePlatformStats(stats: { id: string; label: string; value: string }[]) {
   try {
