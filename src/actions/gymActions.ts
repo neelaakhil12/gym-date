@@ -90,17 +90,19 @@ export async function createGymAndPartner(formData: FormData) {
     const reviewsStr = formData.get("reviews") as string;
     const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : 0.0;
     const reviews = reviewsStr && !isNaN(parseInt(reviewsStr)) ? parseInt(reviewsStr) : 0;
+    const hasOffer = formData.get("hasOffer") === "true";
+    const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
 
     // 3. Create the gym
     const gymInsert = await query(
       `INSERT INTO gyms 
-       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', $9, $10, $11, $12) RETURNING id`,
+       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', $9, $10, $11, $12, $13, $14) RETURNING id`,
       [
         partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
         description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
         galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"],
-        rating, reviews, lat, lng
+        rating, reviews, lat, lng, hasOffer, offerPercentage
       ]
     );
 
