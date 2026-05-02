@@ -154,10 +154,6 @@ export default function PartnerDashboard() {
                   {gym.location}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-black text-slate-900">₹{gym.price_per_day}</div>
-                <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">Per Day</div>
-              </div>
             </div>
 
             <div className="mt-6 border-t border-gray-100 pt-6">
