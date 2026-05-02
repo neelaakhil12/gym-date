@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload } from "lucide-react";
-import { getPartnerGym, getPartnerBookings, createPayoutRequest } from "@/actions/adminActions";
+import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload, Clock, CheckCircle2 } from "lucide-react";
+import { getPartnerGym, getPartnerBookings, createPayoutRequest, getPartnerPayoutRequests } from "@/actions/adminActions";
 import { supabase } from "@/lib/supabase";
 
 export default function PartnerWallet() {
@@ -13,6 +13,7 @@ export default function PartnerWallet() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeTab, setActiveTab] = useState<"bank" | "upi">("bank");
+  const [payouts, setPayouts] = useState<any[]>([]);
   const qrInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -45,6 +46,10 @@ export default function PartnerWallet() {
         }, 0) || 0;
         
         setBalance(Math.floor(total));
+        
+        // Fetch payout history
+        const payoutHistory = await getPartnerPayoutRequests(gymData.id);
+        setPayouts(payoutHistory || []);
       }
       setLoading(false);
     }
@@ -121,10 +126,18 @@ export default function PartnerWallet() {
 
       if (result.error) throw new Error(result.error);
 
-      setMessage({ type: "success", text: "Withdrawal request sent successfully!" });
+      setMessage({ type: "success", text: "Your owner will verify and accept the withdraw shortly." });
       setTimeout(() => {
         setShowWithdrawForm(false);
         setMessage({ type: "", text: "" });
+        // Refresh payout history locally (optimistic)
+        setPayouts([{
+          id: Math.random().toString(),
+          amount: payload.amount,
+          status: 'pending',
+          payout_method: payload.payout_method,
+          created_at: new Date().toISOString()
+        }, ...payouts]);
       }, 2000);
       
       setFormData({ 
@@ -174,6 +187,47 @@ export default function PartnerWallet() {
         </div>
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
         <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Payout History Section */}
+      <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-8">
+        <h3 className="text-xl font-black text-slate-900 mb-6">Withdrawal History</h3>
+        
+        {payouts.length > 0 ? (
+          <div className="space-y-4">
+            {payouts.map((payout: any) => (
+              <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="flex items-center space-x-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    payout.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                  }`}>
+                    {payout.status === 'completed' ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900">₹{parseFloat(payout.amount).toLocaleString()}</h4>
+                    <p className="text-xs text-gray-500">
+                      {new Date(payout.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} • {payout.payout_method === 'upi' ? 'UPI' : 'Bank'}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-lg ${
+                    payout.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {payout.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Banknote className="w-8 h-8 text-gray-300" />
+            </div>
+            <p className="text-gray-500 font-medium">No withdrawal requests yet.</p>
+          </div>
+        )}
       </div>
 
       {/* Withdrawal Form Modal */}

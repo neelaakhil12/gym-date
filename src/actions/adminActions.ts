@@ -387,3 +387,18 @@ export async function createPayoutRequest(payload: any) {
     return { error: error.message };
   }
 }
+
+export async function getPartnerPayoutRequests(gymId: string) {
+  try {
+    const result = await query(`
+      SELECT * FROM payout_requests
+      WHERE gym_id = $1
+      ORDER BY created_at DESC
+    `, [gymId]);
+    
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching partner payout requests", error);
+    return [];
+  }
+}
