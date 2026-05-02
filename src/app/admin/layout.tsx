@@ -8,7 +8,6 @@ import {
   Dumbbell, 
   Users, 
   Wallet, 
-  Settings, 
   LogOut,
   Menu,
   X,
@@ -24,7 +23,6 @@ const adminLinks = [
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Revenue", href: "/admin/revenue", icon: Wallet },
   { name: "Payouts", href: "/admin/payouts", icon: Banknote },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export default function AdminLayout({
