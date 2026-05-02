@@ -39,17 +39,22 @@ export default function PartnerWallet() {
         const bookings = await getPartnerBookings(gymData.id);
         const commissionRate = gymData.commission_rate || 10;
         
-        const total = bookings?.reduce((sum: number, b: any) => {
+        const totalEarnings = bookings?.reduce((sum: number, b: any) => {
           const amount = parseFloat(b.amount) || parseFloat(b.total_price) || 0;
           const commission = amount * (commissionRate / 100);
           return sum + (amount - commission);
         }, 0) || 0;
         
-        setBalance(Math.floor(total));
-        
         // Fetch payout history
         const payoutHistory = await getPartnerPayoutRequests(gymData.id);
         setPayouts(payoutHistory || []);
+
+        // Calculate total withdrawn or pending withdrawal
+        const totalWithdrawn = payoutHistory?.reduce((sum: number, p: any) => {
+          return sum + (parseFloat(p.amount) || 0);
+        }, 0) || 0;
+        
+        setBalance(Math.max(0, Math.floor(totalEarnings - totalWithdrawn)));
       }
       setLoading(false);
     }
@@ -138,6 +143,8 @@ export default function PartnerWallet() {
           payout_method: payload.payout_method,
           created_at: new Date().toISOString()
         }, ...payouts]);
+        // Deduct from available balance optimistically
+        setBalance(prev => Math.max(0, prev - amountNum));
       }, 2000);
       
       setFormData({ 
