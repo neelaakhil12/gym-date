@@ -69,15 +69,19 @@ export async function POST(req: NextRequest) {
       
       const bookingRes = await query(
         `INSERT INTO bookings (
-          user_id, gym_id, plan_name, amount, status, payment_id, razorpay_order_id, start_date, end_date
-        ) VALUES ($1, $2, $3, $4, 'completed', $5, $6, $7, $8) RETURNING id`,
+          user_id, gym_id, customer_name, customer_email, plan_name, amount, 
+          status, payment_id, razorpay_order_id, ticket_code, start_date, end_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7, $8, $9, $10, $11) RETURNING id`,
         [
           finalUserId || null, 
-          gymId, 
+          gymId,
+          customerName,
+          customerEmail,
           planName, 
           Number(amount), 
           razorpay_payment_id, 
-          razorpay_order_id, 
+          razorpay_order_id,
+          ticketCode,
           today.toISOString(), 
           endDate.toISOString()
         ]

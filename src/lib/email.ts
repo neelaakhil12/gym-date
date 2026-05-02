@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 export async function sendBookingConfirmationEmail(booking: any) {
   try {
     // 1. Generate QR Code as Data URL
-    const qrDataUrl = await QRCode.toDataURL(booking.id);
+    const qrDataUrl = await QRCode.toDataURL(booking.ticket_code || booking.id);
     
     // 2. Prepare Email Content
     const mailOptions = {

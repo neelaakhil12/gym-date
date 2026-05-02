@@ -16,11 +16,8 @@ export async function GET(req: NextRequest) {
     // Fetch user id first
     const userResult = await query('SELECT id FROM users WHERE email = $1', [email]);
     
-    if (userResult.rows.length === 0) {
-      return NextResponse.json({ success: true, bookings: [] });
-    }
-
-    const userId = userResult.rows[0].id;
+    const userId = userResult.rows[0]?.id;
+    console.log(`[GetBookings] Fetching by userId: ${userId} and email: ${email}`);
 
     // Fetch bookings with gym details
     const bookingsResult = await query(
@@ -28,9 +25,9 @@ export async function GET(req: NextRequest) {
        json_build_object('name', g.name, 'location', g.location) as gyms
        FROM bookings b
        LEFT JOIN gyms g ON b.gym_id = g.id
-       WHERE b.user_id = $1
+       WHERE b.user_id = $1 OR b.customer_email = $2
        ORDER BY b.created_at DESC`,
-      [userId]
+      [userId || 'NON_EXISTENT_ID', email]
     );
 
     console.log(`[GetBookings] Found ${bookingsResult.rows.length} bookings for ${email}`);
