@@ -52,7 +52,7 @@ export default async function VerifyBookingPage({ params }: Props) {
   const isExpired = now > endDate;
 
   return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0F172A] pt-44 lg:pt-32 pb-12 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Card */}
         <div className="bg-white rounded-[48px] overflow-hidden shadow-2xl relative">

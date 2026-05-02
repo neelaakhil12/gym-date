@@ -65,10 +65,10 @@ export default function AdminDashboard() {
   // Calculate Breakdown Data
   const getBreakdown = () => {
     return gymData.map(gym => {
-      const gymBookings = bookings.filter(b => b.gym_id === gym.id);
+      const gymBookings = bookings.filter(b => String(b.gym_id) === String(gym.id));
       // Support both 'amount' (Razorpay) and 'total_price' (legacy) fields
       const totalRevenue = gymBookings.reduce((sum, b) => {
-        const amt = parseFloat(b.amount) || parseFloat(b.total_price) || 0;
+        const amt = parseFloat(String(b.amount)) || parseFloat(String(b.total_price)) || 0;
         return sum + amt;
       }, 0);
       const commissionRate = gym.commission_rate || 10;

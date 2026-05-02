@@ -225,13 +225,32 @@ export async function deleteGlobalAmenity(id: string) {
 
 export async function getAdminStats() {
   try {
-    const wallet = await query("SELECT balance FROM wallet WHERE id = 'platform_wallet'");
-    const gymsCount = await query("SELECT COUNT(*) FROM gyms");
-    const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
+    let walletBalance = 0;
+    try {
+      const wallet = await query("SELECT balance FROM wallet WHERE id = 'platform_wallet'");
+      walletBalance = wallet.rows[0]?.balance || 0;
+    } catch (e) {}
+
+    let totalGyms = 0;
+    try {
+      const gymsCount = await query("SELECT COUNT(*) FROM gyms");
+      totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
+    } catch (e) {}
+
+    let totalUsers = 0;
+    try {
+      const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
+      totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+      if (totalUsers === 0) {
+        const uniqueBookingsUsers = await query("SELECT COUNT(DISTINCT customer_email) FROM bookings");
+        totalUsers = parseInt(uniqueBookingsUsers.rows[0]?.count) || 0;
+      }
+    } catch (e) {}
+
     return {
-      walletBalance: wallet.rows[0]?.balance || 0,
-      totalGyms: parseInt(gymsCount.rows[0]?.count) || 0,
-      totalUsers: parseInt(usersCount.rows[0]?.count) || 0,
+      walletBalance,
+      totalGyms,
+      totalUsers,
     };
   } catch (error) {
     console.error("Error fetching admin stats", error);
@@ -244,12 +263,12 @@ export async function getAllBookings() {
     const result = await query(
       `SELECT 
         b.*, 
-        u.full_name as customer_name, 
-        u.email as customer_email,
+        COALESCE(b.customer_name, u.full_name, 'Member') as customer_name, 
+        COALESCE(b.customer_email, u.email, 'No email') as customer_email,
         json_build_object('name', g.name) as gyms
        FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id
-       LEFT JOIN gyms g ON b.gym_id = g.id
+       LEFT JOIN users u ON b.user_id = u.id::text
+       LEFT JOIN gyms g ON b.gym_id = g.id::text
        ORDER BY b.created_at DESC`
     );
     return result.rows || [];
@@ -333,10 +352,10 @@ export async function getPartnerBookings(gymId: string) {
     const result = await query(
       `SELECT 
         b.*, 
-        u.full_name as customer_name, 
-        u.email as customer_email
+        COALESCE(b.customer_name, u.full_name, 'Member') as customer_name, 
+        COALESCE(b.customer_email, u.email, 'No email') as customer_email
        FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id
+       LEFT JOIN users u ON b.user_id = u.id::text
        WHERE b.gym_id = $1
        ORDER BY b.created_at DESC`,
       [gymId]

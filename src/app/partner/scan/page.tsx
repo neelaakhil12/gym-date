@@ -18,7 +18,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { useSession } from "next-auth/react";
+
 export default function PartnerScanner() {
+  const { data: session } = useSession();
   const [scanResult, setScanResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,10 +71,6 @@ export default function PartnerScanner() {
     setError(null);
 
     try {
-      // 1. Get current partner ID
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Please log in to scan tickets.");
-
       // 2. Extract booking_id from decodedText (it might be a full URL or just the ID)
       let bookingId = decodedText.trim();
       
@@ -84,14 +83,15 @@ export default function PartnerScanner() {
       }
 
       // 3. Call secure server action
-      const result = await verifyTicketAction(bookingId, session.user.id);
+      const partnerId = (session?.user as any)?.id;
+      const result = await verifyTicketAction(bookingId, partnerId);
 
-      if (result.error) {
+      if (result.error && !result.booking) {
         throw new Error(result.error);
       }
 
-      setScanResult(result.booking);
-      if (result.gymName) setGymName(result.gymName);
+      // Redirect to the public verification page which shows all details correctly
+      window.location.href = `/verify/${bookingId}`;
     } catch (err: any) {
       setError(err.message);
     } finally {

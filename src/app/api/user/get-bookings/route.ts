@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       `SELECT b.*, 
        json_build_object('name', g.name, 'location', g.location) as gyms
        FROM bookings b
-       LEFT JOIN gyms g ON b.gym_id = g.id
+       LEFT JOIN gyms g ON b.gym_id = g.id::text
        WHERE b.user_id = $1 OR b.customer_email = $2
        ORDER BY b.created_at DESC`,
       [userId || 'NON_EXISTENT_ID', email]
