@@ -81,21 +81,26 @@ export async function createGymAndPartner(formData: FormData) {
       }
     }
 
-    // 3. Create the gym
     const latStr = formData.get("lat") as string;
     const lngStr = formData.get("lng") as string;
     const lat = latStr && !isNaN(parseFloat(latStr)) ? parseFloat(latStr) : null;
     const lng = lngStr && !isNaN(parseFloat(lngStr)) ? parseFloat(lngStr) : null;
 
+    const ratingStr = formData.get("rating") as string;
+    const reviewsStr = formData.get("reviews") as string;
+    const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : 0.0;
+    const reviews = reviewsStr && !isNaN(parseInt(reviewsStr)) ? parseInt(reviewsStr) : 0;
+
+    // 3. Create the gym
     const gymInsert = await query(
       `INSERT INTO gyms 
        (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', 0, 0, $9, $10) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', $9, $10, $11, $12) RETURNING id`,
       [
         partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
         description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
         galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"],
-        lat, lng
+        rating, reviews, lat, lng
       ]
     );
 
@@ -188,11 +193,16 @@ export async function updateGym(gymId: string, formData: FormData) {
     const lat = latStr && !isNaN(parseFloat(latStr)) ? parseFloat(latStr) : null;
     const lng = lngStr && !isNaN(parseFloat(lngStr)) ? parseFloat(lngStr) : null;
 
+    const ratingStr = formData.get("rating") as string;
+    const reviewsStr = formData.get("reviews") as string;
+    const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : 0.0;
+    const reviews = reviewsStr && !isNaN(parseInt(reviewsStr)) ? parseInt(reviewsStr) : 0;
+
     await query(
-      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9 WHERE id = $10",
+      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11 WHERE id = $12",
       [
         gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, gymId
+        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, gymId
       ]
     );
 

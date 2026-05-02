@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Dumbbell, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent } from "lucide-react";
+import { ArrowLeft, Dumbbell, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
 import { createGymAndPartner, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
 
 export default function CreateGymPage() {
@@ -292,6 +292,42 @@ export default function CreateGymPage() {
                     onChange={(e) => setLng(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                     placeholder={lookupLoading ? "Searching..." : "78.4867"}
+                  />
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Starting Rating (e.g. 4.5)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Star className="h-5 w-5 text-yellow-500" />
+                  </div>
+                  <input
+                    name="rating"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    defaultValue="4.5"
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Reviews */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Initial Review Count</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <AlignLeft className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    name="reviews"
+                    type="number"
+                    min="0"
+                    defaultValue="0"
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   />
                 </div>
               </div>

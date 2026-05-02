@@ -5,7 +5,7 @@ import { otpCache } from "@/lib/otpCache";
 import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -133,13 +133,15 @@ const handler = NextAuth({
     },
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET || "gymdate-secret-key-2026",
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

@@ -4,6 +4,8 @@ import { query } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/api/auth/[...nextauth]/route";
 
 export async function updatePlatformStats(stats: { id: string; label: string; value: string }[]) {
   try {
@@ -276,11 +278,20 @@ export async function getUniqueUsersCount() {
   }
 }
 
-export async function getPartnerGym(partnerId: string) {
+export async function getPartnerGym(partnerId?: string) {
   try {
+    let id = partnerId;
+    
+    // If no ID provided, get it from the current session
+    if (!id) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) return null;
+      id = session.user.id;
+    }
+
     const result = await query(
       "SELECT * FROM gyms WHERE partner_id = $1 LIMIT 1",
-      [partnerId]
+      [id]
     );
     return result.rows[0] || null;
   } catch (error) {

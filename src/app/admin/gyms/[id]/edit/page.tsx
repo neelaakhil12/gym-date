@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Dumbbell, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent } from "lucide-react";
+import { ArrowLeft, Dumbbell, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
 import { updateGym, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +26,8 @@ export default function EditGymPage() {
   const [customAmenities, setCustomAmenities] = useState<string[]>([]);
   const [newAmenity, setNewAmenity] = useState("");
   const [commissionRate, setCommissionRate] = useState("10");
+  const [rating, setRating] = useState("4.5");
+  const [reviews, setReviews] = useState("0");
   const [locating, setLocating] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
 
@@ -132,6 +134,8 @@ export default function EditGymPage() {
         setCheckedDefaultAmenities(checkedDefaults);
         setCustomAmenities(customs);
         setCommissionRate(gym.commission_rate?.toString() || "10");
+        setRating(gym.rating?.toString() || "4.5");
+        setReviews(gym.reviews?.toString() || "0");
 
         // Fetch pricing plans
         const plansData = await getPricingPlansByGymId(gymId);
@@ -369,6 +373,44 @@ export default function EditGymPage() {
                     onChange={(e) => setLng(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                     placeholder={lookupLoading ? "Searching..." : "78.5455"}
+                  />
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Display Rating (e.g. 4.5)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Star className="h-5 w-5 text-yellow-500" />
+                  </div>
+                  <input
+                    name="rating"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={rating}
+                    onChange={(e) => setRating(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Reviews */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Review Count</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <AlignLeft className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    name="reviews"
+                    type="number"
+                    min="0"
+                    value={reviews}
+                    onChange={(e) => setReviews(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   />
                 </div>
               </div>
