@@ -162,5 +162,3 @@ export default async function VerifyBookingPage({ params }: Props) {
     </div>
   );
 }
-  );
-}
