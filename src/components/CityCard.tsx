@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+
 
 interface CityCardProps {
   city: {
@@ -13,11 +13,10 @@ const CityCard: React.FC<CityCardProps> = ({ city }) => {
   return (
     <div className={`relative h-64 rounded-2xl overflow-hidden group ${city.is_coming_soon ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
       {/* City Image - blurred if coming soon */}
-      <Image
+      <img
         src={city.image}
         alt={city.name}
-        fill
-        className={`object-cover transition-transform duration-700 group-hover:scale-110 ${city.is_coming_soon ? 'blur-sm scale-105' : ''}`}
+        className={`absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${city.is_coming_soon ? 'blur-sm scale-105' : ''}`}
       />
 
       {/* Standard gradient overlay */}
