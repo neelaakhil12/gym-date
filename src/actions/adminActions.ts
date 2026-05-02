@@ -23,11 +23,13 @@ export async function getAdminStats() {
 
     let totalUsers = 0;
     try {
-      const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user'");
-      totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+      // Count unique customers who have made bookings
+      const uniqueCustomers = await query("SELECT COUNT(DISTINCT LOWER(customer_email)) FROM bookings WHERE customer_email IS NOT NULL AND customer_email != ''");
+      totalUsers = parseInt(uniqueCustomers.rows[0]?.count) || 0;
       if (totalUsers === 0) {
-        const uniqueBookingsUsers = await query("SELECT COUNT(DISTINCT customer_email) FROM bookings");
-        totalUsers = parseInt(uniqueBookingsUsers.rows[0]?.count) || 0;
+        // Fallback: count registered users
+        const usersCount = await query("SELECT COUNT(*) FROM users");
+        totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
       }
     } catch (e) {}
 

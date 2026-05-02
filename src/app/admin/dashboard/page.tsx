@@ -73,7 +73,7 @@ export default function AdminDashboard() {
       }, 0);
       const commissionRate = gym.commission_rate || 10;
       const totalCommission = totalRevenue * (commissionRate / 100);
-      const uniqueUsers = new Set(gymBookings.map(b => b.customer_id || b.user_id || b.email)).size;
+      const uniqueUsers = new Set(gymBookings.map(b => b.customer_email || b.user_id || b.customer_id).filter(Boolean)).size;
 
       return {
         id: gym.id,
