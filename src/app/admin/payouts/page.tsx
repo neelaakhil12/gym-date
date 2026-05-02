@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Banknote, CheckCircle2, Clock, MapPin, Building2, User, CreditCard, Eye, X, FileText, Smartphone, QrCode } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getPayoutRequests, updatePayoutStatus } from "@/actions/adminActions";
 
 export default function AdminPayouts() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -13,14 +13,8 @@ export default function AdminPayouts() {
   useEffect(() => {
     async function loadRequests() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('payout_requests')
-        .select('*, gyms(name, location)')
-        .order('created_at', { ascending: false });
-      
-      if (!error) {
-        setRequests(data || []);
-      }
+      const data = await getPayoutRequests();
+      setRequests(data || []);
       setLoading(false);
     }
     loadRequests();
@@ -28,12 +22,9 @@ export default function AdminPayouts() {
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     setUpdatingId(id);
-    const { error } = await supabase
-      .from('payout_requests')
-      .update({ status: newStatus })
-      .eq('id', id);
+    const result = await updatePayoutStatus(id, newStatus);
 
-    if (!error) {
+    if (result.success) {
       setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
       if (selectedRequest?.id === id) {
         setSelectedRequest({ ...selectedRequest, status: newStatus });

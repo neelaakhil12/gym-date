@@ -311,3 +311,36 @@ export async function getGymPricingPlans(gymId: string) {
     return [];
   }
 }
+
+export async function getPayoutRequests() {
+  try {
+    const result = await query(`
+      SELECT p.*, g.name as gym_name, g.location as gym_location
+      FROM payout_requests p
+      LEFT JOIN gyms g ON p.gym_id = g.id
+      ORDER BY p.created_at DESC
+    `);
+    
+    // Map the flat result into the nested structure expected by the frontend
+    return result.rows.map((row: any) => ({
+      ...row,
+      gyms: {
+        name: row.gym_name || 'Unknown Gym',
+        location: row.gym_location || 'Unknown Location'
+      }
+    }));
+  } catch (error) {
+    console.error("Error fetching payout requests", error);
+    return [];
+  }
+}
+
+export async function updatePayoutStatus(id: string, newStatus: string) {
+  try {
+    await query("UPDATE payout_requests SET status = $1 WHERE id = $2", [newStatus, id]);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating payout status", error);
+    return { error: error.message };
+  }
+}
