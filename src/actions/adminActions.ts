@@ -95,7 +95,7 @@ export async function updateSectionVisibility(isVisible: boolean) {
 async function uploadCityImage(file: File): Promise<string | null> {
   if (!file || file.size === 0) return null;
   try {
-    const uploadDir = process.env.UPLOAD_DIR || './public/uploads/cities';
+    const uploadDir = '/var/www/gymdate_uploads/cities';
     await mkdir(uploadDir, { recursive: true });
     
     const ext = file.name.split(".").pop() || "jpg";
@@ -105,8 +105,7 @@ async function uploadCityImage(file: File): Promise<string | null> {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
 
-    const baseUrl = process.env.NEXT_PUBLIC_UPLOAD_URL || '/uploads';
-    return `${baseUrl}/cities/${fileName}`;
+    return `/uploads/cities/${fileName}`;
   } catch (err) {
     console.error("Error uploading city image:", err);
     return null;
