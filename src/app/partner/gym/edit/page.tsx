@@ -652,8 +652,8 @@ export default function PartnerEditGymPage() {
                   </label>
                 ))}
                 {customAmenities.map((amenity) => (
-                  <label key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <div className="flex items-center space-x-3">
+                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
                       <input 
                         type="checkbox" 
                         name="amenities" 
@@ -662,7 +662,7 @@ export default function PartnerEditGymPage() {
                         className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
                       />
                       <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
-                    </div>
+                    </label>
                     <button
                       type="button"
                       onClick={(e) => handleRemoveCustomAmenity(amenity, e)}
@@ -670,7 +670,7 @@ export default function PartnerEditGymPage() {
                     >
                       <X className="w-4 h-4" />
                     </button>
-                  </label>
+                  </div>
                 ))}
               </div>
               
