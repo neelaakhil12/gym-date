@@ -96,6 +96,10 @@ export default function ExplorePage() {
   }));
 
   const filteredGyms = gymsWithDistance.filter(gym => {
+    // Hide Closed gyms - only show Open gyms (or gyms with no status set)
+    const gymStatus = (gym.status || "Open").toLowerCase();
+    if (gymStatus === "closed") return false;
+
     // Distance Filter
     if (activeDistance !== "all") {
       const maxDistance = parseInt(activeDistance);
