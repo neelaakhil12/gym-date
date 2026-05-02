@@ -63,20 +63,37 @@ export async function POST(req: NextRequest) {
     // ── 4. Insert booking into Postgres ───────────────────────────────────
     let bookingId;
     try {
+      console.log("[Postgres] Attempting to insert booking:", {
+        finalUserId, gymId, planName, amount, razorpay_payment_id, razorpay_order_id, today, endDate
+      });
+      
       const bookingRes = await query(
         `INSERT INTO bookings (
           user_id, gym_id, plan_name, amount, status, payment_id, razorpay_order_id, start_date, end_date
         ) VALUES ($1, $2, $3, $4, 'completed', $5, $6, $7, $8) RETURNING id`,
         [
-          finalUserId || null, gymId, planName, Number(amount), razorpay_payment_id, 
-          razorpay_order_id, today.toISOString(), endDate.toISOString()
+          finalUserId || null, 
+          gymId, 
+          planName, 
+          Number(amount), 
+          razorpay_payment_id, 
+          razorpay_order_id, 
+          today.toISOString(), 
+          endDate.toISOString()
         ]
       );
       bookingId = bookingRes.rows[0].id;
-    } catch (error) {
-      console.error("[Postgres] booking insert error:", error);
+      console.log("[Postgres] Booking created successfully ID:", bookingId);
+    } catch (error: any) {
+      console.error("[Postgres] booking insert error detail:", {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        table: error.table,
+        constraint: error.constraint
+      });
       return NextResponse.json(
-        { error: "Payment verified but booking creation failed" },
+        { error: `Booking creation failed: ${error.message}` },
         { status: 500 }
       );
     }
