@@ -859,7 +859,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-6">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-secondary leading-none mb-1">{booking.gyms?.name || 'Unknown Gym'}</span>
+                        <span className="text-sm font-bold text-secondary leading-none mb-1">{booking.gym_name || 'Unknown Gym'}</span>
                         <span className="text-[10px] font-black text-primary uppercase tracking-wider">{booking.plan_name}</span>
                       </div>
                     </td>

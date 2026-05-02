@@ -6,12 +6,13 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function getAdminStats() {
   try {
+    // Calculate real balance: sum of all booking amounts
     let walletBalance = 0;
     try {
-      const walletRes = await query("SELECT balance FROM wallet WHERE id = 'platform_wallet'");
-      walletBalance = parseFloat(walletRes.rows[0]?.balance) || 0;
+      const balanceRes = await query("SELECT COALESCE(SUM(amount::numeric), 0) as total FROM bookings");
+      walletBalance = parseFloat(balanceRes.rows[0]?.total) || 0;
     } catch (e) {
-      console.warn("Wallet query failed, defaulting to 0", e);
+      console.warn("Balance calculation failed, defaulting to 0", e);
     }
 
     let totalGyms = 0;
