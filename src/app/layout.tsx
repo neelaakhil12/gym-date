@@ -49,8 +49,7 @@ export const metadata: Metadata = {
     images: ["/brand-logo.png"],
   },
   verification: {
-    // Replace this string with your actual Google Search Console verification code
-    google: "YOUR_GOOGLE_SEARCH_CONSOLE_VERIFICATION_CODE",
+    google: "793f9734d99cba80",
   },
 };
 
