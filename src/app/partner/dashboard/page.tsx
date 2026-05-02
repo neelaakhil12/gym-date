@@ -13,7 +13,7 @@ import {
   FileDown
 } from "lucide-react";
 import Link from "next/link";
-import { getPartnerGym, supabase } from "@/lib/supabase";
+import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
 import { updateGymStatus, updateGymOffer } from "@/actions/gymActions";
 import { generateInvoicePDF } from "@/lib/invoice";
 
@@ -37,12 +37,8 @@ export default function PartnerDashboard() {
         hasOffer: data.has_offer || false, 
         percentage: data.offer_percentage || 0 
       });
-      const { data: bookingData } = await supabase
-        .from('bookings')
-        .select('*, gyms(name)')
-        .eq('gym_id', data.id)
-        .order('created_at', { ascending: false });
       
+      const bookingData = await getPartnerBookings(data.id);
       setBookings(bookingData || []);
       
       const commissionRate = data.commission_rate || 10;

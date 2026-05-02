@@ -242,7 +242,11 @@ export async function getAdminStats() {
 export async function getAllBookings() {
   try {
     const result = await query(
-      `SELECT b.*, u.email as user_email, g.name as gym_name
+      `SELECT 
+        b.*, 
+        u.full_name as customer_name, 
+        u.email as customer_email,
+        json_build_object('name', g.name) as gyms
        FROM bookings b
        LEFT JOIN users u ON b.user_id = u.id
        LEFT JOIN gyms g ON b.gym_id = g.id
@@ -321,5 +325,38 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
   } catch (error: any) {
     console.error("Error updating partner request status", error);
     return { error: error.message || "Failed to update status." };
+  }
+}
+
+export async function getPartnerBookings(gymId: string) {
+  try {
+    const result = await query(
+      `SELECT 
+        b.*, 
+        u.full_name as customer_name, 
+        u.email as customer_email
+       FROM bookings b
+       LEFT JOIN users u ON b.user_id = u.id
+       WHERE b.gym_id = $1
+       ORDER BY b.created_at DESC`,
+      [gymId]
+    );
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching partner bookings:", error);
+    return [];
+  }
+}
+
+export async function getGymPricingPlans(gymId: string) {
+  try {
+    const result = await query(
+      "SELECT id, name, price FROM pricing_plans WHERE gym_id = $1 ORDER BY price ASC",
+      [gymId]
+    );
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching gym pricing plans:", error);
+    return [];
   }
 }

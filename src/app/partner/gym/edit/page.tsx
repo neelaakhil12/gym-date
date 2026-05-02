@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Dumbbell, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Star, Percent } from "lucide-react";
 import { updateGym, getCoordinatesFromGoogle } from "@/actions/gymActions";
-import { getPartnerGym, supabase } from "@/lib/supabase";
+import { getPartnerGym, getGymPricingPlans } from "@/actions/adminActions";
 
 export default function PartnerEditGymPage() {
   const router = useRouter();
@@ -142,15 +142,10 @@ export default function PartnerEditGymPage() {
         setCustomAmenities(customs);
 
         // Fetch pricing plans
-        const { data: plans, error: plansError } = await supabase
-          .from("pricing_plans")
-          .select("*")
-          .eq("gym_id", gym.id);
+        const dbPlans = await getGymPricingPlans(gym.id);
 
-        if (plansError) throw plansError;
-
-        if (plans && plans.length > 0) {
-          const formattedPlans = plans.map((p: any) => ({
+        if (dbPlans && dbPlans.length > 0) {
+          const formattedPlans = dbPlans.map((p: any) => ({
             id: p.id,
             name: p.name,
             price: p.price.replace(/[^0-9]/g, '')
