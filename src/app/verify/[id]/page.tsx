@@ -14,12 +14,13 @@ export default async function VerifyBookingPage({ params }: Props) {
   try {
     const result = await query(
       `SELECT b.*, 
-       COALESCE(b.customer_name, u.full_name, 'Anonymous User') as display_name,
-       json_build_object('name', g.name, 'location', g.location, 'image', g.image) as gyms
+       COALESCE(b.customer_name, u.full_name, 'Member') as display_name,
+       g.name as gym_name,
+       g.location as gym_location
        FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id
-       LEFT JOIN gyms g ON b.gym_id = g.id
-       WHERE b.id::text = $1 OR b.ticket_code = $1`,
+       LEFT JOIN users u ON b.user_id = u.id::text
+       LEFT JOIN gyms g ON b.gym_id::text = g.id::text
+       WHERE b.id::text = $1 OR b.ticket_code ILIKE $1`,
       [id]
     );
     booking = result.rows[0];
@@ -73,11 +74,19 @@ export default async function VerifyBookingPage({ params }: Props) {
               <div className="w-24 h-24 rounded-[32px] bg-slate-50 flex items-center justify-center border-4 border-white shadow-xl">
                 <User className="w-10 h-10 text-slate-300" />
               </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Customer Name</p>
-                <h2 className="text-2xl font-black text-slate-900 leading-tight">
-                  {booking.display_name}
-                </h2>
+              <div className="space-y-1">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0">Customer</p>
+                  <h2 className="text-xl font-black text-slate-900 leading-none">
+                    {booking.display_name}
+                  </h2>
+                </div>
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0">Gym</p>
+                  <h2 className="text-sm font-black text-slate-600 leading-tight">
+                    {booking.gym_name}
+                  </h2>
+                </div>
               </div>
             </div>
 
@@ -135,7 +144,7 @@ export default async function VerifyBookingPage({ params }: Props) {
                   </div>
                   <span className="text-lg">Amount Paid</span>
                 </div>
-                <span className="text-lg font-black text-[#E50914]">₹{booking.amount || booking.total_price}</span>
+                <span className="text-lg font-black text-[#E50914]">₹{Number(booking.amount) || Number(booking.total_price)}</span>
               </div>
             </div>
 
