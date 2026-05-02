@@ -28,6 +28,8 @@ export default function EditGymPage() {
   const [commissionRate, setCommissionRate] = useState("10");
   const [rating, setRating] = useState("4.5");
   const [reviews, setReviews] = useState("0");
+  const [hasOffer, setHasOffer] = useState(false);
+  const [offerPercentage, setOfferPercentage] = useState("10");
   const [locating, setLocating] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
 
@@ -136,6 +138,8 @@ export default function EditGymPage() {
         setCommissionRate(gym.commission_rate?.toString() || "10");
         setRating(gym.rating?.toString() || "4.5");
         setReviews(gym.reviews?.toString() || "0");
+        setHasOffer(gym.has_offer || false);
+        setOfferPercentage(gym.offer_percentage?.toString() || "10");
 
         // Fetch pricing plans
         const plansData = await getPricingPlansByGymId(gymId);
@@ -413,6 +417,50 @@ export default function EditGymPage() {
                     className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                   />
                 </div>
+              </div>
+
+              {/* Offer Toggle */}
+              <div className="space-y-4 pt-4 border-t border-gray-100 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-bold text-gray-700">Special Offer / Discount</label>
+                    <p className="text-xs text-gray-500">Enable a discount badge on the explore page.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHasOffer(!hasOffer)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      hasOffer ? 'bg-primary' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        hasOffer ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <input type="hidden" name="hasOffer" value={hasOffer ? "true" : "false"} />
+                </div>
+
+                {hasOffer && (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                    <label className="text-sm font-bold text-gray-700">Discount Percentage (%)</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Percent className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        name="offerPercentage"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={offerPercentage}
+                        onChange={(e) => setOfferPercentage(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Location */}

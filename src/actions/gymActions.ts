@@ -197,12 +197,14 @@ export async function updateGym(gymId: string, formData: FormData) {
     const reviewsStr = formData.get("reviews") as string;
     const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : 0.0;
     const reviews = reviewsStr && !isNaN(parseInt(reviewsStr)) ? parseInt(reviewsStr) : 0;
+    const hasOffer = formData.get("hasOffer") === "true";
+    const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
 
     await query(
-      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11 WHERE id = $12",
+      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11, has_offer = $12, offer_percentage = $13 WHERE id = $14",
       [
         gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, gymId
+        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, hasOffer, offerPercentage, gymId
       ]
     );
 
