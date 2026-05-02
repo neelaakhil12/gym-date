@@ -3,8 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload } from "lucide-react";
 import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
-import { query } from "@/lib/db"; // For direct DB access if needed in server components, but this is a client component
-// We will use the server actions instead
+import { supabase } from "@/lib/supabase";
 
 export default function PartnerWallet() {
   const [gym, setGym] = useState<any>(null);
