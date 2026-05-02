@@ -110,8 +110,16 @@ const Footer = () => {
               Gym Partner Login
             </Link>
           </div>
-          <div className="flex space-x-6">
+          <div className="flex flex-col items-center md:items-end space-y-1">
             <span className="text-gray-500 text-xs">Made with ❤️ in India</span>
+            <a 
+              href="https://codtechitsolutions.com/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-gray-500 text-[10px] hover:text-primary transition-colors uppercase tracking-wider"
+            >
+              Developed by CodTech IT Solutions
+            </a>
           </div>
         </div>
       </div>
