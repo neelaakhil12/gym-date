@@ -277,12 +277,14 @@ export default function AdminUsers() {
 
                     {/* Location (customers only) */}
                     {activeTab === "customers" && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                          <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          <span className="max-w-[150px] truncate">
-                            {profile.address || "Not set"}
-                          </span>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                            <span className="font-medium text-secondary">
+                              {profile.address || "Address not provided"}
+                            </span>
+                          </div>
                         </div>
                       </td>
                     )}

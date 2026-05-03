@@ -114,21 +114,21 @@ export async function getAllProfiles() {
   try {
     const result = await query(`
       SELECT 
-        u.id, u.email, u.full_name, u.phone, 'user' as role_id, 'Customer' as role_name, u.created_at, NULL as gym_name
+        u.id, u.email, u.full_name, u.phone, 'user' as role_id, 'Customer' as role_name, u.created_at, NULL as gym_name, u.address
       FROM users u
       WHERE u.role_id = 'user'
       
       UNION ALL
       
       SELECT 
-        p.id, p.email, p.full_name, p.phone, 'partner' as role_id, 'Partner Admin' as role_name, p.created_at, g.name as gym_name
+        p.id, p.email, p.full_name, p.phone, 'partner' as role_id, 'Partner Admin' as role_name, p.created_at, g.name as gym_name, g.location as address
       FROM partner_users p
       LEFT JOIN gyms g ON p.id::text = g.partner_id::text
       
       UNION ALL
       
       SELECT 
-        a.id, a.email, a.full_name, NULL as phone, 'super_admin' as role_id, 'Super Admin' as role_name, a.created_at, NULL as gym_name
+        a.id, a.email, a.full_name, NULL as phone, 'super_admin' as role_id, 'Super Admin' as role_name, a.created_at, NULL as gym_name, NULL as address
       FROM admin_users a
       
       ORDER BY created_at DESC
