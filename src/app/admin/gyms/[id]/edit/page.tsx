@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
-import { updateGym, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
+import { updateGym, getCoordinatesFromGoogle } from "@/actions/gymActions";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { supabase } from "@/lib/supabase";
 
@@ -107,9 +107,6 @@ export default function EditGymPage() {
   
   const [plans, setPlans] = useState<{id?: string, name: string, price: string}[]>([]);
 
-  const [defaultAmenitiesList, setDefaultAmenitiesList] = useState<string[]>([]);
-  const [checkedDefaultAmenities, setCheckedDefaultAmenities] = useState<string[]>([]);
-
   useEffect(() => {
     async function loadGymData() {
       try {
@@ -124,29 +121,9 @@ export default function EditGymPage() {
         setExistingPrimaryImage(gym.image || "");
         setExistingGalleryUrls(gym.gallery || []);
 
-        // Fetch global amenities
-        const globalAmenitiesData = await getGlobalAmenities();
-        const globalNames = globalAmenitiesData.map((a: any) => a.name);
-        setDefaultAmenitiesList(globalNames);
-
-        // Split amenities into default and custom, ensuring uniqueness and case-normalization
+        // Consolidate all amenities to custom list
         const rawDbAmenities = Array.from(new Set(gym.amenities || []));
-        
-        // Map to official names from global list if match found (case-insensitive)
-        const normalizedDbAmenities = rawDbAmenities.map(a => {
-          const official = globalNames.find((gn: string) => gn.toLowerCase() === a.toLowerCase());
-          return official || a;
-        });
-
-        const checkedDefaults = normalizedDbAmenities.filter((a: string) => 
-          globalNames.includes(a)
-        );
-        const customs = normalizedDbAmenities.filter((a: string) => 
-          !globalNames.includes(a)
-        );
-        
-        setCheckedDefaultAmenities(checkedDefaults);
-        setCustomAmenities(customs);
+        setCustomAmenities(rawDbAmenities);
         setCommissionRate(gym.commission_rate?.toString() || "10");
         setRating(gym.rating?.toString() || "4.5");
         setReviews(gym.reviews?.toString() || "0");
@@ -183,35 +160,11 @@ export default function EditGymPage() {
     loadGymData();
   }, [gymId]);
 
-  const handleGlobalAmenityDelete = async (amenityName: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (confirm(`Are you sure you want to permanently delete "${amenityName}" from the global system?`)) {
-      const result = await deleteGlobalAmenity(amenityName);
-      if (result.success) {
-        setDefaultAmenitiesList(prev => prev.filter(a => a !== amenityName));
-        setCheckedDefaultAmenities(prev => prev.filter(a => a !== amenityName));
-      } else {
-        alert(result.error || "Failed to delete amenity");
-      }
-    }
-  };
+
 
   const handleAddCustomAmenity = () => {
     const trimmed = newAmenity.trim();
     if (!trimmed) return;
-
-    // Check if it's already in default list
-    const isDefault = defaultAmenitiesList.some(a => a.toLowerCase() === trimmed.toLowerCase());
-    if (isDefault) {
-      const actualName = defaultAmenitiesList.find(a => a.toLowerCase() === trimmed.toLowerCase())!;
-      if (!checkedDefaultAmenities.includes(actualName)) {
-        setCheckedDefaultAmenities([...checkedDefaultAmenities, actualName]);
-      }
-      setNewAmenity("");
-      return;
-    }
 
     if (!customAmenities.some(a => a.toLowerCase() === trimmed.toLowerCase())) {
       setCustomAmenities([...customAmenities, trimmed]);
@@ -265,13 +218,7 @@ export default function EditGymPage() {
     setPlans(updatedPlans);
   };
 
-  const toggleDefaultAmenity = (amenity: string) => {
-    if (checkedDefaultAmenities.includes(amenity)) {
-      setCheckedDefaultAmenities(checkedDefaultAmenities.filter(a => a !== amenity));
-    } else {
-      setCheckedDefaultAmenities([...checkedDefaultAmenities, amenity]);
-    }
-  };
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -703,49 +650,17 @@ export default function EditGymPage() {
               <input 
                 type="hidden" 
                 name="amenities_json" 
-                value={JSON.stringify([...checkedDefaultAmenities, ...customAmenities])} 
+                value={JSON.stringify(customAmenities)} 
               />
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {defaultAmenitiesList.map((amenity) => (
-                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
-                      <input 
-                        type="checkbox" 
-                        name="amenities" 
-                        value={amenity}
-                        checked={checkedDefaultAmenities.includes(amenity)}
-                        onChange={() => toggleDefaultAmenity(amenity)}
-                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                      />
-                      <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={(e) => handleGlobalAmenityDelete(amenity, e)}
-                      className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+              <div className="flex flex-wrap gap-2">
                 {customAmenities.map((amenity) => (
-                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-primary/20 bg-primary/5 transition-colors group">
-                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
-                      <input 
-                        type="checkbox" 
-                        name="amenities" 
-                        value={amenity}
-                        checked={true}
-                        readOnly
-                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                      />
-                      <span className="text-sm font-medium text-primary">{amenity}</span>
-                    </label>
+                  <div key={amenity} className="flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg">
+                    <span className="text-sm font-bold">{amenity}</span>
                     <button
                       type="button"
                       onClick={(e) => handleRemoveCustomAmenity(amenity, e)}
-                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50"
+                      className="text-primary/60 hover:text-primary transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
