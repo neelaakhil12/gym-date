@@ -116,8 +116,12 @@ export async function getAdminStats() {
     const gymsCount = await query("SELECT COUNT(*) FROM gyms");
     const totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
 
-    // 3. Users (Count total from users table)
-    const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user' OR role_id IS NULL");
+    // 3. Users (Count everyone who isn't a partner or super_admin)
+    const usersCount = await query(`
+      SELECT COUNT(*) FROM users 
+      WHERE role_id NOT IN ('partner', 'super_admin') 
+      OR role_id IS NULL
+    `);
     const totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
 
     return { walletBalance, totalGyms, totalUsers };
