@@ -135,10 +135,33 @@ export async function getAllProfiles() {
       LEFT JOIN gyms g ON u.id::text = g.partner_id::text
       ORDER BY u.created_at DESC
     `);
+
+    console.log(`[AdminActions] getAllProfiles: Found ${result.rows.length} profiles`);
     return result.rows || [];
   } catch (error) {
     console.error("Error fetching all profiles", error);
     return [];
+  }
+}
+
+export async function getAdminStats() {
+  try {
+    // 1. Balance
+    const balanceRes = await query("SELECT COALESCE(SUM(amount::numeric), 0) as total FROM bookings");
+    const walletBalance = parseFloat(balanceRes.rows[0]?.total) || 0;
+
+    // 2. Gyms
+    const gymsCount = await query("SELECT COUNT(*) FROM gyms");
+    const totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
+
+    // 3. Users (Count total from users table)
+    const usersCount = await query("SELECT COUNT(*) FROM users WHERE role_id = 'user' OR role_id IS NULL");
+    const totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+
+    return { walletBalance, totalGyms, totalUsers };
+  } catch (error) {
+    console.error("Error fetching admin stats", error);
+    return { walletBalance: 0, totalGyms: 0, totalUsers: 0 };
   }
 }
 
