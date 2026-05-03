@@ -260,12 +260,11 @@ export default function AdminUsers() {
                                   ? profile.gym_name 
                                   : (profile.full_name || "—")}
                               </div>
-                              <div className="text-xs text-gray-400 font-mono mt-0.5">
-                                ID: {profile.id?.substring(0, 8)}...
-                                {profile.role_id === "partner" && profile.full_name && (
-                                  <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600 font-sans font-medium">Owner: {profile.full_name}</span>
-                                )}
-                              </div>
+                              {profile.role_id === "partner" && profile.full_name && (
+                                <div className="text-xs text-gray-500 font-medium mt-0.5">
+                                  Owner: {profile.full_name}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
