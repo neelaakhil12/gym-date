@@ -1,9 +1,10 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Dumbbell, User } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -27,9 +28,8 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const { data: nextAuthSession } = useSession();
-
-  const hasSession = !!nextAuthSession;
+  const { data: nextAuthSession, status } = useSession();
+  const hasSession = status === "authenticated" && !!nextAuthSession?.user;
 
   // Generate Initials
   const getInitials = (name: string) => {
@@ -41,7 +41,7 @@ const Navbar = () => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  const displayName = nextAuthSession?.user?.name || "Gym User";
+  const displayName = nextAuthSession?.user?.name || "User";
   const initials = getInitials(displayName);
 
   useEffect(() => {
@@ -95,7 +95,9 @@ const Navbar = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {hasSession ? (
+            {status === "loading" ? (
+              <div className="w-28 h-10 bg-gray-100 rounded-full animate-pulse" />
+            ) : hasSession ? (
               <Link
                 href="/account"
                 className="flex items-center space-x-2 px-5 py-2.5 bg-gray-50 border border-gray-100 rounded-full hover:bg-white hover:shadow-sm transition-all group"
@@ -153,7 +155,9 @@ const Navbar = () => {
                 </Link>
               ))}
               <div className="pt-4 flex flex-col space-y-3">
-                {hasSession ? (
+                {status === "loading" ? (
+                  <div className="w-full h-14 bg-gray-100 rounded-xl animate-pulse" />
+                ) : hasSession ? (
                   <Link
                     href="/account"
                     onClick={() => setIsOpen(false)}

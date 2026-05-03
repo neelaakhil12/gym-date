@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,7 +33,11 @@ export async function GET(req: NextRequest) {
 
     console.log(`[GetBookings] Found ${bookingsResult.rows.length} bookings for ${email}`);
 
-    return NextResponse.json({ success: true, bookings: bookingsResult.rows || [] });
+    return NextResponse.json({ success: true, bookings: bookingsResult.rows || [] }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
+    });
   } catch (error: any) {
     console.error("[GetBookings] Critical error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

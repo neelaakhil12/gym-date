@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
@@ -20,6 +21,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ 
       success: true, 
       profile: profile || null
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      }
     });
   } catch (error: any) {
     console.error("Get Profile Error:", error);

@@ -13,6 +13,7 @@ import {
   Wallet
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
+import PartnerAuthProvider from "@/components/PartnerAuthProvider";
 
 const partnerLinks = [
   { name: "My Gym Overview", href: "/partner/dashboard", icon: Store },
@@ -58,11 +59,12 @@ export default function PartnerLayout({
   // If we are on login or auth recovery pages, don't show the dashboard sidebar
   const isPublicRoute = pathname === "/partner" || pathname === "/partner/login" || pathname === "/partner/forgot-password" || pathname === "/partner/reset-password";
   if (isPublicRoute) {
-    return <>{children}</>;
+    return <PartnerAuthProvider>{children}</PartnerAuthProvider>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <PartnerAuthProvider>
+      <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -161,6 +163,6 @@ export default function PartnerLayout({
           {children}
         </main>
       </div>
-    </div>
+    </PartnerAuthProvider>
   );
 }

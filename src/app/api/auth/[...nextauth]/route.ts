@@ -31,44 +31,7 @@ export const authOptions = {
 
         const { email, otp, password, name, phone, role } = credentials;
 
-        // 1. Password Login (Admin / Partner)
-        if (password) {
-          try {
-            // First time setup - create password_hash column if it doesn't exist
-            await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash varchar;');
-          } catch (e) {
-            console.log('Column password_hash already exists or error:', e);
-          }
 
-          const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
-          if (userResult.rows.length === 0) {
-            throw new Error("No user found with this email");
-          }
-
-          const user = userResult.rows[0];
-
-          // If they don't have a password set, they must use the forgot password flow
-          if (!user.password_hash) {
-            throw new Error("No password set for this account. Please use forgot password.");
-          }
-
-          const isMatch = await bcrypt.compare(password, user.password_hash);
-          if (!isMatch) {
-            throw new Error("Invalid password");
-          }
-
-          // Verify requested role
-          if (role && role === 'admin' && user.role_id !== 'super_admin') {
-             throw new Error("Access Denied: You do not have super admin privileges.");
-          }
-
-          return {
-            id: user.id,
-            name: user.full_name,
-            email: user.email,
-            role: user.role_id,
-          };
-        }
 
         // 2. OTP Login (Customer)
         if (otp) {
@@ -134,12 +97,23 @@ export const authOptions = {
   },
   session: {
     strategy: "jwt" as const,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   pages: {
     signIn: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET || "gymdate-secret-key-2026",
+  secret: process.env.NEXTAUTH_SECRET,
+  cookies: {
+    sessionToken: {
+      name: `gymdate.user-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
 };
 
 const handler = NextAuth(authOptions);

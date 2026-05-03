@@ -1,6 +1,7 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Calendar, CreditCard, Dumbbell, MapPin, ShieldCheck, User } from "lucide-react";
+import { CheckCircle2, XCircle, Calendar, CreditCard, MapPin, ShieldCheck, User } from "lucide-react";
 import { query } from "@/lib/db";
 
 interface Props {

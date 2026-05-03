@@ -1,3 +1,4 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React from "react";
@@ -5,7 +6,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Dumbbell, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -40,7 +41,7 @@ export default function SignupPage() {
           <div className="relative z-10">
             <Link href="/" className="flex items-center justify-center space-x-2 mb-10">
               <div className="bg-primary p-1.5 rounded-lg">
-                <Dumbbell className="h-6 w-6 text-white" />
+                <GymLogoIcon className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-bold tracking-tight text-secondary">
                 Gym<span className="text-primary">Date</span>

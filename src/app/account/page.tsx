@@ -35,6 +35,7 @@ import { generateInvoicePDF } from "@/lib/invoice";
 import { gyms as mockGyms } from "@/data/mockData";
 import { getGyms } from "@/lib/supabase";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -47,7 +48,15 @@ export default function AccountPage() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
-  const { data: nextAuthSession } = useSession();
+  const { data: nextAuthSession, status } = useSession();
+  const router = useRouter();
+
+  // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
 
   useEffect(() => {
     const fetchUserAndGyms = async () => {
@@ -204,6 +213,22 @@ export default function AccountPage() {
     );
   };
 
+  // Show spinner while session is loading; show nothing while redirecting to /login
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-black text-secondary tracking-widest uppercase animate-pulse">Loading your account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null; // Router is already pushing to /login via useEffect
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] pt-44 lg:pt-32 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -335,7 +360,7 @@ export default function AccountPage() {
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Location</label>
                       <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 font-bold text-secondary flex items-center">
                         <MapPin className="w-4 h-4 mr-2 text-primary" />
-                        <span>Hyderabad, Telangana</span>
+                        <span>{supabaseUser?.address || "Location not set"}</span>
                       </div>
                     </div>
                   </div>
@@ -471,7 +496,7 @@ export default function AccountPage() {
                       <span className="font-bold text-gray-400 group-hover:text-primary transition-all">Add New Address</span>
                     </div>
                     {[
-                      { type: "Primary Location", addr: supabaseUser?.address_name || "Plot No 81, Chaitanya Hill, Hyderabad", icon: <Home className="w-6 h-6 text-orange-500" /> },
+                      { type: "Primary Location", addr: supabaseUser?.address || "No address saved", icon: <Home className="w-6 h-6 text-orange-500" /> },
                     ].map((addr, idx) => (
                       <div key={idx} className="p-8 bg-white rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-all relative group">
                         <div className="flex items-start justify-between mb-6">

@@ -162,7 +162,17 @@ export async function updateGym(gymId: string, formData: FormData) {
     const gymName = formData.get("name") as string;
     const location = formData.get("location") as string;
     const description = formData.get("description") as string;
-    const amenities = formData.getAll("amenities") as string[];
+    const amenitiesJson = formData.get("amenities_json") as string;
+    let amenities: string[] = [];
+    if (amenitiesJson) {
+      try {
+        amenities = JSON.parse(amenitiesJson);
+      } catch (e) {
+        amenities = formData.getAll("amenities") as string[];
+      }
+    } else {
+      amenities = formData.getAll("amenities") as string[];
+    }
     
     const existingPrimaryImage = formData.get("existingPrimaryImage") as string;
     const primaryImageFile = formData.get("primaryImage") as File;
@@ -225,6 +235,9 @@ export async function updateGym(gymId: string, formData: FormData) {
     }
 
     revalidatePath("/admin/gyms");
+    revalidatePath(`/admin/gyms/${gymId}/edit`);
+    revalidatePath("/partner/gym/edit");
+    revalidatePath(`/gym/${gymId}`);
     return { success: true };
     
   } catch (err: any) {
@@ -242,8 +255,17 @@ export async function deleteGym(gymId: string) {
     
     const partnerId = gymResult.rows[0].partner_id;
 
+    // 1. Delete dependent records first to avoid foreign key constraints
+    console.log(`Cleaning up dependent records for gym: ${gymId}`);
+    
+    await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
+    await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
+    await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
+
+    // 2. Delete the gym
     await query("DELETE FROM gyms WHERE id = $1", [gymId]);
 
+    // 3. Delete the partner account if it exists
     if (partnerId) {
       await query("DELETE FROM users WHERE id = $1", [partnerId]);
     }
@@ -254,7 +276,7 @@ export async function deleteGym(gymId: string) {
     return { success: true };
   } catch (err: any) {
     console.error("Error in deleteGym process:", err);
-    return { error: "Failed to permanently remove the gym and partner." };
+    return { error: `Failed to permanently remove the gym: ${err.message}` };
   }
 }
 

@@ -1,9 +1,10 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Dumbbell, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
+import { ArrowLeft, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
 import { updateGym, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { supabase } from "@/lib/supabase";
@@ -128,10 +129,21 @@ export default function EditGymPage() {
         const globalNames = globalAmenitiesData.map((a: any) => a.name);
         setDefaultAmenitiesList(globalNames);
 
-        // Split amenities into default and custom
-        const dbAmenities = gym.amenities || [];
-        const checkedDefaults = dbAmenities.filter((a: string) => globalNames.includes(a));
-        const customs = dbAmenities.filter((a: string) => !globalNames.includes(a));
+        // Split amenities into default and custom, ensuring uniqueness and case-normalization
+        const rawDbAmenities = Array.from(new Set(gym.amenities || []));
+        
+        // Map to official names from global list if match found (case-insensitive)
+        const normalizedDbAmenities = rawDbAmenities.map(a => {
+          const official = globalNames.find((gn: string) => gn.toLowerCase() === a.toLowerCase());
+          return official || a;
+        });
+
+        const checkedDefaults = normalizedDbAmenities.filter((a: string) => 
+          globalNames.includes(a)
+        );
+        const customs = normalizedDbAmenities.filter((a: string) => 
+          !globalNames.includes(a)
+        );
         
         setCheckedDefaultAmenities(checkedDefaults);
         setCustomAmenities(customs);
@@ -187,10 +199,24 @@ export default function EditGymPage() {
   };
 
   const handleAddCustomAmenity = () => {
-    if (newAmenity.trim() && !customAmenities.includes(newAmenity.trim()) && !defaultAmenitiesList.includes(newAmenity.trim())) {
-      setCustomAmenities([...customAmenities, newAmenity.trim()]);
+    const trimmed = newAmenity.trim();
+    if (!trimmed) return;
+
+    // Check if it's already in default list
+    const isDefault = defaultAmenitiesList.some(a => a.toLowerCase() === trimmed.toLowerCase());
+    if (isDefault) {
+      const actualName = defaultAmenitiesList.find(a => a.toLowerCase() === trimmed.toLowerCase())!;
+      if (!checkedDefaultAmenities.includes(actualName)) {
+        setCheckedDefaultAmenities([...checkedDefaultAmenities, actualName]);
+      }
       setNewAmenity("");
+      return;
     }
+
+    if (!customAmenities.some(a => a.toLowerCase() === trimmed.toLowerCase())) {
+      setCustomAmenities([...customAmenities, trimmed]);
+    }
+    setNewAmenity("");
   };
 
   const handleRemoveCustomAmenity = (amenityToRemove: string, e: React.MouseEvent) => {
@@ -312,7 +338,7 @@ export default function EditGymPage() {
                 <label className="text-sm font-bold text-gray-700">Gym Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Dumbbell className="h-5 w-5 text-gray-400" />
+                    <GymLogoIcon className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     name="name"
@@ -673,10 +699,17 @@ export default function EditGymPage() {
               <div>
                 <h3 className="text-sm font-bold text-gray-700">Amenities</h3>
               </div>
+              {/* Hidden input to ensure amenities are sent as an array correctly */}
+              <input 
+                type="hidden" 
+                name="amenities_json" 
+                value={JSON.stringify([...checkedDefaultAmenities, ...customAmenities])} 
+              />
+
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {defaultAmenitiesList.map((amenity) => (
-                  <label key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <div className="flex items-center space-x-3">
+                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
                       <input 
                         type="checkbox" 
                         name="amenities" 
@@ -686,7 +719,7 @@ export default function EditGymPage() {
                         className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
                       />
                       <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
-                    </div>
+                    </label>
                     <button
                       type="button"
                       onClick={(e) => handleGlobalAmenityDelete(amenity, e)}
@@ -694,20 +727,21 @@ export default function EditGymPage() {
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
-                  </label>
+                  </div>
                 ))}
                 {customAmenities.map((amenity) => (
-                  <label key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <div className="flex items-center space-x-3">
+                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-primary/20 bg-primary/5 transition-colors group">
+                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
                       <input 
                         type="checkbox" 
                         name="amenities" 
                         value={amenity}
-                        defaultChecked
+                        checked={true}
+                        readOnly
                         className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
                       />
-                      <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
-                    </div>
+                      <span className="text-sm font-medium text-primary">{amenity}</span>
+                    </label>
                     <button
                       type="button"
                       onClick={(e) => handleRemoveCustomAmenity(amenity, e)}
@@ -715,7 +749,7 @@ export default function EditGymPage() {
                     >
                       <X className="w-4 h-4" />
                     </button>
-                  </label>
+                  </div>
                 ))}
               </div>
               

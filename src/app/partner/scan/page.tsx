@@ -1,3 +1,4 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -12,7 +13,6 @@ import {
   CheckCircle2, 
   AlertCircle,
   ArrowLeft,
-  Dumbbell,
   ShieldCheck,
   CreditCard
 } from "lucide-react";
@@ -210,7 +210,7 @@ export default function PartnerScanner() {
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Plan</p>
                   <div className="flex items-center text-slate-900 font-black">
-                    <Dumbbell className="w-4 h-4 mr-2 text-primary" />
+                    <GymLogoIcon className="w-4 h-4 mr-2 text-primary" />
                     {scanResult.plan_name}
                   </div>
                 </div>

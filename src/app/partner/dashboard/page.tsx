@@ -1,8 +1,8 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { 
-  Dumbbell, 
   MapPin, 
   DollarSign, 
   Star,
@@ -103,7 +103,7 @@ export default function PartnerDashboard() {
   if (!gym) {
     return (
       <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
-        <Dumbbell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <GymLogoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <h2 className="text-2xl font-black text-slate-900 mb-2">No Gym Found</h2>
         <p className="text-gray-500">Your partner account hasn't been linked to a gym yet. Please contact the Super Admin.</p>
       </div>

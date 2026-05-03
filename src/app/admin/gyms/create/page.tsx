@@ -1,9 +1,10 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Dumbbell, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
+import { ArrowLeft, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
 import { createGymAndPartner, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
 
 export default function CreateGymPage() {
@@ -230,7 +231,7 @@ export default function CreateGymPage() {
                 <label className="text-sm font-bold text-gray-700">Gym Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Dumbbell className="h-5 w-5 text-gray-400" />
+                    <GymLogoIcon className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
                     name="name"

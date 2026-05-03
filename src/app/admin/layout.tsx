@@ -1,3 +1,4 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -5,7 +6,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
-  Dumbbell, 
   Users, 
   Wallet, 
   LogOut,
@@ -15,10 +15,11 @@ import {
   ClipboardList
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
+import AdminAuthProvider from "@/components/AdminAuthProvider";
 
 const adminLinks = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { name: "Gyms", href: "/admin/gyms", icon: Dumbbell },
+  { name: "Gyms", href: "/admin/gyms", icon: GymLogoIcon },
   { name: "Partner Leads", href: "/admin/partner-requests", icon: ClipboardList },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Revenue", href: "/admin/revenue", icon: Wallet },
@@ -60,11 +61,12 @@ export default function AdminLayout({
   // If we are on a public admin page, don't show the dashboard sidebar
   const publicAdminPaths = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
   if (publicAdminPaths.includes(pathname)) {
-    return <>{children}</>;
+    return <AdminAuthProvider>{children}</AdminAuthProvider>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <AdminAuthProvider>
+      <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -160,6 +162,6 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
-    </div>
+    </AdminAuthProvider>
   );
 }

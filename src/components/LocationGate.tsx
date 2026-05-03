@@ -122,7 +122,7 @@ export default function LocationGate({ children }: { children: React.ReactNode }
         setError(msg);
         setLocating(false);
       },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -136,7 +136,13 @@ export default function LocationGate({ children }: { children: React.ReactNode }
     };
 
     const lowerCity = cityName.toLowerCase().trim();
-    const coords = cityCoords[lowerCity] || { lat: 17.3850, lng: 78.4867 }; // Default to Hyd
+    const coords = cityCoords[lowerCity];
+    
+    if (!coords) {
+      setError("City not supported for manual search. Please use current location.");
+      setLocating(false);
+      return;
+    }
 
     setLocating(true);
     try {

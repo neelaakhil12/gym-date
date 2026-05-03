@@ -1,8 +1,9 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Star, MapPin, Clock, User, Wifi, Wind, Car, ShieldCheck, Dumbbell, Droplets, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Star, MapPin, Clock, User, Wifi, Wind, Car, ShieldCheck, Droplets, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { useRazorpay } from "@/hooks/useRazorpay";
 
@@ -14,7 +15,7 @@ const getAmenityIcon = (amenity: string) => {
     case "locker room": return <ShieldCheck className="w-5 h-5" />;
     case "personal trainer": return <User className="w-5 h-5" />;
     case "shower": return <Droplets className="w-5 h-5" />;
-    default: return <Dumbbell className="w-5 h-5" />;
+    default: return <GymLogoIcon className="w-5 h-5" />;
   }
 };
 

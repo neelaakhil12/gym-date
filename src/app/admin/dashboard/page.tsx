@@ -1,3 +1,4 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -5,7 +6,7 @@ import Link from "next/link";
 import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addPlatformStat, deletePlatformStat, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
 import { getGyms, getCities } from "@/actions/publicActions";
 import { generateInvoicePDF } from "@/lib/invoice";
-import { Coins, Eye, TrendingUp, Wallet, Dumbbell, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2, PlusCircle } from "lucide-react";
+import { Coins, Eye, TrendingUp, Wallet, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2, PlusCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 // Platform Analytics Dashboard Refresh Fix
@@ -302,11 +303,11 @@ export default function AdminDashboard() {
         {/* Gyms Card */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
-            <Dumbbell className="w-24 h-24 text-secondary" />
+            <GymLogoIcon className="w-24 h-24 text-secondary" />
           </div>
           <div className="relative z-10">
             <div className="w-12 h-12 bg-secondary/10 rounded-2xl flex items-center justify-center mb-4">
-              <Dumbbell className="w-6 h-6 text-secondary" />
+              <GymLogoIcon className="w-6 h-6 text-secondary" />
             </div>
             <p className="text-sm font-bold text-gray-500">Live Partners</p>
             <div className="mt-2">
@@ -784,7 +785,7 @@ export default function AdminDashboard() {
                             <img className="h-10 w-10 rounded-lg object-cover" src={gym.image} alt="" />
                           ) : (
                             <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                              <Dumbbell className="h-5 w-5 text-gray-400" />
+                              <GymLogoIcon className="h-5 w-5 text-gray-400" />
                             </div>
                           )}
                         </div>

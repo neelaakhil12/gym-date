@@ -1,9 +1,9 @@
+import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
 import { 
-  Dumbbell, 
   Mail, 
   ArrowRight, 
   Chrome, 
@@ -110,7 +110,7 @@ export default function LoginPage() {
         <div className="bg-white rounded-[48px] p-10 md:p-14 shadow-2xl border border-white relative">
           <Link href="/" className="flex items-center justify-center space-x-2 mb-12">
             <div className="bg-primary p-2 rounded-2xl shadow-lg shadow-primary/20">
-              <Dumbbell className="h-6 w-6 text-white" />
+              <GymLogoIcon className="h-6 w-6 text-white" />
             </div>
             <span className="text-3xl font-black tracking-tighter text-secondary">
               Gym<span className="text-primary">Date</span>
