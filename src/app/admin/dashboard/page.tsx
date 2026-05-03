@@ -374,31 +374,6 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
-
-        {/* Amenities Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group transition-all hover:shadow-md">
-          <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
-            <Plus className="w-24 h-24 text-secondary" />
-          </div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-4">
-              <Plus className="w-6 h-6 text-orange-500" />
-            </div>
-            <p className="text-sm font-bold text-gray-500">Global Amenities</p>
-            <div className="mt-2">
-              <h3 className="text-3xl font-black text-secondary">
-                {globalAmenities.length}
-              </h3>
-            </div>
-            <button 
-              onClick={() => setShowModal('amenities')}
-              className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Manage Amenities</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Platform Stats Management */}
