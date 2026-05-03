@@ -225,55 +225,79 @@ export default function AdminUsers() {
             <table className="min-w-full divide-y divide-gray-50">
               <thead className="bg-gray-50/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
+                  {activeTab !== "super_admins" && (
+                    <>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
+                    </>
+                  )}
+                  {activeTab === "super_admins" && (
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Admin Email</th>
+                  )}
                   {activeTab === "customers" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Location</th>
                   )}
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Joined</th>
+                  {activeTab !== "super_admins" && (
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Joined</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-50">
                 {currentList.map((profile) => (
                   <tr key={profile.id} className="hover:bg-gray-50/50 transition-colors group">
-                    {/* User */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${getAvatarBg(profile.role_id)}`}>
-                          {getInitials(profile.full_name, profile.email)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-secondary">
-                            {profile.role_id === "partner" && profile.gym_name 
-                              ? profile.gym_name 
-                              : (profile.full_name || "—")}
+                    {/* User / Email Column */}
+                    {activeTab !== "super_admins" ? (
+                      <>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${getAvatarBg(profile.role_id)}`}>
+                              {getInitials(profile.full_name, profile.email)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-secondary">
+                                {profile.role_id === "partner" && profile.gym_name 
+                                  ? profile.gym_name 
+                                  : (profile.full_name || "—")}
+                              </div>
+                              <div className="text-xs text-gray-400 font-mono mt-0.5">
+                                ID: {profile.id?.substring(0, 8)}...
+                                {profile.role_id === "partner" && profile.full_name && (
+                                  <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600 font-sans font-medium">Owner: {profile.full_name}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-400 font-mono mt-0.5">
-                            ID: {profile.id?.substring(0, 8)}...
-                            {profile.role_id === "partner" && profile.full_name && (
-                              <span className="ml-2 px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600 font-sans font-medium">Owner: {profile.full_name}</span>
+                        </td>
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              <span className="font-medium">{profile.email || "—"}</span>
+                            </div>
+                            {profile.phone && (
+                              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                                <Phone className="w-3 h-3 flex-shrink-0" />
+                                <span>{profile.phone}</span>
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Contact */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                          <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                          <span className="font-medium">{profile.email || "—"}</span>
-                        </div>
-                        {profile.phone && (
-                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <Phone className="w-3 h-3 flex-shrink-0" />
-                            <span>{profile.phone}</span>
+                        </td>
+                      </>
+                    ) : (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${getAvatarBg(profile.role_id)}`}>
+                            {getInitials("", profile.email)}
                           </div>
-                        )}
-                      </div>
-                    </td>
+                          <div className="flex items-center gap-1.5 text-sm font-bold text-secondary">
+                            <Mail className="w-4 h-4 text-gray-400" />
+                            {profile.email}
+                          </div>
+                        </div>
+                      </td>
+                    )}
 
                     {/* Location (customers only) */}
                     {activeTab === "customers" && (
@@ -297,20 +321,22 @@ export default function AdminUsers() {
                     </td>
 
                     {/* Joined */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <Calendar className="w-3 h-3 text-gray-400" />
-                        <span>
-                          {profile.created_at
-                            ? new Date(profile.created_at).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })
-                            : "—"}
-                        </span>
-                      </div>
-                    </td>
+                    {activeTab !== "super_admins" && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Calendar className="w-3 h-3 text-gray-400" />
+                          <span>
+                            {profile.created_at
+                              ? new Date(profile.created_at).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "—"}
+                          </span>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
