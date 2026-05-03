@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { query } from "@/lib/db";
 import { sendBookingConfirmationEmail } from "@/lib/email";
 import { computeEndDate } from "@/lib/planDuration";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -135,6 +136,17 @@ export async function POST(req: NextRequest) {
       }
     } catch (emailErr) {
       console.error("[Email] confirmation email failed:", emailErr);
+    }
+
+    // ── 5. Revalidate Paths ───────────────────────────────────────────────
+    try {
+      revalidatePath("/admin/dashboard");
+      revalidatePath("/admin/users");
+      revalidatePath("/admin/gyms");
+      revalidatePath("/partner/dashboard");
+      revalidatePath("/explore");
+    } catch (revalidateErr) {
+      console.warn("Revalidation failed after payment, but booking is saved:", revalidateErr);
     }
 
     return NextResponse.json({
