@@ -256,7 +256,7 @@ export default function AdminUsers() {
                   {activeTab === "admins" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Admin Email</th>
                   )}
-                  {activeTab === "customers" && (
+                  {activeTab === "users" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Location</th>
                   )}
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
@@ -283,11 +283,7 @@ export default function AdminUsers() {
                                   ? profile.gym_name 
                                   : (profile.full_name || "—")}
                               </div>
-                              {profile.role_id === "partner" && profile.full_name && (
-                                <div className="text-xs text-gray-500 font-medium mt-0.5">
-                                  Owner: {profile.full_name}
-                                </div>
-                              )}
+
                             </div>
                           </div>
                         </td>
@@ -322,7 +318,7 @@ export default function AdminUsers() {
                     )}
 
                     {/* Location (customers only) */}
-                    {activeTab === "customers" && (
+                    {activeTab === "users" && (
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-1.5 text-xs text-gray-500">
