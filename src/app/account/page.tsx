@@ -185,14 +185,28 @@ export default function AccountPage() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
+          const { latitude, longitude } = position.coords;
+
+          // 1. Fetch State name using Reverse Geocoding (Nominatim - Free)
+          let detectedAddress = "Current Location";
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
+            const geoData = await geoRes.json();
+            // Try to get State, then City/Town as fallback
+            detectedAddress = geoData.address?.state || geoData.address?.city || geoData.address?.town || "Current Location";
+          } catch (geoErr) {
+            console.error("Reverse geocoding error:", geoErr);
+          }
+
+          // 2. Sync profile with the detected state/address
           const response = await fetch('/api/user/sync-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               email: displayEmail,
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              address: "Current Location"
+              lat: latitude,
+              lng: longitude,
+              address: detectedAddress
             }),
           });
           const result = await response.json();
