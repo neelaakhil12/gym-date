@@ -123,14 +123,18 @@ export default function AdminUsers() {
     }
   };
 
-  const getInitials = (name: string, email: string) => {
-    if (name) {
-      const parts = name.split(" ");
-      return parts.length >= 2
-        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        : name.slice(0, 2).toUpperCase();
+  const getInitials = (name?: string | null, email?: string | null) => {
+    if (name && name.trim() && name !== "undefined" && name !== "null") {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return parts[0][0].toUpperCase();
     }
-    return email ? email.slice(0, 2).toUpperCase() : "??";
+    if (email && email.trim() && email !== "undefined" && email !== "null") {
+      return email.trim()[0].toUpperCase();
+    }
+    return "??";
   };
 
   const getAvatarBg = (roleId: string) => {
