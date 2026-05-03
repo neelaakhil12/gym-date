@@ -221,10 +221,9 @@ export default function GymDetailsPage() {
             {gym.amenities && (
               <div className="mb-12">
                 <h3 className="text-xl font-bold text-secondary mb-5">Amenities</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {gym.amenities.map((amenity: string, idx: number) => (
-                    <div key={idx} className="flex items-center bg-gray-100/50 p-4 rounded-2xl border border-gray-100 text-sm font-medium text-gray-700">
-                      <div className="text-primary mr-3">{getAmenityIcon(amenity)}</div>
+                    <div key={idx} className="flex items-center justify-center text-center bg-white px-4 py-3 rounded-xl border-2 border-red-500 text-xs font-black text-secondary uppercase tracking-tight shadow-sm hover:scale-[1.02] transition-transform">
                       {amenity}
                     </div>
                   ))}
