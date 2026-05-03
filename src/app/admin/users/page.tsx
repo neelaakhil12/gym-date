@@ -225,20 +225,20 @@ export default function AdminUsers() {
             <table className="min-w-full divide-y divide-gray-50">
               <thead className="bg-gray-50/50">
                 <tr>
-                  {activeTab !== "super_admins" && (
+                  {activeTab !== "admins" && (
                     <>
                       <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
                       <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Contact</th>
                     </>
                   )}
-                  {activeTab === "super_admins" && (
+                  {activeTab === "admins" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Admin Email</th>
                   )}
                   {activeTab === "customers" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Location</th>
                   )}
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
-                  {activeTab !== "super_admins" && (
+                  {activeTab !== "admins" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Joined</th>
                   )}
                 </tr>
@@ -247,7 +247,7 @@ export default function AdminUsers() {
                 {currentList.map((profile) => (
                   <tr key={profile.id} className="hover:bg-gray-50/50 transition-colors group">
                     {/* User / Email Column */}
-                    {activeTab !== "super_admins" ? (
+                    {activeTab !== "admins" ? (
                       <>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
@@ -320,7 +320,7 @@ export default function AdminUsers() {
                     </td>
 
                     {/* Joined */}
-                    {activeTab !== "super_admins" && (
+                    {activeTab !== "admins" && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 text-xs text-gray-500">
                           <Calendar className="w-3 h-3 text-gray-400" />
