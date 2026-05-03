@@ -113,17 +113,24 @@ export async function getPartnerBookings(gymId: string) {
 // RESTORED FUNCTIONS
 export async function getAllProfiles() {
   try {
+    // Check if address column exists in users table to avoid SQL errors
+    const checkUserCol = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name='users' AND column_name='address'
+    `);
+    const hasAddress = checkUserCol.rows.length > 0;
+
     const result = await query(`
       SELECT 
         u.id, u.email, u.full_name, u.phone, u.role_id, 
         CASE 
           WHEN u.role_id = 'super_admin' THEN 'Super Admin'
           WHEN u.role_id = 'partner' THEN 'Partner'
-          ELSE 'Customer'
+          ELSE 'User'
         END as role_name,
         u.created_at, 
         g.name as gym_name, 
-        COALESCE(u.address, g.location) as address
+        ${hasAddress ? 'COALESCE(u.address, g.location)' : 'g.location'} as address
       FROM users u
       LEFT JOIN gyms g ON u.id::text = g.partner_id::text
       ORDER BY u.created_at DESC

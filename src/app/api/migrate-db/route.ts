@@ -16,6 +16,13 @@ export async function GET() {
       );
     `);
 
+    // 2. Add address column to users if missing
+    const userColumns = await query(`
+      SELECT column_name FROM information_schema.columns WHERE table_name='users';
+    `);
+    const uCols = userColumns.rows.map(r => r.column_name);
+    if (!uCols.includes('address')) await query(`ALTER TABLE users ADD COLUMN address TEXT;`);
+
     // 1. Ensure bookings table exists with core columns
     await query(`
       CREATE TABLE IF NOT EXISTS bookings (
