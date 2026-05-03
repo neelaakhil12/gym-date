@@ -4,6 +4,7 @@ import { query } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { partnerAuthOptions } from "@/app/api/auth/partner/[...nextauth]/route";
+import { revalidatePath } from "next/cache";
 
 export async function getAdminStats() {
   try {
