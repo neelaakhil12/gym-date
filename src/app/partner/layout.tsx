@@ -163,6 +163,7 @@ export default function PartnerLayout({
           {children}
         </main>
       </div>
+    </div>
     </PartnerAuthProvider>
   );
 }

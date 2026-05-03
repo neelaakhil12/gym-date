@@ -1,6 +1,6 @@
-import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
+import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { 

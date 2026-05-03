@@ -1,6 +1,6 @@
-import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
+import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,7 +21,7 @@ const adminLinks = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Gyms", href: "/admin/gyms", icon: GymLogoIcon },
   { name: "Partner Leads", href: "/admin/partner-requests", icon: ClipboardList },
-  { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Accounts", href: "/admin/users", icon: Users },
   { name: "Revenue", href: "/admin/revenue", icon: Wallet },
   { name: "Payouts", href: "/admin/payouts", icon: Banknote },
 ];
@@ -162,6 +162,7 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+    </div>
     </AdminAuthProvider>
   );
 }

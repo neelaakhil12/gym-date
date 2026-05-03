@@ -1,6 +1,6 @@
-import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
+import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Star, MapPin, Clock, User, Wifi, Wind, Car, ShieldCheck, Droplets, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";

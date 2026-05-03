@@ -1,6 +1,6 @@
-import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
+import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useState, useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { supabase, getPartnerGym } from "@/lib/supabase";

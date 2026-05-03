@@ -1,6 +1,6 @@
-import GymLogoIcon from "@/components/GymLogoIcon";
 "use client";
 
+import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addPlatformStat, deletePlatformStat, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";

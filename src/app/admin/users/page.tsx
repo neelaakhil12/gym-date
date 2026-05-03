@@ -127,9 +127,9 @@ export default function AdminUsers() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-secondary">Manage Users</h1>
+        <h1 className="text-2xl font-black text-secondary">Account Management</h1>
         <p className="text-gray-500 mt-1">
-          View and manage all platform users separated by role.
+          View and manage all platform accounts, partners, and super admins.
         </p>
       </div>
 
