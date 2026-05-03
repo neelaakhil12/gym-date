@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { partnerAuthOptions } from "@/app/api/auth/partner/[...nextauth]/route";
 import { query } from "@/lib/db";
 
 export async function verifyTicketAction(ticketCode: string, providedPartnerId?: string) {
@@ -30,8 +30,8 @@ export async function verifyTicketAction(ticketCode: string, providedPartnerId?:
 
     // 3. Security Check (If partnerId is provided or in session)
     if (!partnerId) {
-      const session = await getServerSession(authOptions);
-      if (session?.user?.id) {
+      const session = await getServerSession(partnerAuthOptions);
+      if (session?.user?.id && (session.user as any).role === 'partner') {
         partnerId = (session.user as any).id;
       }
     }

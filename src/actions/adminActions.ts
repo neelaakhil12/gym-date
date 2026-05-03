@@ -3,6 +3,7 @@
 import { query } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { partnerAuthOptions } from "@/app/api/auth/partner/[...nextauth]/route";
 
 export async function getAdminStats() {
   try {
@@ -76,7 +77,7 @@ export async function getGyms() {
 
 export async function getPartnerGym() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(partnerAuthOptions);
     if (!session?.user) return null;
     
     const userId = (session.user as any).id;
