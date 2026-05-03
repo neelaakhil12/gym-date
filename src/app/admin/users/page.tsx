@@ -16,12 +16,12 @@ import {
 } from "lucide-react";
 import { getAllProfiles, deleteAccount } from "@/actions/adminActions";
 
-type Tab = "customers" | "partners" | "admins";
+type Tab = "users" | "partners" | "admins";
 
 export default function AdminUsers() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>("customers");
+  const [activeTab, setActiveTab] = useState<Tab>("users");
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -50,12 +50,12 @@ export default function AdminUsers() {
     setDeletingId(null);
   };
 
-  const customers = profiles.filter((p) => p.role_id === "user" || (!p.role_id && p.role_id !== "partner" && p.role_id !== "super_admin"));
+  const users = profiles.filter((p) => p.role_id === "user" || (!p.role_id && p.role_id !== "partner" && p.role_id !== "super_admin"));
   const partners = profiles.filter((p) => p.role_id === "partner");
   const admins = profiles.filter((p) => p.role_id === "super_admin");
 
   const getCurrentList = () => {
-    let list = activeTab === "customers" ? customers : activeTab === "partners" ? partners : admins;
+    let list = activeTab === "users" ? users : activeTab === "partners" ? partners : admins;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -70,9 +70,9 @@ export default function AdminUsers() {
 
   const tabs = [
     {
-      id: "customers" as Tab,
-      label: "Customers",
-      count: customers.length,
+      id: "users" as Tab,
+      label: "Users",
+      count: users.length,
       icon: User,
       color: "text-green-600",
       activeBg: "bg-green-600",
@@ -119,7 +119,7 @@ export default function AdminUsers() {
     switch (roleId) {
       case "super_admin": return "Super Admin";
       case "partner": return "Partner";
-      default: return "Customer";
+      default: return "User";
     }
   };
 
@@ -175,7 +175,7 @@ export default function AdminUsers() {
               </div>
               <p className="font-bold text-secondary text-sm">{tab.label}</p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {tab.id === "customers" ? "Registered gym users" : tab.id === "partners" ? "Gym owners / partners" : "Platform administrators"}
+                {tab.id === "users" ? "Registered gym users" : tab.id === "partners" ? "Gym owners / partners" : "Platform administrators"}
               </p>
             </button>
           );
@@ -201,7 +201,7 @@ export default function AdminUsers() {
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-black ${isActive ? tab.badgeBg : "bg-gray-100 text-gray-500"}`}>
-                  {tab.id === "customers" ? customers.length : tab.id === "partners" ? partners.length : admins.length}
+                  {tab.id === "users" ? users.length : tab.id === "partners" ? partners.length : admins.length}
                 </span>
               </button>
             );
