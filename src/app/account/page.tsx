@@ -192,8 +192,16 @@ export default function AccountPage() {
           try {
             const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
             const geoData = await geoRes.json();
-            // Try to get State, then City/Town as fallback
-            detectedAddress = geoData.address?.state || geoData.address?.city || geoData.address?.town || "Current Location";
+            
+            // Combine City/Village and State
+            const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || geoData.address?.suburb || geoData.address?.county;
+            const state = geoData.address?.state;
+            
+            if (city && state) {
+              detectedAddress = `${city}, ${state}`;
+            } else {
+              detectedAddress = city || state || "Current Location";
+            }
           } catch (geoErr) {
             console.error("Reverse geocoding error:", geoErr);
           }
