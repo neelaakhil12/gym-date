@@ -116,13 +116,23 @@ export async function getAdminStats() {
     const gymsCount = await query("SELECT COUNT(*) FROM gyms");
     const totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
 
-    // 3. Users (Count everyone who isn't a partner or super_admin)
+    // 3. Users (Count unique customers who have made bookings)
     const usersCount = await query(`
-      SELECT COUNT(*) FROM users 
-      WHERE role_id NOT IN ('partner', 'super_admin') 
-      OR role_id IS NULL
+      SELECT COUNT(DISTINCT LOWER(customer_email)) as count 
+      FROM bookings 
+      WHERE customer_email IS NOT NULL AND customer_email != ''
     `);
-    const totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+    let totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+
+    // Fallback: If no bookings, count from users table
+    if (totalUsers === 0) {
+      const fallbackCount = await query(`
+        SELECT COUNT(*) FROM users 
+        WHERE role_id NOT IN ('partner', 'super_admin') 
+        OR role_id IS NULL
+      `);
+      totalUsers = parseInt(fallbackCount.rows[0]?.count) || 0;
+    }
 
     return { walletBalance, totalGyms, totalUsers };
   } catch (error) {
