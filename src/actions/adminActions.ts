@@ -6,45 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { partnerAuthOptions } from "@/app/api/auth/partner/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
 
-export async function getAdminStats() {
-  try {
-    // Calculate real balance: sum of all booking amounts
-    let walletBalance = 0;
-    try {
-      const balanceRes = await query("SELECT COALESCE(SUM(amount::numeric), 0) as total FROM bookings");
-      walletBalance = parseFloat(balanceRes.rows[0]?.total) || 0;
-    } catch (e) {
-      console.warn("Balance calculation failed, defaulting to 0", e);
-    }
 
-    let totalGyms = 0;
-    try {
-      const gymsCount = await query("SELECT COUNT(*) FROM gyms");
-      totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
-    } catch (e) {}
-
-    let totalUsers = 0;
-    try {
-      // Count unique customers who have made bookings
-      const uniqueCustomers = await query("SELECT COUNT(DISTINCT LOWER(customer_email)) FROM bookings WHERE customer_email IS NOT NULL AND customer_email != ''");
-      totalUsers = parseInt(uniqueCustomers.rows[0]?.count) || 0;
-      if (totalUsers === 0) {
-        // Fallback: count registered users
-        const usersCount = await query("SELECT COUNT(*) FROM users");
-        totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
-      }
-    } catch (e) {}
-
-    return {
-      walletBalance,
-      totalGyms,
-      totalUsers,
-    };
-  } catch (error) {
-    console.error("Error fetching admin stats", error);
-    return { walletBalance: 0, totalGyms: 0, totalUsers: 0 };
-  }
-}
 
 export async function getAllBookings() {
   try {
