@@ -11,8 +11,10 @@ import {
   Mail,
   Calendar,
   MapPin,
+  Trash2,
+  Loader2,
 } from "lucide-react";
-import { getAllProfiles } from "@/actions/adminActions";
+import { getAllProfiles, deleteAccount } from "@/actions/adminActions";
 
 type Tab = "customers" | "partners" | "admins";
 
@@ -21,6 +23,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("customers");
   const [searchQuery, setSearchQuery] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProfiles() {
@@ -31,6 +34,21 @@ export default function AdminUsers() {
     }
     loadProfiles();
   }, []);
+
+  const handleDelete = async (id: string, role: string) => {
+    if (!window.confirm(`Are you sure you want to delete this ${role}? This action is permanent and will delete all associated data (gyms, bookings, etc.).`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    const res = await deleteAccount(id, role);
+    if (res.success) {
+      setProfiles(prev => prev.filter(p => p.id !== id));
+    } else {
+      alert(res.error || "Failed to delete account");
+    }
+    setDeletingId(null);
+  };
 
   const customers = profiles.filter((p) => p.role_id === "user" || (!p.role_id && p.role_id !== "partner" && p.role_id !== "super_admin"));
   const partners = profiles.filter((p) => p.role_id === "partner");
@@ -241,6 +259,7 @@ export default function AdminUsers() {
                   {activeTab !== "admins" && (
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Joined</th>
                   )}
+                  <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-50">
@@ -336,6 +355,24 @@ export default function AdminUsers() {
                         </div>
                       </td>
                     )}
+
+                    {/* Actions */}
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      {profile.role_id !== 'super_admin' && (
+                        <button
+                          onClick={() => handleDelete(profile.id, profile.role_id)}
+                          disabled={deletingId === profile.id}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all disabled:opacity-30"
+                          title="Delete Account"
+                        >
+                          {deletingId === profile.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

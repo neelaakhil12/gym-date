@@ -418,3 +418,38 @@ export async function getPartnerPayoutRequests(gymId: string) {
     return [];
   }
 }
+
+export async function deleteAccount(id: string, role: string) {
+  try {
+    if (!id) return { error: "ID is required" };
+
+    if (role === "partner") {
+      // For partners, we find their gym and use the existing deleteGym logic (which handles cascading)
+      const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text", [id]);
+      if (gymRes.rows.length > 0) {
+        const gymId = gymRes.rows[0].id;
+        // Import deleteGym here to avoid circular dependencies if any, 
+        // or just implement the logic here for safety.
+        
+        await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
+        await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
+        await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
+        await query("DELETE FROM gyms WHERE id = $1", [gymId]);
+      }
+      await query("DELETE FROM partner_users WHERE id = $1", [id]);
+    } else if (role === "super_admin") {
+      await query("DELETE FROM admin_users WHERE id = $1", [id]);
+    } else {
+      // Default: Customer
+      // Clean up bookings for this user first
+      await query("DELETE FROM bookings WHERE user_id = $1::text", [id]);
+      await query("DELETE FROM users WHERE id = $1", [id]);
+    }
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Account Error:", error);
+    return { error: error.message || "Failed to delete account" };
+  }
+}
