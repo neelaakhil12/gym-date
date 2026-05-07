@@ -165,7 +165,22 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
-    // Migration: Ensure status column exists
+    // Migration: Ensure table exists
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        gym_name VARCHAR(255) NOT NULL,
+        owner_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        address TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Migration: Ensure status column exists (for older versions)
     await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'");
     
     const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
