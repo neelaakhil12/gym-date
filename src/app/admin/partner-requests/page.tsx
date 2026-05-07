@@ -29,13 +29,15 @@ interface PartnerRequest {
 }
 
 export default function PartnerRequestsPage() {
+  const [debug, setDebug] = useState<any>(null);
   const [requests, setRequests] = useState<PartnerRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = async () => {
     try {
       const data = await getPartnerRequests();
-      setRequests(data);
+      setRequests(data.requests || []);
+      setDebug(data.debug);
     } catch (error) {
       console.error("Error fetching requests:", error);
       toast.error("Failed to load leads");
@@ -110,14 +112,18 @@ export default function PartnerRequestsPage() {
           {/* Debug Section */}
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
             <h4 className="text-sm font-black text-secondary uppercase tracking-widest mb-4">Database Diagnosis</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-gray-500">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono text-gray-500">
               <div className="bg-white p-3 rounded-lg border border-gray-100">
+                <p>DB: {debug?.dbName || "Checking..."}</p>
                 <p>TABLE: partner_requests</p>
-                <p>STATUS: Verified</p>
               </div>
               <div className="bg-white p-3 rounded-lg border border-gray-100">
-                <p>VISIBLE LEADS: {requests.length}</p>
-                <p>LAST SYNC: {new Date().toLocaleTimeString()}</p>
+                <p>RAW ROWS: {debug?.rowCount || 0}</p>
+                <p>VISIBLE: {requests.length}</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-gray-100 text-red-500">
+                <p>ERROR: {debug?.error || "None"}</p>
+                <p>SYNC: {new Date().toLocaleTimeString()}</p>
               </div>
             </div>
           </div>

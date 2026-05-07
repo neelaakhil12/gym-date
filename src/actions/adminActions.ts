@@ -189,10 +189,22 @@ export async function getPartnerRequests() {
     await query("ALTER TABLE partner_requests ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
     
     const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
-    return result.rows || [];
+    
+    // Debug: Get raw count and DB name
+    const debugRes = await query("SELECT COUNT(*) as count FROM partner_requests");
+    const dbNameRes = await query("SELECT current_database()");
+    const debugInfo = {
+      rowCount: debugRes.rows[0]?.count || 0,
+      dbName: dbNameRes.rows[0]?.current_database || "Unknown"
+    };
+
+    return {
+      requests: result.rows || [],
+      debug: debugInfo
+    };
   } catch (error) {
     console.error("Error fetching partner requests", error);
-    return [];
+    return { requests: [], debug: { error: (error as any).message } };
   }
 }
 
