@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       walletBalance: parseFloat(walletBalance),
       totalReferrals: parseInt(stats.rows[0].total),
       totalEarned: parseFloat(stats.rows[0].total_earned),
-      bonusPerReferral: parseFloat(configMap[isPartner ? 'referral_bonus_partner' : 'refer_a_friend'] || (isPartner ? '500' : '30')),
+      bonusPerReferral: parseFloat(configMap[isPartner ? 'referral_bonus_partner' : 'refer_a_friend'] || '30'),
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
       isPartner
     });
