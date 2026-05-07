@@ -84,19 +84,32 @@ export async function getAllProfiles() {
     const hasAddress = checkUserCol.rows.length > 0;
 
     const result = await query(`
+      -- Super Admins from admin_users table
       SELECT 
-        u.id, u.email, u.full_name, u.phone, u.role_id, 
+        a.id::text, a.email, a.full_name, a.phone, 'super_admin' as role_id,
+        'Super Admin' as role_name,
+        a.created_at,
+        NULL as gym_name,
+        NULL as address
+      FROM admin_users a
+
+      UNION ALL
+
+      -- Regular users and partners from users table
+      SELECT 
+        u.id::text, u.email, u.full_name, u.phone, u.role_id,
         CASE 
-          WHEN u.role_id = 'super_admin' THEN 'Super Admin'
           WHEN u.role_id = 'partner' THEN 'Partner'
           ELSE 'User'
         END as role_name,
-        u.created_at, 
-        g.name as gym_name, 
+        u.created_at,
+        g.name as gym_name,
         ${hasAddress ? 'COALESCE(u.address, g.location)' : 'g.location'} as address
       FROM users u
       LEFT JOIN gyms g ON u.id::text = g.partner_id::text
-      ORDER BY u.created_at DESC
+      WHERE u.role_id != 'super_admin'
+
+      ORDER BY created_at DESC
     `);
 
     console.log(`[AdminActions] getAllProfiles: Found ${result.rows.length} profiles`);
