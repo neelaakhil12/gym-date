@@ -31,7 +31,25 @@ export const authOptions = {
 
         const { email, otp, password, name, phone, role } = credentials;
 
+        // 1. Password Login (Admin/Partner)
+        if (password) {
+          const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
+          if (userResult.rows.length === 0) throw new Error("User not found");
+          
+          const user = userResult.rows[0];
+          const isValid = await bcrypt.compare(password, user.password_hash);
+          if (!isValid) throw new Error("Invalid password");
 
+          // Only allow admins or partners to use password login
+          if (user.role_id === 'user') throw new Error("Unauthorized access");
+
+          return {
+            id: user.id,
+            name: user.full_name,
+            email: user.email,
+            role: user.role_id,
+          };
+        }
 
         // 2. OTP Login (Customer)
         if (otp) {

@@ -16,7 +16,8 @@ export default function AdminLogin() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (status === "authenticated" && (session?.user as any)?.role === "super_admin") {
+    const allowedRoles = ["super_admin", "operation_admin"];
+    if (status === "authenticated" && allowedRoles.includes((session?.user as any)?.role)) {
       router.push("/admin/dashboard");
     }
   }, [session, status, router]);
