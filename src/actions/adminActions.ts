@@ -184,6 +184,10 @@ export async function getPartnerRequests() {
     await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'");
     await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
     
+    // Aggressive Repair: Ensure defaults are set correctly if they were missing
+    await query("ALTER TABLE partner_requests ALTER COLUMN status SET DEFAULT 'pending'");
+    await query("ALTER TABLE partner_requests ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
+    
     const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
     return result.rows || [];
   } catch (error) {

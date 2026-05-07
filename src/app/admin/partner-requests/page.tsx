@@ -80,9 +80,18 @@ export default function PartnerRequestsPage() {
           <h1 className="text-3xl font-black text-secondary">Partner <span className="text-primary">Leads</span></h1>
           <p className="text-gray-500">Manage incoming gym registration requests and inquiries.</p>
         </div>
-        <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
-          <span className="text-sm font-bold text-gray-400">TOTAL LEADS:</span>
-          <span className="text-lg font-black text-primary">{requests.length}</span>
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={fetchRequests}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all font-bold text-sm"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Refresh</span>
+          </button>
+          <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
+            <span className="text-sm font-bold text-gray-400">TOTAL LEADS:</span>
+            <span className="text-lg font-black text-primary">{requests.length}</span>
+          </div>
         </div>
       </div>
 
