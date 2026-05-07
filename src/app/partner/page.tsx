@@ -1,6 +1,9 @@
 "use client";
 
+import React from "react";
 import * as z from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
 import { TrendingUp, Users, Shield, LayoutGrid, CheckCircle } from "lucide-react";
 import { registerPartnerRequest } from "@/actions/gymActions";
