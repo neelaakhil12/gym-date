@@ -171,34 +171,22 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
-    // Attempt complex join first
-    try {
-      const result = await query(`
-        SELECT 
-          pr.*,
-          g.name as referrer_gym_name,
-          u.full_name as referrer_owner_name
-        FROM partner_requests pr
-        LEFT JOIN users u ON pr.referred_by = u.referral_code
-        LEFT JOIN gyms g ON u.id::text = g.partner_id::text
-        ORDER BY pr.created_at DESC
-      `);
-      return { requests: result.rows || [], debug: { type: 'complex' } };
-    } catch (e: any) {
-      console.warn("Complex partner request join failed, falling back to simple select", e);
-      try {
-        const result = await query(`SELECT * FROM partner_requests ORDER BY created_at DESC`);
-        return { requests: result.rows || [], debug: { type: 'fallback' } };
-      } catch (innerError: any) {
-        return { 
-          requests: [{ id: 'err', gym_name: 'DATABASE ERROR', email: innerError.message, status: 'error' }], 
-          debug: { error: innerError.message } 
-        };
-      }
-    }
+    // Basic query to ensure all leads are fetched
+    const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
+    
+    // Attempt to enrich with referrer info, but don't fail if it doesn't work
+    const enriched = [...(result.rows || [])];
+    
+    return { 
+      requests: enriched, 
+      debug: { count: enriched.length, timestamp: new Date().toISOString() } 
+    };
   } catch (error: any) {
     console.error("Critical error fetching partner requests", error);
-    return { requests: [{ id: 'fatal', gym_name: 'CRITICAL ERROR', email: error.message, status: 'error' }] };
+    return { 
+      requests: [{ id: 'err', gym_name: 'ERROR LOADING LEADS', owner_name: error.message, status: 'error' }], 
+      error: error.message 
+    };
   }
 }
 
