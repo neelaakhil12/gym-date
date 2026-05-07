@@ -524,6 +524,31 @@ export async function deleteAccount(id: string, role: string) {
     return { success: true };
   } catch (error: any) {
     console.error("Delete Account Error:", error);
-    return { error: error.message || "Failed to delete account" };
+    return { success: false, error: error.message };
+  }
+}
+
+export async function createOperationAdmin(data: { email: string; password: string; full_name: string }) {
+  try {
+    const { email, password, full_name } = data;
+    
+    // Check if user exists
+    const checkUser = await query("SELECT id FROM users WHERE email = $1", [email]);
+    if (checkUser.rows.length > 0) return { error: "User with this email already exists" };
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    await query(
+      "INSERT INTO users (email, password_hash, full_name, role_id) VALUES ($1, $2, $3, 'operation_admin')",
+      [email, hashedPassword, full_name]
+    );
+
+    revalidatePath("/admin/users");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Create Operation Admin Error:", error);
+    return { error: error.message };
   }
 }
