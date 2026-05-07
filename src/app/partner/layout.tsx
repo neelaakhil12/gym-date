@@ -42,12 +42,13 @@ export default function PartnerLayout({
       return;
     }
 
-    // Role check
+    // Role check - ensure they are a partner if they are in protected routes
     if (session.user?.role !== "partner" && !pathname.startsWith("/partner/login")) {
-      // If logged in but not a partner, maybe they are admin? If so, kick to admin dashboard or logout
-      // For now, if they are not partner, just logout or redirect
-      if (pathname.startsWith("/partner/dashboard")) {
-         router.push("/");
+      const protectedPartnerRoutes = ["/partner/dashboard", "/partner/bookings", "/partner/wallet", "/partner/gym/edit", "/partner/scan", "/partner/settings"];
+      
+      if (protectedPartnerRoutes.some(route => pathname.startsWith(route))) {
+        console.log("PartnerLayout: Unauthorized role, redirecting to login.");
+        router.push("/partner/login");
       }
     }
   }, [session, status, pathname, router]);
