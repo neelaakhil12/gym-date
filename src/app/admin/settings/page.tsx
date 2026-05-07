@@ -1,293 +1,163 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { 
-  Settings as SettingsIcon, Shield, Bell, CreditCard,
-  Mail, Globe, Gift, Wallet, Save, Loader2, CheckCircle2
+  Settings as SettingsIcon, 
+  Save, 
+  RefreshCw, 
+  AlertCircle, 
+  CheckCircle2,
+  Gift,
+  Coins,
+  ShieldCheck,
+  UserPlus
 } from "lucide-react";
+import { getPlatformConfig, updatePlatformConfig } from "@/actions/adminActions";
+
+interface ConfigItem {
+  key: string;
+  value: string;
+  description: string;
+}
 
 export default function AdminSettings() {
-  const [activeSection, setActiveSection] = useState("general");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [config, setConfig] = useState({
-    user_referral_bonus: "20",
-    max_wallet_per_txn: "10",
-    partner_referral_bonus: "100",
-    signup_bonus: "0",
-    max_referrals_allowed: "5",
-  });
+  const [config, setConfig] = useState<ConfigItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/referral-config")
-      .then(r => r.json())
-      .then(data => {
-        if (data.config) setConfig(data.config);
-      });
+    loadConfig();
   }, []);
 
-  const handleSaveReferral = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/referral-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      }
-    } finally {
-      setSaving(false);
+  async function loadConfig() {
+    setLoading(true);
+    const data = await getPlatformConfig();
+    setConfig(data);
+    setLoading(false);
+  }
+
+  const handleSave = async (key: string, value: string) => {
+    setSavingKey(key);
+    setMessage(null);
+    const res = await updatePlatformConfig(key, value);
+    if (res.success) {
+      setMessage({ type: 'success', text: `Successfully updated ${key.replace(/_/g, ' ')}` });
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(null), 3000);
+    } else {
+      setMessage({ type: 'error', text: res.error || "Update failed" });
     }
+    setSavingKey(null);
   };
 
-  const navItems = [
-    { id: "general", label: "General", icon: Globe },
-    { id: "referral", label: "Referral & Wallet", icon: Gift },
-    { id: "security", label: "Security & Auth", icon: Shield },
-    { id: "payments", label: "Payments", icon: CreditCard },
-    { id: "notifications", label: "Notifications", icon: Bell },
-  ];
+  const handleValueChange = (key: string, newValue: string) => {
+    setConfig(prev => prev.map(item => 
+      item.key === key ? { ...item, value: newValue } : item
+    ));
+  };
+
+  const getConfigIcon = (key: string) => {
+    if (key.includes('referral')) return <UserPlus className="w-5 h-5 text-blue-500" />;
+    if (key.includes('bonus')) return <Gift className="w-5 h-5 text-primary" />;
+    if (key.includes('wallet')) return <Coins className="w-5 h-5 text-amber-500" />;
+    return <SettingsIcon className="w-5 h-5 text-gray-500" />;
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl space-y-8">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-black text-secondary">Platform Settings</h1>
-        <p className="text-gray-500 mt-1">Configure global platform rules, referral bonuses, and more.</p>
+        <p className="text-gray-500 mt-1 text-sm font-medium">
+          Manage referral bonuses, wallet usage limits, and core business rules.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Sidebar */}
-        <div className="md:col-span-1 space-y-2">
-          {navItems.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveSection(id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-colors ${
-                activeSection === id
-                  ? "bg-white text-primary border border-gray-200 shadow-sm"
-                  : "text-gray-600 hover:bg-white hover:text-secondary"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span>{label}</span>
-            </button>
-          ))}
+      {message && (
+        <div className={`flex items-center gap-3 p-4 rounded-2xl border ${
+          message.type === 'success' 
+            ? 'bg-green-50 border-green-100 text-green-700' 
+            : 'bg-red-50 border-red-100 text-red-700'
+        } animate-in slide-in-from-top duration-300`}>
+          {message.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          <span className="text-sm font-bold">{message.text}</span>
         </div>
+      )}
 
-        {/* Content */}
-        <div className="md:col-span-2 space-y-6">
-
-          {/* General */}
-          {activeSection === "general" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-100">
-                <h2 className="text-lg font-bold text-secondary flex items-center">
-                  <SettingsIcon className="w-5 h-5 mr-2 text-gray-400" />
-                  General Configuration
-                </h2>
-              </div>
-              <div className="p-6 space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Platform Name</label>
-                  <input type="text" defaultValue="GymDate"
-                    className="block w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" />
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+          <RefreshCw className="w-10 h-10 text-primary animate-spin mb-4" />
+          <p className="text-gray-400 font-bold animate-pulse">Loading configurations...</p>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {config.map((item) => (
+            <div key={item.key} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-gray-50 rounded-2xl flex-shrink-0">
+                  {getConfigIcon(item.key)}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Support Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
-                    <input type="email" defaultValue="support@gymdate.com"
-                      className="block w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <div>
-                    <h4 className="text-sm font-bold text-secondary">Maintenance Mode</h4>
-                    <p className="text-xs text-gray-500 mt-1">Temporarily disable access to the user-facing website.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
-                </div>
-                <div className="pt-4 flex justify-end">
-                  <button className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-red-700 transition-all shadow-sm">
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Referral & Wallet */}
-          {activeSection === "referral" && (
-            <div className="space-y-6">
-              {/* User Referral */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-                  <h2 className="text-lg font-bold text-secondary flex items-center">
-                    <Gift className="w-5 h-5 mr-2 text-green-500" />
-                    User Referral Settings
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-1">Configure how much users earn for referring friends.</p>
-                </div>
-                <div className="p-6 space-y-5">
-                  <div className="grid grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Bonus Per Referral (₹)
-                      </label>
-                      <p className="text-xs text-gray-400 mb-3">Credited when referred user buys a subscription.</p>
-                      <div className="relative">
-                        <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                        <input
-                          type="number" min="0"
-                          value={config.user_referral_bonus}
-                          onChange={e => setConfig({ ...config, user_referral_bonus: e.target.value })}
-                          className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Max Wallet Usage Per Renewal (₹)
-                      </label>
-                      <p className="text-xs text-gray-400 mb-3">Max wallet amount deductible per subscription purchase.</p>
-                      <div className="relative">
-                        <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                        <input
-                          type="number" min="0"
-                          value={config.max_wallet_per_txn}
-                          onChange={e => setConfig({ ...config, max_wallet_per_txn: e.target.value })}
-                          className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
-                    <strong>Example:</strong> If a user refers 5 friends who all buy subscriptions, they earn ₹{parseInt(config.user_referral_bonus) * 5}. 
-                    They can use up to ₹{config.max_wallet_per_txn} per renewal to offset their cost.
-                  </div>
-
-                  <div className="pt-6 border-t border-gray-100 mt-6 space-y-6">
-                    <h3 className="text-sm font-black text-secondary uppercase tracking-widest">Growth & Limits</h3>
-                    <div className="grid grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                          New User Signup Bonus (₹)
-                        </label>
-                        <p className="text-xs text-gray-400 mb-3">Instant wallet credit when a new user creates an account.</p>
-                        <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                          <input
-                            type="number" min="0"
-                            value={config.signup_bonus}
-                            onChange={e => setConfig({ ...config, signup_bonus: e.target.value })}
-                            className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                          Max Bonus-Eligible Referrals
-                        </label>
-                        <p className="text-xs text-gray-400 mb-3">Maximum number of friends a user can get paid for referring.</p>
-                        <div className="relative">
-                          <input
-                            type="number" min="1"
-                            value={config.max_referrals_allowed}
-                            onChange={e => setConfig({ ...config, max_referrals_allowed: e.target.value })}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
+                    {item.key.replace(/_/g, ' ')}
+                  </h3>
+                  <p className="text-xs text-gray-400 font-medium mt-1">
+                    {item.description || "No description provided for this setting."}
+                  </p>
                 </div>
               </div>
 
-              {/* Partner Referral */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-violet-50">
-                  <h2 className="text-lg font-bold text-secondary flex items-center">
-                    <Wallet className="w-5 h-5 mr-2 text-purple-500" />
-                    Partner Referral Settings
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-1">Default bonus when a partner refers another gym to join the platform.</p>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">₹</span>
+                  <input
+                    type="number"
+                    value={item.value}
+                    onChange={(e) => handleValueChange(item.key, e.target.value)}
+                    className="w-32 pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-black text-secondary"
+                  />
                 </div>
-                <div className="p-6 space-y-5">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Default Bonus Per Gym Referred (₹)
-                    </label>
-                    <p className="text-xs text-gray-400 mb-3">
-                      This is the default. You can override it per gym in the gym creation form.
-                    </p>
-                    <div className="relative max-w-xs">
-                      <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
-                      <input
-                        type="number" min="0"
-                        value={config.partner_referral_bonus}
-                        onChange={e => setConfig({ ...config, partner_referral_bonus: e.target.value })}
-                        className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-sm text-purple-700">
-                    <strong>How it works:</strong> When Partner A shares their referral link and a new gym owner signs up and gets onboarded, 
-                    Partner A receives ₹{config.partner_referral_bonus} in their wallet.
-                  </div>
-                </div>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex justify-end">
                 <button
-                  onClick={handleSaveReferral}
-                  disabled={saving}
-                  className="flex items-center space-x-2 bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-md disabled:opacity-70"
+                  onClick={() => handleSave(item.key, item.value)}
+                  disabled={savingKey === item.key}
+                  className="p-3 bg-secondary text-white rounded-2xl hover:bg-black transition-all disabled:opacity-50 shadow-lg shadow-secondary/10 group"
+                  title="Save Setting"
                 >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : saved ? (
-                    <CheckCircle2 className="w-4 h-4" />
+                  {savingKey === item.key ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
                   ) : (
-                    <Save className="w-4 h-4" />
+                    <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   )}
-                  <span>{saved ? "Saved!" : saving ? "Saving..." : "Save Referral Settings"}</span>
                 </button>
               </div>
             </div>
-          )}
+          ))}
 
-          {/* Security placeholder */}
-          {activeSection === "security" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-              <Shield className="w-12 h-12 mx-auto mb-4 text-gray-200" />
-              <p className="font-bold">Security settings coming soon.</p>
-            </div>
-          )}
-
-          {/* Payments placeholder */}
-          {activeSection === "payments" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-              <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-200" />
-              <p className="font-bold">Payment settings coming soon.</p>
-            </div>
-          )}
-
-          {/* Notifications placeholder */}
-          {activeSection === "notifications" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center text-gray-400">
-              <Bell className="w-12 h-12 mx-auto mb-4 text-gray-200" />
-              <p className="font-bold">Notification settings coming soon.</p>
+          {config.length === 0 && (
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+              <ShieldCheck className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No settings found in database</p>
+              <button 
+                onClick={loadConfig}
+                className="mt-4 text-primary font-black text-sm hover:underline"
+              >
+                Click to retry
+              </button>
             </div>
           )}
         </div>
+      )}
+
+      {/* Security Info */}
+      <div className="p-6 bg-secondary rounded-3xl text-white">
+        <div className="flex items-center gap-3 mb-2">
+          <ShieldCheck className="w-6 h-6 text-primary" />
+          <h2 className="text-lg font-black tracking-tight">Security & Performance</h2>
+        </div>
+        <p className="text-sm text-gray-300 font-medium leading-relaxed">
+          These settings are global. Any changes made here will immediately affect all users and partners on the platform. Referral bonuses are calculated at the time of account creation or lead approval based on these values.
+        </p>
       </div>
     </div>
   );

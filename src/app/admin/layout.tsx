@@ -24,6 +24,7 @@ const adminLinks = [
   { name: "Accounts", href: "/admin/users", icon: Users },
   { name: "Revenue", href: "/admin/revenue", icon: Wallet },
   { name: "Payouts", href: "/admin/payouts", icon: Banknote },
+  { name: "Settings", href: "/admin/settings", icon: ClipboardList },
 ];
 
 export default function AdminLayout({

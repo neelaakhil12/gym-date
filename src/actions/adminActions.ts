@@ -553,3 +553,27 @@ export async function createOperationAdmin(data: { email: string; password: stri
     return { error: error.message };
   }
 }
+
+export async function getPlatformConfig() {
+  try {
+    const result = await query("SELECT * FROM platform_config ORDER BY key ASC");
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching platform config", error);
+    return [];
+  }
+}
+
+export async function updatePlatformConfig(key: string, value: string) {
+  try {
+    await query(
+      "INSERT INTO platform_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2",
+      [key, value]
+    );
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating platform config", error);
+    return { error: error.message };
+  }
+}
