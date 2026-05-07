@@ -107,14 +107,15 @@ export async function createGymAndPartner(formData: FormData) {
 
     // 3. Create the gym
     console.log("STEP 3: Inserting Gym into Database...");
+    const finalGallery = galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"];
     const gymInsert = await query(
       `INSERT INTO gyms 
        (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Open', $9, $10, $11, $12, $13, $14) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8::text[], 'Open', $9, $10, $11, $12, $13, $14) RETURNING id`,
       [
         partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
         description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
-        galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"],
+        finalGallery,
         rating, reviews, lat, lng, hasOffer, offerPercentage
       ]
     );
