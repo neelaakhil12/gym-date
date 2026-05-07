@@ -167,17 +167,29 @@ export async function registerPartnerRequest(data: {
   referredBy?: string;
 }) {
   try {
-    // 1. Insert the lead
-    await query(
-      "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address, referred_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-      [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address, data.referredBy || null]
-    );
+    // 1. Try with referral info
+    try {
+      await query(
+        "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address, referred_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address, data.referredBy || null]
+      );
+    } catch (dbErr: any) {
+      // 2. Fallback: Try without referred_by if column doesn't exist
+      if (dbErr.message?.includes("referred_by") || dbErr.message?.includes("does not exist")) {
+        console.warn("Retrying registration without referred_by column...");
+        await query(
+          "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address) VALUES ($1, $2, $3, $4, $5, $6)",
+          [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address]
+        );
+      } else {
+        throw dbErr;
+      }
+    }
     
     revalidatePath("/admin/partner-requests");
     return { success: true };
   } catch (error: any) {
     console.error("Error in registerPartnerRequest:", error);
-    // Return the actual error message to help us debug
     return { error: `Database Error: ${error.message || "Unknown error"}` };
   }
 }
