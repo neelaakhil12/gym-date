@@ -165,48 +165,10 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
-    // Ensure table exists - wrap in try/catch to avoid permission crashes
-    try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS partner_requests (
-          id SERIAL PRIMARY KEY,
-          gym_name VARCHAR(255) NOT NULL,
-          owner_name VARCHAR(255) NOT NULL,
-          email VARCHAR(255) NOT NULL,
-          phone VARCHAR(20) NOT NULL,
-          city VARCHAR(100) NOT NULL,
-          address TEXT NOT NULL,
-          status VARCHAR(20) DEFAULT 'pending',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      
-      // Try to add columns if missing, but don't crash if permission is denied
-      try { await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'"); } catch(e) {}
-      try { await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch(e) {}
-    } catch (error) {
-      console.warn("Table initialization skipped due to permissions", error);
-    }
-    
-    // Aggressive Repair: Ensure defaults are set correctly if they were missing
-    try {
-      await query("ALTER TABLE partner_requests ALTER COLUMN status SET DEFAULT 'pending'");
-      await query("ALTER TABLE partner_requests ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
-    } catch (e) {}
-    
     const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
-    
-    // Debug: Get raw count and DB name
-    const debugRes = await query("SELECT COUNT(*) as count FROM partner_requests");
-    const dbNameRes = await query("SELECT current_database()");
-    const debugInfo = {
-      rowCount: debugRes.rows[0]?.count || 0,
-      dbName: dbNameRes.rows[0]?.current_database || "Unknown"
-    };
-
     return {
       requests: result.rows || [],
-      debug: debugInfo
+      debug: { rowCount: result.rows.length }
     };
   } catch (error) {
     console.error("Error fetching partner requests", error);
