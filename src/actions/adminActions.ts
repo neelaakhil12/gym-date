@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { partnerAuthOptions } from "@/app/api/auth/partner/[...nextauth]/route";
 import { revalidatePath } from "next/cache";
+import { sendPartnerLeadStatusEmail } from "@/lib/email";
 
 
 
@@ -164,6 +165,9 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
+    // Migration: Ensure status column exists
+    await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'");
+    
     const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
     return result.rows || [];
   } catch (error) {
@@ -174,10 +178,27 @@ export async function getPartnerRequests() {
 
 export async function updatePartnerRequestStatus(id: string, status: string) {
   try {
-    // Note: status might be in a separate column or just deleting if processed
-    // If the table doesn't have status, we'll just return success for now
+    // 1. Update the status in the database
+    const updateRes = await query(
+      "UPDATE partner_requests SET status = $1 WHERE id = $2 RETURNING *",
+      [status, id]
+    );
+
+    if (updateRes.rows.length === 0) {
+      throw new Error("Lead not found.");
+    }
+
+    const lead = updateRes.rows[0];
+
+    // 2. If it's approved or rejected, send the professional email
+    if (status === "approved" || status === "rejected") {
+      await sendPartnerLeadStatusEmail(lead, status as 'approved' | 'rejected');
+    }
+
+    revalidatePath("/admin/partner-requests");
     return { success: true };
   } catch (error: any) {
+    console.error("Error updating partner request status:", error);
     return { error: error.message };
   }
 }
