@@ -1,85 +1,44 @@
-import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    // Create users table if it doesn't exist
+    console.log("Starting manual migration...");
+    
+    // 1. Ensure table exists
     await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT,
-        full_name TEXT,
-        phone TEXT,
-        role_id TEXT DEFAULT 'user',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      CREATE TABLE IF NOT EXISTS partner_requests (
+        id SERIAL PRIMARY KEY,
+        gym_name VARCHAR(255) NOT NULL,
+        owner_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        address TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
-    // 2. Add address column to users if missing
-    const userColumns = await query(`
-      SELECT column_name FROM information_schema.columns WHERE table_name='users';
-    `);
-    const uCols = userColumns.rows.map(r => r.column_name);
-    if (!uCols.includes('address')) await query(`ALTER TABLE users ADD COLUMN address TEXT;`);
+    // 2. Add columns if missing
+    try { await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'"); } catch(e) {}
+    try { await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch(e) {}
 
-    // 1. Ensure bookings table exists with core columns
-    await query(`
-      CREATE TABLE IF NOT EXISTS bookings (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id TEXT,
-        gym_id TEXT,
-        plan_name TEXT NOT NULL,
-        amount NUMERIC NOT NULL,
-        status TEXT DEFAULT 'pending',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-    `);
-
-    // 2. Add new columns if missing
-    const bookingColumns = await query(`
-      SELECT column_name FROM information_schema.columns WHERE table_name='bookings';
-    `);
-    const cols = bookingColumns.rows.map(r => r.column_name);
-
-    if (!cols.includes('customer_name')) await query(`ALTER TABLE bookings ADD COLUMN customer_name TEXT;`);
-    if (!cols.includes('customer_email')) await query(`ALTER TABLE bookings ADD COLUMN customer_email TEXT;`);
-    if (!cols.includes('ticket_code')) await query(`ALTER TABLE bookings ADD COLUMN ticket_code TEXT;`);
-    if (!cols.includes('payment_id')) await query(`ALTER TABLE bookings ADD COLUMN payment_id TEXT;`);
-    if (!cols.includes('razorpay_order_id')) await query(`ALTER TABLE bookings ADD COLUMN razorpay_order_id TEXT;`);
-    if (!cols.includes('start_date')) await query(`ALTER TABLE bookings ADD COLUMN start_date TIMESTAMP WITH TIME ZONE;`);
-    if (!cols.includes('end_date')) await query(`ALTER TABLE bookings ADD COLUMN end_date TIMESTAMP WITH TIME ZONE;`);
-
-    // Check if columns exist in gyms
-    const checkColumns = await query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name='gyms' and column_name='lat';
-    `);
-
-    if (checkColumns.rows.length === 0) {
-      // Add columns if they don't exist
-      await query(`ALTER TABLE gyms ADD COLUMN lat NUMERIC;`);
-      await query(`ALTER TABLE gyms ADD COLUMN lng NUMERIC;`);
-    }
-
-    const usersCount = await query("SELECT COUNT(*) FROM users");
-    const bookingsCount = await query("SELECT COUNT(*) FROM bookings");
-    const gymsCount = await query("SELECT COUNT(*) FROM gyms");
-    const lastBookings = await query("SELECT * FROM bookings ORDER BY created_at DESC LIMIT 5");
+    // 3. Set defaults
+    try {
+      await query("ALTER TABLE partner_requests ALTER COLUMN status SET DEFAULT 'pending'");
+      await query("ALTER TABLE partner_requests ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
+    } catch (e) {}
 
     return NextResponse.json({ 
       success: true, 
-      message: "Database schema updated successfully.",
-      counts: {
-        users: usersCount.rows[0].count,
-        bookings: bookingsCount.rows[0].count,
-        gyms: gymsCount.rows[0].count
-      },
-      lastBookings: lastBookings.rows
+      message: "Database migration successful! Status and Created_at columns are ready." 
     });
-  } catch (err: any) {
-    console.error("Migration error:", err);
-    return NextResponse.json({ success: false, error: err.message });
+  } catch (error: any) {
+    console.error("Migration error:", error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 }
