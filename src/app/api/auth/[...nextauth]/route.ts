@@ -89,11 +89,17 @@ export const authOptions = {
               "INSERT INTO users (email, full_name, role_id) VALUES ($1, $2, 'user')",
               [email, name || "User"]
             );
+          } else {
+            // Update existing user to ensure sync
+            await query(
+              "UPDATE users SET full_name = COALESCE($1, full_name) WHERE email = $2",
+              [name || null, email]
+            );
           }
           return true;
         } catch (error) {
           console.error("Error syncing Google user to DB:", error);
-          return true; // Still allow login even if sync fails
+          return true;
         }
       }
       return true;
