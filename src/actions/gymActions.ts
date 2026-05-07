@@ -168,9 +168,10 @@ export async function registerPartnerRequest(data: {
     
     revalidatePath("/admin/partner-requests");
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in registerPartnerRequest:", error);
-    return { error: "An unexpected error occurred. Please try again later." };
+    // Return the actual error message to help us debug
+    return { error: `Database Error: ${error.message || "Unknown error"}` };
   }
 }
 
