@@ -24,15 +24,17 @@ export async function GET() {
     try { await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'"); } catch(e) {}
     try { await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"); } catch(e) {}
 
-    // 3. Set defaults
-    try {
-      await query("ALTER TABLE partner_requests ALTER COLUMN status SET DEFAULT 'pending'");
-      await query("ALTER TABLE partner_requests ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP");
-    } catch (e) {}
+    // 4. Verify columns
+    const schema = await query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'partner_requests'
+    `);
 
     return NextResponse.json({ 
       success: true, 
-      message: "Database migration successful! Status and Created_at columns are ready." 
+      message: "Database migration completed.",
+      schema: schema.rows
     });
   } catch (error: any) {
     console.error("Migration error:", error);
