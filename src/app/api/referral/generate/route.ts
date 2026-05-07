@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     );
 
     // Get config
-    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus')`);
+    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'max_wallet_per_txn', 'referral_bonus_partner')`);
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       walletBalance: parseFloat(walletBalance),
       totalReferrals: parseInt(stats.rows[0].total),
       totalEarned: parseFloat(stats.rows[0].total_earned),
-      bonusPerReferral: parseFloat(configMap[isPartner ? 'partner_referral_bonus' : 'user_referral_bonus'] || (isPartner ? '500' : '20')),
+      bonusPerReferral: parseFloat(configMap[isPartner ? 'referral_bonus_partner' : 'refer_a_friend'] || (isPartner ? '500' : '30')),
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
       isPartner
     });
