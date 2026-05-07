@@ -76,6 +76,28 @@ export const authOptions = {
     })
   ],
   callbacks: {
+    async signIn({ user, account, profile }: any) {
+      if (account?.provider === "google") {
+        try {
+          const { email, name } = user;
+          // Check if user exists
+          const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
+          
+          if (userResult.rows.length === 0) {
+            // Create new user
+            await query(
+              "INSERT INTO users (email, full_name, role_id) VALUES ($1, $2, 'user')",
+              [email, name || "User"]
+            );
+          }
+          return true;
+        } catch (error) {
+          console.error("Error syncing Google user to DB:", error);
+          return true; // Still allow login even if sync fails
+        }
+      }
+      return true;
+    },
     async jwt({ token, account, user }: any) {
       if (account) {
         token.accessToken = account.access_token;
