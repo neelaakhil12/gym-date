@@ -23,12 +23,17 @@ export async function GET() {
       )
     `);
 
-    // 5. Check User Count and Schema
+    // 5. Check User Count and Schemas
     const userCount = await query("SELECT COUNT(*) as count FROM users");
     const userSchema = await query(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
       WHERE table_name = 'users'
+    `);
+    const partnerSchema = await query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'partner_requests'
     `);
 
     return NextResponse.json({ 
@@ -36,7 +41,7 @@ export async function GET() {
       message: "Database check completed.",
       totalUsers: userCount.rows[0]?.count || 0,
       userTableSchema: userSchema.rows,
-      partnerTableSchema: schema.rows
+      partnerTableSchema: partnerSchema.rows
     });
   } catch (error: any) {
     console.error("Migration error:", error);
