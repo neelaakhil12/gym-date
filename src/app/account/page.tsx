@@ -96,6 +96,18 @@ export default function AccountPage() {
           const profileResult = await profileRes.json();
           if (profileResult.success && profileResult.profile) {
             setSupabaseUser(profileResult.profile);
+
+            // Apply referral code if stored in localStorage (works for both Google + OTP login)
+            const pendingRef = localStorage.getItem('referral_code');
+            if (pendingRef) {
+              await fetch('/api/referral/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, referralCode: pendingRef }),
+              });
+              localStorage.removeItem('referral_code');
+            }
+
             // Fetch referral/wallet data
             if (profileResult.profile.id) {
               const refRes = await fetch(`/api/referral/generate?userId=${profileResult.profile.id}`);
