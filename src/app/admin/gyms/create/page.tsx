@@ -155,6 +155,22 @@ export default function CreateGymPage() {
     setLoading(true);
     setError("");
 
+    // Validate file sizes (max 5MB each)
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    const primaryImageFile = (e.currentTarget.elements.namedItem("primaryImage") as HTMLInputElement)?.files?.[0];
+    if (primaryImageFile && primaryImageFile.size > MAX_SIZE) {
+      setError(`Primary image is too large (${(primaryImageFile.size / 1024 / 1024).toFixed(1)}MB). Please use an image under 5MB.`);
+      setLoading(false);
+      return;
+    }
+    for (const preview of galleryPreviews) {
+      if (preview.file.size > MAX_SIZE) {
+        setError(`Gallery image "${preview.file.name}" is too large (${(preview.file.size / 1024 / 1024).toFixed(1)}MB). Please use images under 5MB each.`);
+        setLoading(false);
+        return;
+      }
+    }
+
     const formData = new FormData(e.currentTarget);
     
     // Append the gallery files that are in our state to the form data
