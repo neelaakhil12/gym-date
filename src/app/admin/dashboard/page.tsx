@@ -3,6 +3,7 @@
 import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addPlatformStat, deletePlatformStat, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
 import { getGyms, getCities } from "@/actions/publicActions";
 import { generateInvoicePDF } from "@/lib/invoice";
@@ -12,6 +13,7 @@ import { toast } from "react-hot-toast";
 // Platform Analytics Dashboard Refresh Fix
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState({ walletBalance: 0, totalGyms: 0, totalUsers: 0 });
   const [gymData, setGymData] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -97,7 +99,7 @@ export default function AdminDashboard() {
 
   const handleUpdateStats = async () => {
     setSavingStats(true);
-    const result = await updatePlatformStats(platformStats);
+    const result = await updatePlatformStats(platformStats as any);
     if (result.success) {
       toast.success("Platform stats updated successfully!");
     } else {
@@ -108,7 +110,7 @@ export default function AdminDashboard() {
 
   const handleAddStat = async () => {
     setSavingStats(true);
-    const result = await addPlatformStat("New Stat", "0");
+    const result = await addPlatformStat({ label: "New Stat", value: "0" });
     if (result.success) {
       const updated = await getPlatformStats();
       setPlatformStats(updated);
@@ -134,7 +136,7 @@ export default function AdminDashboard() {
   
   const handleToggleVisibility = async (val: boolean) => {
     setUpdatingVisibility(true);
-    const result = await updateSectionVisibility(val);
+    const result = await updateSectionVisibility("stats", val);
     if (result.success) {
       setIsStatsVisible(val);
       toast.success(val ? "Stats section is now VISIBLE on website" : "Stats section is now HIDDEN from website");
@@ -154,7 +156,7 @@ export default function AdminDashboard() {
     // Pass the existing image URL as fallback if no new file picked
     formData.set("existingImageUrl", cityImagePreview);
     if (cityImageFile) {
-      formData.set("image", cityImageFile);
+      formData.set("image", cityImageFile as any);
     }
 
     let result;
@@ -480,7 +482,15 @@ export default function AdminDashboard() {
             <div className="p-6 max-h-[60vh] overflow-y-auto">
               <div className="space-y-4">
                 {breakdown.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-primary/30 transition-all group">
+                  <Link 
+                    key={item.id} 
+                    href={`/admin/gyms/${item.id}/dashboard`}
+                    onClick={() => {
+                      console.log("Navigating to gym dashboard:", item.id);
+                      setShowModal(null);
+                    }}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-primary/30 transition-all group cursor-pointer"
+                  >
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-white shadow-sm">
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
@@ -503,7 +513,7 @@ export default function AdminDashboard() {
                         ></div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -556,7 +566,7 @@ export default function AdminDashboard() {
                         <MapPin className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
                       </div>
                       <span className="text-xs font-bold text-gray-500 group-hover:text-primary transition-colors">
-                        {cityImageFile ? cityImageFile.name : 'Click to upload image'}
+                        {cityImageFile ? (cityImageFile as any).name : 'Click to upload image'}
                       </span>
                       <span className="text-[10px] text-gray-400">PNG, JPG up to 5MB</span>
                     </div>
@@ -729,9 +739,9 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-secondary">Recent Gym Partners</h2>
-          <button className="text-sm font-semibold text-primary hover:text-primary-dark flex items-center">
+          <Link href="/admin/gyms" className="text-sm font-semibold text-primary hover:text-primary-dark flex items-center">
             View All <ArrowUpRight className="w-4 h-4 ml-1" />
-          </button>
+          </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -752,7 +762,14 @@ export default function AdminDashboard() {
                 </tr>
               ) : (
                 recentGyms.map((gym) => (
-                  <tr key={gym.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr 
+                    key={gym.id} 
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer" 
+                    onClick={() => {
+                      console.log("Navigating from table to gym dashboard:", gym.id);
+                      router.push(`/admin/gyms/${gym.id}/dashboard`);
+                    }}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
@@ -783,85 +800,6 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {gym.rating ? `${gym.rating} ⭐` : 'New'}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {/* Recent Subscriptions Section */}
-      <div className="bg-white rounded-[40px] shadow-sm border border-gray-100 overflow-hidden mb-12">
-        <div className="px-10 py-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
-          <div>
-            <h2 className="text-xl font-black text-secondary tracking-tighter">Recent Subscriptions</h2>
-            <p className="text-xs text-gray-400 font-medium">Real-time membership activity across the platform.</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Live Activity</span>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50">
-                <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Customer</th>
-                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Gym & Plan</th>
-                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
-                <th className="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
-                <th className="px-10 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {bookings.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-10 py-12 text-center">
-                    <div className="flex flex-col items-center space-y-2">
-                      <Clock className="w-8 h-8 text-gray-200" />
-                      <p className="text-sm font-bold text-gray-400">No subscriptions found yet.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                bookings.slice(0, 10).map((booking) => (
-                  <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-10 py-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-secondary leading-none mb-1">{booking.customer_name || 'Anonymous'}</span>
-                        <span className="text-[10px] font-medium text-gray-400">{booking.customer_email || 'No email'}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-secondary leading-none mb-1">{booking.gym_name || 'Unknown Gym'}</span>
-                        <span className="text-[10px] font-black text-primary uppercase tracking-wider">{booking.plan_name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-6">
-                      <span className="text-sm font-black text-secondary">₹{booking.amount}</span>
-                    </td>
-                    <td className="px-6 py-6 text-sm text-gray-500 font-medium">
-                      {new Date(booking.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-10 py-6 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button 
-                          onClick={() => generateInvoicePDF(booking)}
-                          className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm group-hover:shadow-md"
-                          title="Download Invoice PDF"
-                        >
-                          <FileDown className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteBooking(booking.id)}
-                          className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm group-hover:shadow-md"
-                          title="Delete Transaction"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ))

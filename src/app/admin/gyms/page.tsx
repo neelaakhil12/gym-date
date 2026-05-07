@@ -13,7 +13,8 @@ import {
   Star,
   Edit,
   Trash2,
-  Percent
+  Percent,
+  LayoutDashboard
 } from "lucide-react";
 import { getGyms } from "@/actions/publicActions";
 import { deleteGym, updateGymOffer } from "@/actions/gymActions";
@@ -188,6 +189,13 @@ export default function AdminGyms() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
+                          <Link 
+                            href={`/admin/gyms/${gym.id}/dashboard`}
+                            className="text-gray-400 hover:text-secondary transition-colors p-2 rounded-lg hover:bg-gray-100"
+                            title="View Dashboard"
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                          </Link>
                           <Link 
                             href={`/admin/gyms/${gym.id}/edit`}
                             className="text-gray-400 hover:text-primary transition-colors p-2 rounded-lg hover:bg-gray-100"
