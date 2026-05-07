@@ -79,6 +79,23 @@ export const adminAuthOptions = {
         secure: process.env.NODE_ENV === "production",
       },
     },
+    callbackUrl: {
+      name: "gymdate.admin-callback-url",
+      options: {
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: "gymdate.admin-csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
 };
 

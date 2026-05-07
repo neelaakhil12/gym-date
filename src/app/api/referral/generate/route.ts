@@ -10,11 +10,13 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
     // Check if user already has a referral code
-    const existing = await query('SELECT referral_code, wallet_balance FROM users WHERE id = $1', [userId]);
+    const existing = await query('SELECT referral_code, wallet_balance, role_id FROM users WHERE id = $1', [userId]);
     if (existing.rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    let code = existing.rows[0].referral_code;
-    const walletBalance = existing.rows[0].wallet_balance || 0;
+    const user = existing.rows[0];
+    let code = user.referral_code;
+    const walletBalance = user.wallet_balance || 0;
+    const isPartner = user.role_id === 'partner';
 
     // Generate a new unique code if not set
     if (!code) {
@@ -30,19 +32,25 @@ export async function GET(req: NextRequest) {
     );
 
     // Get config
-    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn')`);
+    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus')`);
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gymdate.in';
+    const referralLink = isPartner 
+      ? `${siteUrl}/partner?ref=${code}`
+      : `${siteUrl}/login?ref=${code}`;
 
     return NextResponse.json({
       success: true,
       referralCode: code,
-      referralLink: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://gymdate.in'}/login?ref=${code}`,
+      referralLink,
       walletBalance: parseFloat(walletBalance),
       totalReferrals: parseInt(stats.rows[0].total),
       totalEarned: parseFloat(stats.rows[0].total_earned),
-      bonusPerReferral: parseFloat(configMap['user_referral_bonus'] || '20'),
+      bonusPerReferral: parseFloat(configMap[isPartner ? 'partner_referral_bonus' : 'user_referral_bonus'] || (isPartner ? '500' : '20')),
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
+      isPartner
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

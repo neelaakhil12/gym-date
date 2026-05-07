@@ -76,47 +76,40 @@ export async function getPartnerBookings(gymId: string) {
 // RESTORED FUNCTIONS
 export async function getAllProfiles() {
   try {
-    // Check if address column exists in users table to avoid SQL errors
-    const checkUserCol = await query(`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name='users' AND column_name='address'
-    `);
-    const hasAddress = checkUserCol.rows.length > 0;
+    const profiles: any[] = [];
 
-    const result = await query(`
-      -- Super Admins from admin_users table
-      SELECT 
-        a.id::text, a.email, a.full_name, a.phone, 'super_admin' as role_id,
-        'Super Admin' as role_name,
-        a.created_at,
-        NULL as gym_name,
-        NULL as address
-      FROM admin_users a
+    // 1. Fetch Admin Users
+    try {
+      const adminRes = await query("SELECT id, email, full_name, phone, 'super_admin' as role_id FROM admin_users");
+      if (adminRes.rows) profiles.push(...adminRes.rows);
+    } catch (e: any) {
+      profiles.push({ id: 'err1', full_name: 'Admin Fetch Error', email: e.message, role_id: 'super_admin' });
+    }
 
-      UNION ALL
+    // 2. Fetch Partners
+    try {
+      const partnerRes = await query(`
+        SELECT u.id::text, u.email, u.full_name, u.role_id, g.name as gym_name
+        FROM users u
+        LEFT JOIN gyms g ON u.id::text = g.partner_id::text
+        WHERE u.role_id = 'partner'
+      `);
+      if (partnerRes.rows) profiles.push(...partnerRes.rows);
+    } catch (e: any) {
+      profiles.push({ id: 'err2', full_name: 'Partner Fetch Error', email: e.message, role_id: 'partner' });
+    }
 
-      -- Regular users and partners from users table
-      SELECT 
-        u.id::text, u.email, u.full_name, u.phone, u.role_id,
-        CASE 
-          WHEN u.role_id = 'partner' THEN 'Partner'
-          ELSE 'User'
-        END as role_name,
-        u.created_at,
-        g.name as gym_name,
-        ${hasAddress ? 'COALESCE(u.address, g.location)' : 'g.location'} as address
-      FROM users u
-      LEFT JOIN gyms g ON u.id::text = g.partner_id::text
-      WHERE u.role_id != 'super_admin'
+    // 3. Fetch Regular Users
+    try {
+      const userRes = await query("SELECT id::text, email, full_name, role_id FROM users WHERE role_id != 'partner' AND role_id != 'super_admin' OR role_id IS NULL");
+      if (userRes.rows) profiles.push(...userRes.rows);
+    } catch (e: any) {
+      profiles.push({ id: 'err3', full_name: 'User Fetch Error', email: e.message, role_id: 'user' });
+    }
 
-      ORDER BY created_at DESC
-    `);
-
-    console.log(`[AdminActions] getAllProfiles: Found ${result.rows.length} profiles`);
-    return result.rows || [];
-  } catch (error) {
-    console.error("Error fetching all profiles", error);
-    return [];
+    return profiles;
+  } catch (error: any) {
+    return [{ id: 'fatal', full_name: 'CRITICAL DATABASE ERROR', email: error.message, role_id: 'super_admin' }];
   }
 }
 
@@ -178,14 +171,34 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
-    const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
-    return {
-      requests: result.rows || [],
-      debug: { rowCount: result.rows.length }
-    };
-  } catch (error) {
-    console.error("Error fetching partner requests", error);
-    return { requests: [], debug: { error: (error as any).message } };
+    // Attempt complex join first
+    try {
+      const result = await query(`
+        SELECT 
+          pr.*,
+          g.name as referrer_gym_name,
+          u.full_name as referrer_owner_name
+        FROM partner_requests pr
+        LEFT JOIN users u ON pr.referred_by = u.referral_code
+        LEFT JOIN gyms g ON u.id::text = g.partner_id::text
+        ORDER BY pr.created_at DESC
+      `);
+      return { requests: result.rows || [], debug: { type: 'complex' } };
+    } catch (e: any) {
+      console.warn("Complex partner request join failed, falling back to simple select", e);
+      try {
+        const result = await query(`SELECT * FROM partner_requests ORDER BY created_at DESC`);
+        return { requests: result.rows || [], debug: { type: 'fallback' } };
+      } catch (innerError: any) {
+        return { 
+          requests: [{ id: 'err', gym_name: 'DATABASE ERROR', email: innerError.message, status: 'error' }], 
+          debug: { error: innerError.message } 
+        };
+      }
+    }
+  } catch (error: any) {
+    console.error("Critical error fetching partner requests", error);
+    return { requests: [{ id: 'fatal', gym_name: 'CRITICAL ERROR', email: error.message, status: 'error' }] };
   }
 }
 
@@ -206,6 +219,40 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
     // 2. If it's approved or rejected, send the professional email
     if (status === "approved" || status === "rejected") {
       await sendPartnerLeadStatusEmail(lead, status as 'approved' | 'rejected');
+      
+      // Credit Referral Bonus if approved and referred by someone
+      if (status === "approved" && lead.referred_by) {
+        try {
+          // Get partner referral bonus from config
+          const configRes = await query("SELECT value FROM platform_config WHERE key = 'partner_referral_bonus'");
+          const bonusAmount = parseFloat(configRes.rows[0]?.value || '100');
+
+          // Find the referrer
+          const referrerRes = await query("SELECT id, email FROM users WHERE referral_code = $1", [lead.referred_by]);
+          
+          if (referrerRes.rows.length > 0) {
+            const referrer = referrerRes.rows[0];
+            
+            // Start Transaction to credit wallet and record it
+            await query("BEGIN");
+            
+            // 1. Update wallet balance
+            await query("UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2", [bonusAmount, referrer.id]);
+            
+            // 2. Record transaction
+            await query(
+              "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'partner', $3, 'credited')",
+              [referrer.id, lead.email, bonusAmount]
+            );
+            
+            await query("COMMIT");
+            console.log(`[AdminActions] Credited ₹${bonusAmount} to partner ${referrer.email} for referring ${lead.email}`);
+          }
+        } catch (creditErr) {
+          await query("ROLLBACK");
+          console.error("Failed to credit partner referral bonus:", creditErr);
+        }
+      }
     }
 
     revalidatePath("/admin/partner-requests");

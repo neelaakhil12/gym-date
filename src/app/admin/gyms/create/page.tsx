@@ -257,6 +257,26 @@ export default function CreateGymPage() {
                   />
                 </div>
               </div>
+
+              {/* Partner Referral Bonus */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Referral Bonus for this Gym (₹)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                  </div>
+                  <input
+                    name="partnerReferralAmount"
+                    type="number"
+                    min="0"
+                    defaultValue="100"
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400">Amount credited to the person who referred this gym.</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

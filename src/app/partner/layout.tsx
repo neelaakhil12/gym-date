@@ -21,7 +21,7 @@ const partnerLinks = [
   { name: "Virtual Wallet", href: "/partner/wallet", icon: Wallet },
 ];
 
-export default function PartnerLayout({
+function DashboardContent({
   children,
 }: {
   children: React.ReactNode;
@@ -57,15 +57,31 @@ export default function PartnerLayout({
     await signOut({ callbackUrl: "/partner/login" });
   };
 
-  // If we are on login or auth recovery pages, don't show the dashboard sidebar
   const isPublicRoute = pathname === "/partner" || pathname === "/partner/login" || pathname === "/partner/forgot-password" || pathname === "/partner/reset-password";
+
   if (isPublicRoute) {
-    return <PartnerAuthProvider>{children}</PartnerAuthProvider>;
+    return <>{children}</>;
+  }
+
+  // Handle loading state to prevent flickering
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!session || (session.user as any).role !== "partner") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <PartnerAuthProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -165,6 +181,17 @@ export default function PartnerLayout({
         </main>
       </div>
     </div>
+  );
+}
+
+export default function PartnerLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <PartnerAuthProvider>
+      <DashboardContent>{children}</DashboardContent>
     </PartnerAuthProvider>
   );
 }

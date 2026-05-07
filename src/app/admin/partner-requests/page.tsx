@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
-  Users
+  Users,
+  Gift
 } from "lucide-react";
 import { getPartnerRequests, updatePartnerRequestStatus } from "@/actions/adminActions";
 import { toast } from "react-hot-toast";
@@ -26,6 +27,9 @@ interface PartnerRequest {
   city: string;
   address: string;
   status: string;
+  referred_by?: string;
+  referrer_gym_name?: string;
+  referrer_owner_name?: string;
 }
 
 export default function PartnerRequestsPage() {
@@ -178,6 +182,19 @@ export default function PartnerRequestsPage() {
                         <p className="font-bold">{request.city}</p>
                       </div>
                     </div>
+                    {request.referred_by && (
+                      <div className="flex items-center space-x-3 text-sm text-gray-600">
+                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary">
+                          <Gift className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-primary uppercase tracking-widest">REFERRED BY</p>
+                          <p className="font-black text-secondary">
+                            {request.referrer_gym_name || request.referred_by}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">

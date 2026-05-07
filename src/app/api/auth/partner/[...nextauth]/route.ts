@@ -79,6 +79,23 @@ export const partnerAuthOptions = {
         secure: process.env.NODE_ENV === "production",
       },
     },
+    callbackUrl: {
+      name: "gymdate.partner-callback-url",
+      options: {
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: "gymdate.partner-csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax" as const,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
 };
 

@@ -1,9 +1,7 @@
 "use client";
 
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useSearchParams } from "next/navigation";
 import { TrendingUp, Users, Shield, LayoutGrid, CheckCircle } from "lucide-react";
 import { registerPartnerRequest } from "@/actions/gymActions";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -21,13 +19,27 @@ const partnerSchema = z.object({
 type PartnerFormValues = z.infer<typeof partnerSchema>;
 
 export default function PartnerPage() {
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get('ref');
+  const [referrerName, setReferrerName] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (refCode) {
+      fetch(`/api/referral/resolve?code=${refCode}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) setReferrerName(data.name);
+        });
+    }
+  }, [refCode]);
+
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<PartnerFormValues>({
     resolver: zodResolver(partnerSchema)
   });
 
   const onSubmit = async (data: PartnerFormValues) => {
     try {
-      const result = await registerPartnerRequest(data);
+      const result = await registerPartnerRequest({ ...data, referredBy: refCode || undefined });
       
       if (result.error) {
         toast.error(result.error);
@@ -38,7 +50,8 @@ export default function PartnerPage() {
       reset();
 
       // Redirect to WhatsApp
-      const message = `Hello GymDate! I am ${data.ownerName}, owner of ${data.gymName} in ${data.city}. I just submitted my registration on your website and would like to discuss the onboarding process.`;
+      const referralNote = referrerName ? ` (Referred by: ${referrerName})` : refCode ? ` (Referred by: ${refCode})` : "";
+      const message = `Hello GymDate! I am ${data.ownerName}, owner of ${data.gymName} in ${data.city}. I just submitted my registration on your website${referralNote} and would like to discuss the onboarding process.`;
       const encodedMessage = encodeURIComponent(message);
       const whatsappUrl = `https://wa.me/8143186677?text=${encodedMessage}`;
       
@@ -57,6 +70,13 @@ export default function PartnerPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ... (rest of the page) */}
         <div className="text-center mb-20">
+          {referrerName && (
+            <div className="bg-primary/10 border border-primary/20 px-6 py-3 rounded-2xl mb-8 inline-block animate-pulse">
+              <p className="text-primary font-bold text-sm">
+                🎁 Referred by <span className="font-black uppercase tracking-tight">{referrerName}</span>
+              </p>
+            </div>
+          )}
           <h1 className="text-4xl md:text-6xl font-black text-secondary mb-6">
             Partner With <span className="text-primary">GymDate</span>
           </h1>

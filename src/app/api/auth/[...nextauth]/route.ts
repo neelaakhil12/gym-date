@@ -49,10 +49,22 @@ export const authOptions = {
           let userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
           
           if (userResult.rows.length === 0) {
+            // Get signup bonus from config
+            const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
+            const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+
             userResult = await query(
-              "INSERT INTO users (email, full_name, phone, role_id) VALUES ($1, $2, $3, 'user') RETURNING *",
-              [email, name || "User", phoneFormatted]
+              "INSERT INTO users (email, full_name, phone, role_id, wallet_balance) VALUES ($1, $2, $3, 'user', $4) RETURNING *",
+              [email, name || "User", phoneFormatted, signupBonus]
             );
+
+            if (signupBonus > 0) {
+              await query(
+                "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'signup_bonus', $3, 'credited')",
+                [userResult.rows[0].id, email, signupBonus]
+              );
+              console.log(`[Auth] Credited ₹${signupBonus} signup bonus to new user ${email}`);
+            }
           } else {
              if (name || phoneFormatted) {
                  await query(
@@ -84,11 +96,22 @@ export const authOptions = {
           const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
           
           if (userResult.rows.length === 0) {
+            // Get signup bonus from config
+            const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
+            const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+
             // Create new user
-            await query(
-              "INSERT INTO users (email, full_name, role_id) VALUES ($1, $2, 'user')",
-              [email, name || "User"]
+            const newUserRes = await query(
+              "INSERT INTO users (email, full_name, role_id, wallet_balance) VALUES ($1, $2, 'user', $3) RETURNING id",
+              [email, name || "User", signupBonus]
             );
+
+            if (signupBonus > 0) {
+              await query(
+                "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'signup_bonus', $3, 'credited')",
+                [newUserRes.rows[0].id, email, signupBonus]
+              );
+            }
           } else {
             // Update existing user to ensure sync
             await query(
@@ -134,6 +157,23 @@ export const authOptions = {
   cookies: {
     sessionToken: {
       name: `gymdate.user-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    callbackUrl: {
+      name: `gymdate.user-callback-url`,
+      options: {
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    csrfToken: {
+      name: `gymdate.user-csrf-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',

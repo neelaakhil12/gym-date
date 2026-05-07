@@ -13,7 +13,9 @@ export default function AdminSettings() {
   const [config, setConfig] = useState({
     user_referral_bonus: "20",
     max_wallet_per_txn: "10",
-    partner_referral_bonus: "500",
+    partner_referral_bonus: "100",
+    signup_bonus: "0",
+    max_referrals_allowed: "5",
   });
 
   useEffect(() => {
@@ -169,6 +171,41 @@ export default function AdminSettings() {
                   <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
                     <strong>Example:</strong> If a user refers 5 friends who all buy subscriptions, they earn ₹{parseInt(config.user_referral_bonus) * 5}. 
                     They can use up to ₹{config.max_wallet_per_txn} per renewal to offset their cost.
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-100 mt-6 space-y-6">
+                    <h3 className="text-sm font-black text-secondary uppercase tracking-widest">Growth & Limits</h3>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                          New User Signup Bonus (₹)
+                        </label>
+                        <p className="text-xs text-gray-400 mb-3">Instant wallet credit when a new user creates an account.</p>
+                        <div className="relative">
+                          <span className="absolute left-4 top-3.5 text-gray-500 font-bold">₹</span>
+                          <input
+                            type="number" min="0"
+                            value={config.signup_bonus}
+                            onChange={e => setConfig({ ...config, signup_bonus: e.target.value })}
+                            className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                          Max Bonus-Eligible Referrals
+                        </label>
+                        <p className="text-xs text-gray-400 mb-3">Maximum number of friends a user can get paid for referring.</p>
+                        <div className="relative">
+                          <input
+                            type="number" min="1"
+                            value={config.max_referrals_allowed}
+                            onChange={e => setConfig({ ...config, max_referrals_allowed: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold text-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

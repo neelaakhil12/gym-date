@@ -137,26 +137,41 @@ export async function POST(req: NextRequest) {
           if (referrerRes.rows.length > 0) {
             const referrerId = referrerRes.rows[0].id;
 
-            // Get configured bonus amount
-            const bonusConfig = await query(
-              `SELECT value FROM platform_config WHERE key = 'user_referral_bonus'`
+            // Get configured bonus amount and max referrals limit
+            const configRes = await query(
+              `SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_referrals_allowed')`
             );
-            const bonusAmount = parseFloat(bonusConfig.rows[0]?.value || '20');
+            const configMap: Record<string, string> = {};
+            configRes.rows.forEach(r => configMap[r.key] = r.value);
+            
+            const bonusAmount = parseFloat(configMap['user_referral_bonus'] || '20');
+            const maxAllowed = parseInt(configMap['max_referrals_allowed'] || '5');
 
-            // Credit wallet
-            await query(
-              'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
-              [bonusAmount, referrerId]
+            // Check how many successful referrals this referrer already has
+            const currentCountRes = await query(
+              `SELECT COUNT(*) as count FROM referral_transactions WHERE referrer_id = $1 AND status = 'credited'`,
+              [referrerId]
             );
+            const currentCount = parseInt(currentCountRes.rows[0]?.count || '0');
 
-            // Log transaction
-            await query(
-              `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
-               VALUES ($1, $2, 'user', $3, 'credited')`,
-              [referrerId, customerEmail, bonusAmount]
-            );
+            if (currentCount < maxAllowed) {
+              // Credit wallet
+              await query(
+                'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
+                [bonusAmount, referrerId]
+              );
 
-            console.log(`[Referral] Credited ₹${bonusAmount} to referrer ${referrerId} for referring ${customerEmail}`);
+              // Log transaction
+              await query(
+                `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
+                 VALUES ($1, $2, 'user', $3, 'credited')`,
+                [referrerId, customerEmail, bonusAmount]
+              );
+
+              console.log(`[Referral] Credited ₹${bonusAmount} to referrer ${referrerId} for referring ${customerEmail} (Referral #${currentCount + 1}/${maxAllowed})`);
+            } else {
+              console.log(`[Referral] Referrer ${referrerId} reached limit of ${maxAllowed} referrals. No bonus credited.`);
+            }
           }
         }
       }

@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 // GET - fetch current referral config
 export async function GET() {
   try {
-    const result = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus')`);
+    const result = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus', 'signup_bonus', 'max_referrals_allowed')`);
     const config: Record<string, string> = {};
     result.rows.forEach((r: any) => { config[r.key] = r.value; });
     return NextResponse.json({ success: true, config });
@@ -16,12 +16,14 @@ export async function GET() {
 // POST - update referral config
 export async function POST(req: NextRequest) {
   try {
-    const { user_referral_bonus, max_wallet_per_txn, partner_referral_bonus } = await req.json();
+    const { user_referral_bonus, max_wallet_per_txn, partner_referral_bonus, signup_bonus, max_referrals_allowed } = await req.json();
 
     const updates = [
       ['user_referral_bonus', user_referral_bonus],
       ['max_wallet_per_txn', max_wallet_per_txn],
       ['partner_referral_bonus', partner_referral_bonus],
+      ['signup_bonus', signup_bonus],
+      ['max_referrals_allowed', max_referrals_allowed],
     ];
 
     for (const [key, value] of updates) {

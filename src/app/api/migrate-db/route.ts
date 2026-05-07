@@ -3,7 +3,7 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    // 1. Ensure partner_requests table exists (safe)
+    // 1. Ensure partner_requests table exists and has all columns
     await query(`
       CREATE TABLE IF NOT EXISTS partner_requests (
         id SERIAL PRIMARY KEY,
@@ -17,11 +17,13 @@ export async function GET() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await query(`ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS referred_by VARCHAR(100)`);
 
     // 2. Add wallet & referral columns to users
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0`);
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20) UNIQUE`);
     await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(20)`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT`);
 
     // 3. Platform config table
     await query(`
@@ -35,7 +37,9 @@ export async function GET() {
       INSERT INTO platform_config (key, value, description) VALUES
         ('user_referral_bonus', '20', 'Amount credited per successful user referral (₹)'),
         ('max_wallet_per_txn', '10', 'Max wallet amount usable per subscription renewal (₹)'),
-        ('partner_referral_bonus', '500', 'Default amount credited per gym partner referral (₹)')
+        ('partner_referral_bonus', '100', 'Default amount credited per gym partner referral (₹)'),
+        ('signup_bonus', '0', 'Bonus given to new users upon account creation (₹)'),
+        ('max_referrals_allowed', '5', 'Maximum number of referrals a user can get bonus for')
       ON CONFLICT (key) DO NOTHING
     `);
 
@@ -53,32 +57,25 @@ export async function GET() {
     `);
 
     // 5. Add partner_referral_amount to gyms
-    await query(`ALTER TABLE gyms ADD COLUMN IF NOT EXISTS partner_referral_amount DECIMAL(10,2) DEFAULT 500`);
+    await query(`ALTER TABLE gyms ADD COLUMN IF NOT EXISTS partner_referral_amount DECIMAL(10,2) DEFAULT 100`);
 
     // 6. Fix users who have role_id='partner' but no gym
     const fixResult = await query(`
       UPDATE users SET role_id = 'user'
       WHERE role_id = 'partner'
-        AND id NOT IN (SELECT DISTINCT partner_id FROM gyms WHERE partner_id IS NOT NULL)
+        AND id::text NOT IN (SELECT DISTINCT partner_id::text FROM gyms WHERE partner_id IS NOT NULL)
     `);
 
-    // 7. List all users
-    const userList = await query(`
-      SELECT u.email, u.full_name, u.role_id, u.wallet_balance, u.referral_code,
-             g.name as gym_name
-      FROM users u
-      LEFT JOIN gyms g ON u.id = g.partner_id
-      ORDER BY u.created_at DESC
-    `);
-
+    // 7. Fetch diagnostic info
+    const userList = await query(`SELECT COUNT(*) FROM users`);
+    const leadList = await query(`SELECT COUNT(*) FROM partner_requests`);
     const config = await query(`SELECT key, value FROM platform_config`);
 
     return NextResponse.json({ 
       success: true, 
-      message: "All migrations applied successfully.",
-      rolesFixed: fixResult.rowCount,
-      totalUsers: userList.rows.length,
-      allUsers: userList.rows,
+      message: "All migrations applied successfully. Please refresh the admin panel.",
+      usersCount: userList.rows[0].count,
+      leadsCount: leadList.rows[0].count,
       platformConfig: config.rows,
     });
   } catch (error: any) {

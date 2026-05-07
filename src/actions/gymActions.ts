@@ -49,6 +49,7 @@ export async function createGymAndPartner(formData: FormData) {
     
     const partnerEmail = formData.get("partnerEmail") as string;
     const partnerPassword = formData.get("partnerPassword") as string;
+    const partnerReferralAmount = parseFloat(formData.get("partnerReferralAmount") as string) || 100;
 
     console.log("Validating fields for:", gymName);
     if (!gymName || !location || !partnerEmail || !partnerPassword) {
@@ -110,13 +111,13 @@ export async function createGymAndPartner(formData: FormData) {
     const finalGallery = galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"];
     const gymInsert = await query(
       `INSERT INTO gyms 
-       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage) 
-       VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8::text[], 'Open', $9, $10, $11, $12, $13, $14) RETURNING id`,
+       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage, partner_referral_amount) 
+       VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8::text[], 'Open', $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
       [
         partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
         description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
         finalGallery,
-        rating, reviews, lat, lng, hasOffer, offerPercentage
+        rating, reviews, lat, lng, hasOffer, offerPercentage, partnerReferralAmount
       ]
     );
 
@@ -163,12 +164,13 @@ export async function registerPartnerRequest(data: {
   phone: string;
   city: string;
   address: string;
+  referredBy?: string;
 }) {
   try {
     // 1. Insert the lead
     await query(
-      "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address) VALUES ($1, $2, $3, $4, $5, $6)",
-      [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address]
+      "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address, referred_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address, data.referredBy || null]
     );
     
     revalidatePath("/admin/partner-requests");
@@ -233,13 +235,13 @@ export async function updateGym(gymId: string, formData: FormData) {
     const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : 0.0;
     const reviews = reviewsStr && !isNaN(parseInt(reviewsStr)) ? parseInt(reviewsStr) : 0;
     const hasOffer = formData.get("hasOffer") === "true";
-    const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
+    const partnerReferralAmount = parseFloat(formData.get("partnerReferralAmount") as string) || 100;
 
     await query(
-      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11, has_offer = $12, offer_percentage = $13 WHERE id = $14",
+      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11, has_offer = $12, offer_percentage = $13, partner_referral_amount = $14 WHERE id = $15",
       [
         gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, hasOffer, offerPercentage, gymId
+        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, hasOffer, offerPercentage, partnerReferralAmount, gymId
       ]
     );
 
