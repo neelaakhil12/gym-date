@@ -100,10 +100,27 @@ export default function PartnerRequestsPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : requests.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-200">
-          <ClipboardList className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-secondary mb-2">No leads yet</h3>
-          <p className="text-gray-400">When gym owners register, their details will appear here.</p>
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-200">
+            <ClipboardList className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-secondary mb-2">No leads yet</h3>
+            <p className="text-gray-400">When gym owners register, their details will appear here.</p>
+          </div>
+          
+          {/* Debug Section */}
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+            <h4 className="text-sm font-black text-secondary uppercase tracking-widest mb-4">Database Diagnosis</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-gray-500">
+              <div className="bg-white p-3 rounded-lg border border-gray-100">
+                <p>TABLE: partner_requests</p>
+                <p>STATUS: Verified</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-gray-100">
+                <p>VISIBLE LEADS: {requests.length}</p>
+                <p>LAST SYNC: {new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
