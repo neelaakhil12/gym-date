@@ -5,9 +5,12 @@ export async function GET() {
   try {
     console.log("Starting manual migration...");
     
-    // 1. Ensure table exists
+    // 1. DROP and RECREATE to fix ownership issues
+    console.log("Dropping and recreating table to fix ownership...");
+    await query("DROP TABLE IF EXISTS partner_requests CASCADE");
+    
     await query(`
-      CREATE TABLE IF NOT EXISTS partner_requests (
+      CREATE TABLE partner_requests (
         id SERIAL PRIMARY KEY,
         gym_name VARCHAR(255) NOT NULL,
         owner_name VARCHAR(255) NOT NULL,
@@ -19,10 +22,6 @@ export async function GET() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-
-    // 2. Add columns if missing
-    await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'");
-    await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
 
     // 4. Verify columns
     const schema = await query(`
