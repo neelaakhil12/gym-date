@@ -23,14 +23,20 @@ export async function GET() {
       )
     `);
 
-    // 5. Check User Count
+    // 5. Check User Count and Schema
     const userCount = await query("SELECT COUNT(*) as count FROM users");
+    const userSchema = await query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'users'
+    `);
 
     return NextResponse.json({ 
       success: true, 
       message: "Database check completed.",
       totalUsers: userCount.rows[0]?.count || 0,
-      schema: schema.rows
+      userTableSchema: userSchema.rows,
+      partnerTableSchema: schema.rows
     });
   } catch (error: any) {
     console.error("Migration error:", error);
