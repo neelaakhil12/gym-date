@@ -23,8 +23,9 @@ export async function GET() {
       )
     `);
 
-    // 5. Check User Count and Schemas
+    // 5. Check User Count, Schema, and Roles
     const userCount = await query("SELECT COUNT(*) as count FROM users");
+    const userList = await query("SELECT email, role_id, full_name FROM users");
     const userSchema = await query(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
@@ -40,6 +41,7 @@ export async function GET() {
       success: true, 
       message: "Database check completed.",
       totalUsers: userCount.rows[0]?.count || 0,
+      allUsers: userList.rows,
       userTableSchema: userSchema.rows,
       partnerTableSchema: partnerSchema.rows
     });
