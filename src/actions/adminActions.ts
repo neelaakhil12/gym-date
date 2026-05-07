@@ -192,15 +192,19 @@ export async function getPartnerRequests() {
 
 export async function updatePartnerRequestStatus(id: string, status: string) {
   try {
-    // 1. Update the status in the database
+    // 1. Get current status to prevent double-approval
+    const checkRes = await query("SELECT status FROM partner_requests WHERE id = $1", [id]);
+    if (checkRes.rows.length === 0) throw new Error("Lead not found.");
+    if (checkRes.rows[0].status === "approved" && status === "approved") {
+      console.warn(`[AdminActions] Lead ${id} already approved, skipping credit.`);
+      return { success: true, message: "Already approved" };
+    }
+
+    // 2. Update the status in the database
     const updateRes = await query(
       "UPDATE partner_requests SET status = $1 WHERE id = $2 RETURNING *",
       [status, id]
     );
-
-    if (updateRes.rows.length === 0) {
-      throw new Error("Lead not found.");
-    }
 
     const lead = updateRes.rows[0];
 
