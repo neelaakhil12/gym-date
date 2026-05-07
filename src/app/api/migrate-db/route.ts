@@ -23,16 +23,13 @@ export async function GET() {
       )
     `);
 
-    // 4. Verify columns
-    const schema = await query(`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'partner_requests'
-    `);
+    // 5. Check User Count
+    const userCount = await query("SELECT COUNT(*) as count FROM users");
 
     return NextResponse.json({ 
       success: true, 
-      message: "Database migration completed.",
+      message: "Database check completed.",
+      totalUsers: userCount.rows[0]?.count || 0,
       schema: schema.rows
     });
   } catch (error: any) {
