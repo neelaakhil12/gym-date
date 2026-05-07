@@ -1,8 +1,9 @@
 "use client";
 
 import GymLogoIcon from "@/components/GymLogoIcon";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { 
   Mail, 
   ArrowRight, 
@@ -22,6 +23,15 @@ export default function LoginPage() {
   const [step, setStep] = useState<"email" | "otp">("email");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const searchParams = useSearchParams();
+
+  // Save referral code from URL to localStorage
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("referral_code", ref);
+    }
+  }, [searchParams]);
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +74,17 @@ export default function LoginPage() {
 
       if (res?.error) {
         throw new Error(res.error);
+      }
+
+      // Apply referral code if present
+      const refCode = localStorage.getItem("referral_code");
+      if (refCode) {
+        await fetch("/api/referral/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, referralCode: refCode }),
+        });
+        localStorage.removeItem("referral_code");
       }
 
       // Successfully verified! Redirect to account page.

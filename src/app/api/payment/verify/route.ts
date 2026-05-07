@@ -105,23 +105,65 @@ export async function POST(req: NextRequest) {
 
     // ── 4. Update wallets (Platform & Gym) ────────────────────────────────
     try {
-      // A. Platform Wallet
       await query(
         `UPDATE wallet SET balance = balance + $1, updated_at = NOW() WHERE id = 'platform_wallet'`,
         [Number(amount)]
       );
-
-      // B. Gym Wallet
-      const gymDataRes = await query('SELECT commission_rate FROM gyms WHERE id = $1', [gymId]);
-      const commissionRate = gymDataRes.rows[0]?.commission_rate || 10;
-      const netAmount = Number(amount) * (1 - commissionRate / 100);
-
-      // We didn't have wallets table in schema, so let's skip or try to update if it exists
-      // The schema only has a platform_wallet. Wait, partner dashboard gets earnings from bookings.
-      // We don't necessarily need a 'wallets' table for gym, we compute it dynamically.
     } catch (e) {
       console.error("Wallet update error", e);
     }
+
+    // ── 5. Credit Referral Bonus ──────────────────────────────────────────
+    try {
+      if (finalUserId) {
+        // Check if this user was referred AND this is their first purchase
+        const referralCheck = await query(
+          `SELECT u.referred_by, (SELECT COUNT(*) FROM bookings WHERE user_id = $1) as booking_count
+           FROM users u WHERE u.id = $1`,
+          [finalUserId]
+        );
+
+        const referredBy = referralCheck.rows[0]?.referred_by;
+        const bookingCount = parseInt(referralCheck.rows[0]?.booking_count || '0');
+
+        // Only credit on first purchase and if they were referred
+        if (referredBy && bookingCount <= 1) {
+          // Find the referrer
+          const referrerRes = await query(
+            'SELECT id FROM users WHERE referral_code = $1',
+            [referredBy]
+          );
+
+          if (referrerRes.rows.length > 0) {
+            const referrerId = referrerRes.rows[0].id;
+
+            // Get configured bonus amount
+            const bonusConfig = await query(
+              `SELECT value FROM platform_config WHERE key = 'user_referral_bonus'`
+            );
+            const bonusAmount = parseFloat(bonusConfig.rows[0]?.value || '20');
+
+            // Credit wallet
+            await query(
+              'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
+              [bonusAmount, referrerId]
+            );
+
+            // Log transaction
+            await query(
+              `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
+               VALUES ($1, $2, 'user', $3, 'credited')`,
+              [referrerId, customerEmail, bonusAmount]
+            );
+
+            console.log(`[Referral] Credited ₹${bonusAmount} to referrer ${referrerId} for referring ${customerEmail}`);
+          }
+        }
+      }
+    } catch (refErr) {
+      console.error("[Referral] bonus credit failed:", refErr);
+    }
+
 
     // ── 4. Send Confirmation Email ────────────────────────────────────────
     try {

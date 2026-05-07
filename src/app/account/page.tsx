@@ -27,7 +27,11 @@ import {
   QrCode,
   FileDown,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  Gift,
+  Copy,
+  Check,
+  TrendingUp
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -48,6 +52,8 @@ export default function AccountPage() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
+  const [walletData, setWalletData] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
   const { data: nextAuthSession, status } = useSession();
   const router = useRouter();
 
@@ -90,6 +96,12 @@ export default function AccountPage() {
           const profileResult = await profileRes.json();
           if (profileResult.success && profileResult.profile) {
             setSupabaseUser(profileResult.profile);
+            // Fetch referral/wallet data
+            if (profileResult.profile.id) {
+              const refRes = await fetch(`/api/referral/generate?userId=${profileResult.profile.id}`);
+              const refData = await refRes.json();
+              if (refData.success) setWalletData(refData);
+            }
           }
           
           // 2. Fetch real bookings via server API (Always fetch if we have email)
@@ -154,11 +166,20 @@ export default function AccountPage() {
 
   const tabs = [
     { id: "profile", label: "My Profile", icon: <User className="w-5 h-5" /> },
+    { id: "wallet", label: "Wallet & Referral", icon: <Gift className="w-5 h-5" /> },
     { id: "subscriptions", label: "My Subscriptions", icon: <CreditCard className="w-5 h-5" /> },
     { id: "payments", label: "Payment History", icon: <History className="w-5 h-5" /> },
     { id: "bookings", label: "My QR Tickets", icon: <Ticket className="w-5 h-5" /> },
     { id: "addresses", label: "Saved Addresses", icon: <MapPin className="w-5 h-5" /> },
   ];
+
+  const handleCopyReferral = () => {
+    if (walletData?.referralLink) {
+      navigator.clipboard.writeText(walletData.referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -363,6 +384,103 @@ export default function AccountPage() {
               </div>
 
               {/* Tab Contents */}
+              {activeTab === "wallet" && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {/* Wallet Balance Card */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-primary to-red-700 rounded-[28px] p-6 text-white md:col-span-1">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="p-2 bg-white/20 rounded-xl">
+                          <Wallet className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest opacity-80">Wallet Balance</span>
+                      </div>
+                      <p className="text-4xl font-black mb-1">₹{walletData?.walletBalance?.toFixed(2) || "0.00"}</p>
+                      <p className="text-xs opacity-70">Up to ₹{walletData?.maxWalletPerTxn || 10} usable per renewal</p>
+                    </div>
+
+                    <div className="bg-white rounded-[28px] border border-gray-100 p-6 shadow-sm">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total Referrals</span>
+                      </div>
+                      <p className="text-3xl font-black text-secondary">{walletData?.totalReferrals || 0}</p>
+                      <p className="text-xs text-gray-400 mt-1">Friends joined via your link</p>
+                    </div>
+
+                    <div className="bg-white rounded-[28px] border border-gray-100 p-6 shadow-sm">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Gift className="w-4 h-4 text-purple-500" />
+                        <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total Earned</span>
+                      </div>
+                      <p className="text-3xl font-black text-secondary">₹{walletData?.totalEarned?.toFixed(0) || 0}</p>
+                      <p className="text-xs text-gray-400 mt-1">₹{walletData?.bonusPerReferral || 20} per referral</p>
+                    </div>
+                  </div>
+
+                  {/* Referral Link */}
+                  <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm p-6 space-y-4">
+                    <div>
+                      <h3 className="font-black text-secondary text-lg">Your Referral Link</h3>
+                      <p className="text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and buys a subscription, you earn ₹{walletData?.bonusPerReferral || 20}!</p>
+                    </div>
+
+                    {walletData?.referralLink ? (
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono text-sm text-gray-600 truncate">
+                          {walletData.referralLink}
+                        </div>
+                        <button
+                          onClick={handleCopyReferral}
+                          className={`flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
+                            copied
+                              ? "bg-green-500 text-white"
+                              : "bg-primary text-white hover:bg-red-700"
+                          }`}
+                        >
+                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          <span>{copied ? "Copied!" : "Copy"}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-4">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        <span className="text-sm text-gray-400">Generating your referral link...</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-3 pt-2">
+                      {[
+                        { step: "1", label: "Share your link", desc: "Send to friends" },
+                        { step: "2", label: "Friend signs up", desc: "They buy any plan" },
+                        { step: "3", label: "You earn ₹" + (walletData?.bonusPerReferral || 20), desc: "Credited to wallet" },
+                      ].map(({ step, label, desc }) => (
+                        <div key={step} className="text-center p-4 bg-gray-50 rounded-2xl">
+                          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm mx-auto mb-2">{step}</div>
+                          <p className="font-bold text-secondary text-xs">{label}</p>
+                          <p className="text-gray-400 text-[10px] mt-1">{desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Wallet Usage Info */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-[28px] p-6">
+                    <h4 className="font-black text-secondary mb-2 flex items-center">
+                      <Wallet className="w-4 h-4 mr-2 text-blue-500" />
+                      How to use your wallet
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      When you renew a subscription, up to <strong>₹{walletData?.maxWalletPerTxn || 10}</strong> from your wallet 
+                      will automatically be deducted from your payment. The remaining amount is charged via Razorpay.
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      Example: Plan costs ₹499 → Wallet pays ₹{walletData?.maxWalletPerTxn || 10} → You pay ₹{499 - (walletData?.maxWalletPerTxn || 10)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {activeTab === "profile" && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
