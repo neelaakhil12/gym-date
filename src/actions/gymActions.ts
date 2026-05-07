@@ -12,25 +12,29 @@ async function uploadImage(file: File): Promise<string | null> {
   try {
     // Save to the persistent directory handled by Nginx
     const uploadDir = '/var/www/gymdate_uploads/gyms';
+    console.log(`UPLOADER: Ensuring directory exists: ${uploadDir}`);
     await mkdir(uploadDir, { recursive: true });
     
     const ext = file.name.split(".").pop() || "jpg";
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
     const filePath = path.join(uploadDir, fileName);
     
+    console.log(`UPLOADER: Writing file to: ${filePath}`);
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
+    console.log(`UPLOADER: File written successfully: ${fileName}`);
 
     // Return the URL that Nginx will serve
     return `/uploads/gyms/${fileName}`;
   } catch (error) {
-    console.error("Error uploading image:", error);
+    console.error("UPLOADER ERROR:", error);
     return null;
   }
 }
 
 export async function createGymAndPartner(formData: FormData) {
   try {
+    console.log("STARTING: createGymAndPartner");
     const gymName = formData.get("name") as string;
     const location = formData.get("location") as string;
     const description = formData.get("description") as string;
@@ -46,20 +50,23 @@ export async function createGymAndPartner(formData: FormData) {
     const partnerEmail = formData.get("partnerEmail") as string;
     const partnerPassword = formData.get("partnerPassword") as string;
 
+    console.log("Validating fields for:", gymName);
     if (!gymName || !location || !partnerEmail || !partnerPassword) {
       return { error: "Missing required fields." };
     }
 
     // 1. Hash password and create user in Postgres
+    console.log("STEP 1: Creating/Updating Partner User:", partnerEmail);
     let partnerId: string;
     const hashedPassword = await bcrypt.hash(partnerPassword, 10);
     
     const checkUser = await query("SELECT id FROM users WHERE email = $1", [partnerEmail]);
     if (checkUser.rows.length > 0) {
       partnerId = checkUser.rows[0].id;
-      // Ensure they have the partner role and update password
+      console.log("Partner already exists, updating role and password for ID:", partnerId);
       await query("UPDATE users SET role_id = 'partner', password_hash = $1 WHERE id = $2", [hashedPassword, partnerId]);
     } else {
+      console.log("Creating new partner user...");
       const insertUser = await query(
         "INSERT INTO users (email, role_id, password_hash) VALUES ($1, 'partner', $2) RETURNING id",
         [partnerEmail, hashedPassword]
@@ -68,16 +75,21 @@ export async function createGymAndPartner(formData: FormData) {
     }
 
     // 2. Upload Images
+    console.log("STEP 2: Uploading Images...");
     let primaryImageUrl = null;
     if (primaryImageFile && primaryImageFile.size > 0) {
+      console.log("Uploading primary image:", primaryImageFile.name);
       primaryImageUrl = await uploadImage(primaryImageFile);
     }
 
     const galleryUrls: string[] = [];
-    for (const file of galleryImageFiles) {
-      if (file && file.size > 0) {
-        const url = await uploadImage(file);
-        if (url) galleryUrls.push(url);
+    if (galleryImageFiles.length > 0) {
+      console.log(`Uploading ${galleryImageFiles.length} gallery images...`);
+      for (const file of galleryImageFiles) {
+        if (file && file.size > 0) {
+          const url = await uploadImage(file);
+          if (url) galleryUrls.push(url);
+        }
       }
     }
 
@@ -94,6 +106,7 @@ export async function createGymAndPartner(formData: FormData) {
     const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
 
     // 3. Create the gym
+    console.log("STEP 3: Inserting Gym into Database...");
     const gymInsert = await query(
       `INSERT INTO gyms 
        (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage) 
@@ -107,14 +120,18 @@ export async function createGymAndPartner(formData: FormData) {
     );
 
     const gymId = gymInsert.rows[0].id;
+    console.log("Gym created successfully with ID:", gymId);
 
     // 4. Create pricing plans
+    console.log("STEP 4: Creating Pricing Plans...");
     for (let idx = 0; idx < planNames.length; idx++) {
+      if (!planNames[idx] || !planPrices[idx]) continue;
+      
       await query(
         "INSERT INTO pricing_plans (gym_id, name, price, features, button_text, popular) VALUES ($1, $2, $3, $4, 'Book Now', $5)",
         [
           gymId, planNames[idx], 
-          planPrices[idx].startsWith('₹') ? planPrices[idx] : `₹${planPrices[idx]}`,
+          planPrices[idx].toString().startsWith('₹') ? planPrices[idx] : `₹${planPrices[idx]}`,
           ["Access to Gym", "Locker Access", "Basic Amenities"],
           idx === 2
         ]
@@ -124,15 +141,17 @@ export async function createGymAndPartner(formData: FormData) {
     revalidatePath("/admin/gyms");
 
     // 5. Send welcome email to partner (non-blocking)
+    console.log("STEP 5: Sending welcome email to:", partnerEmail);
     sendPartnerWelcomeEmail(partnerEmail, gymName, partnerPassword).catch(err => {
       console.error("Delayed welcome email error:", err);
     });
 
+    console.log("COMPLETED: createGymAndPartner");
     return { success: true };
     
   } catch (err: any) {
-    console.error("Unexpected error in createGymAndPartner:", err);
-    return { error: "An unexpected error occurred." };
+    console.error("CRITICAL ERROR in createGymAndPartner:", err);
+    return { error: `Server Error: ${err.message || "An unexpected error occurred."}` };
   }
 }
 
