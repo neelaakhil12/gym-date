@@ -426,7 +426,7 @@ export default function AccountPage() {
                         <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total Earned</span>
                       </div>
                       <p className="text-3xl font-black text-secondary">₹{walletData?.totalEarned?.toFixed(0) || 0}</p>
-                      <p className="text-xs text-gray-400 mt-1">₹{walletData?.bonusPerReferral || 20} per referral</p>
+                      <p className="text-xs text-gray-400 mt-1">Get ₹30 per referral</p>
                     </div>
                   </div>
 
@@ -434,7 +434,7 @@ export default function AccountPage() {
                   <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm p-6 space-y-4">
                     <div>
                       <h3 className="font-black text-secondary text-lg">Your Referral Link</h3>
-                      <p className="text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and buys a subscription, you earn ₹{walletData?.bonusPerReferral || 20}!</p>
+                      <p className="text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and buys a subscription, you earn ₹30!</p>
                     </div>
 
                     {walletData?.referralLink ? (
@@ -465,7 +465,7 @@ export default function AccountPage() {
                       {[
                         { step: "1", label: "Share your link", desc: "Send to friends" },
                         { step: "2", label: "Friend signs up", desc: "They buy any plan" },
-                        { step: "3", label: "You earn ₹" + (walletData?.bonusPerReferral || 20), desc: "Credited to wallet" },
+                        { step: "3", label: "You earn ₹30", desc: "Credited to wallet" },
                       ].map(({ step, label, desc }) => (
                         <div key={step} className="text-center p-4 bg-gray-50 rounded-2xl">
                           <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm mx-auto mb-2">{step}</div>
