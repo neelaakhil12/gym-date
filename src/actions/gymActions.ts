@@ -145,15 +145,32 @@ export async function registerPartnerRequest(data: {
   address: string;
 }) {
   try {
-    // Requires a partner_requests table
+    // 1. Ensure table exists with proper structure
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_requests (
+        id SERIAL PRIMARY KEY,
+        gym_name VARCHAR(255) NOT NULL,
+        owner_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        address TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 2. Insert the lead
     await query(
       "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address) VALUES ($1, $2, $3, $4, $5, $6)",
       [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address]
     );
+    
+    revalidatePath("/admin/partner-requests");
     return { success: true };
   } catch (error) {
     console.error("Error in registerPartnerRequest:", error);
-    return { error: "An unexpected error occurred." };
+    return { error: "An unexpected error occurred. Please try again later." };
   }
 }
 
