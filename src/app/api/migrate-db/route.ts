@@ -3,14 +3,9 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    console.log("Starting manual migration...");
-    
-    // 1. DROP and RECREATE to fix ownership issues
-    console.log("Dropping and recreating table to fix ownership...");
-    await query("DROP TABLE IF EXISTS partner_requests CASCADE");
-    
+    // 1. Ensure partner_requests table exists with correct schema (safe upsert)
     await query(`
-      CREATE TABLE partner_requests (
+      CREATE TABLE IF NOT EXISTS partner_requests (
         id SERIAL PRIMARY KEY,
         gym_name VARCHAR(255) NOT NULL,
         owner_name VARCHAR(255) NOT NULL,
@@ -23,27 +18,31 @@ export async function GET() {
       )
     `);
 
-    // 5. Check User Count, Schema, and Roles
-    const userCount = await query("SELECT COUNT(*) as count FROM users");
-    const userList = await query("SELECT email, role_id, full_name FROM users");
-    const userSchema = await query(`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'users'
+    // 2. Fix users who have role_id='partner' but are NOT actual gym partners
+    const fixResult = await query(`
+      UPDATE users
+      SET role_id = 'user'
+      WHERE role_id = 'partner'
+        AND id NOT IN (
+          SELECT DISTINCT partner_id FROM gyms WHERE partner_id IS NOT NULL
+        )
     `);
-    const partnerSchema = await query(`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'partner_requests'
+
+    // 3. List all users with their roles
+    const userList = await query(`
+      SELECT u.email, u.full_name, u.role_id,
+             g.name as gym_name
+      FROM users u
+      LEFT JOIN gyms g ON u.id = g.partner_id
+      ORDER BY u.created_at DESC
     `);
 
     return NextResponse.json({ 
       success: true, 
-      message: "Database check completed.",
-      totalUsers: userCount.rows[0]?.count || 0,
+      message: "Diagnostics complete. Orphaned partner roles fixed.",
+      rolesFixed: fixResult.rowCount,
+      totalUsers: userList.rows.length,
       allUsers: userList.rows,
-      userTableSchema: userSchema.rows,
-      partnerTableSchema: partnerSchema.rows
     });
   } catch (error: any) {
     console.error("Migration error:", error);
