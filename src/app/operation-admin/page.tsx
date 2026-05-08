@@ -16,7 +16,7 @@ function OperationAdminLoginForm() {
 
   useEffect(() => {
     if (status === "authenticated" && (session?.user as any)?.role === "operation_admin") {
-      router.push("/admin/gyms");
+      router.push("/operation-admin/gyms");
     }
   }, [session, status, router]);
 
@@ -37,7 +37,7 @@ function OperationAdminLoginForm() {
       if (res?.error) {
         setError("Staff account not found or invalid password.");
       } else if (res?.ok) {
-        router.push("/admin/gyms");
+        router.push("/operation-admin/gyms");
         router.refresh();
       }
     } catch (err) {
