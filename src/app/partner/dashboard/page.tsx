@@ -96,7 +96,7 @@ export default function PartnerDashboard() {
         // Fetch referral data
         if (data.partner_id) {
           try {
-            const refRes = await fetch(`/api/referral/generate?userId=${data.partner_id}`);
+            const refRes = await fetch(`/api/referral/generate?userId=${data.partner_id}&type=partner`);
             const refData = await refRes.json();
             if (refData.success) setWalletData(refData);
           } catch (err) {

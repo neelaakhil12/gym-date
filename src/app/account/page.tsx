@@ -110,7 +110,7 @@ export default function AccountPage() {
 
             // Fetch referral/wallet data
             if (profileResult.profile.id) {
-              const refRes = await fetch(`/api/referral/generate?userId=${profileResult.profile.id}`);
+              const refRes = await fetch(`/api/referral/generate?userId=${profileResult.profile.id}&type=user`);
               const refData = await refRes.json();
               if (refData.success) setWalletData(refData);
             }

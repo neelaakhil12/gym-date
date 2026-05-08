@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
+    const type = searchParams.get('type'); // 'user' or 'partner'
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
     // Check if user already has a referral code
@@ -16,7 +17,9 @@ export async function GET(req: NextRequest) {
     const user = existing.rows[0];
     let code = user.referral_code;
     const walletBalance = user.wallet_balance || 0;
-    const isPartner = user.role_id === 'partner';
+    
+    // Determine role context: use 'type' param if provided, otherwise fallback to database role
+    const isPartnerContext = type ? (type === 'partner') : (user.role_id === 'partner');
 
     // Generate a new unique code if not set
     if (!code) {
@@ -36,14 +39,14 @@ export async function GET(req: NextRequest) {
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });
 
-    // Determine correct bonus based on role
-    let bonusPerReferral = isPartner 
+    // Determine correct bonus based on context
+    let bonusPerReferral = isPartnerContext 
       ? parseFloat(configMap['partner_referral_bonus'] || '500')
       : parseFloat(configMap['refer_a_friend'] || '30');
 
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gymdate.in';
-    const referralLink = isPartner 
+    const referralLink = isPartnerContext 
       ? `${siteUrl}/partner?ref=${code}`
       : `${siteUrl}/login?ref=${code}`;
 
@@ -93,7 +96,7 @@ export async function GET(req: NextRequest) {
       totalEarned: parseFloat(stats.rows[0]?.total_earned || '0'),
       bonusPerReferral,
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
-      isPartner,
+      isPartner: isPartnerContext,
       history: history.slice(0, 10)
     });
   } catch (err: any) {
