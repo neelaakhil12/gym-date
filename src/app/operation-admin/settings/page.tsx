@@ -35,7 +35,8 @@ export default function OperationSettings() {
     const data = await getPlatformConfig();
     // For Operations staff, we might want to only show specific keys, 
     // but the user asked for "same user refer bonus edit option", so showing all is fine.
-    setConfig(data);
+    // UPDATE: User now asked to remove 'user_referral_bonus' from the panel.
+    setConfig(data.filter((item: any) => item.key !== 'user_referral_bonus'));
     setLoading(false);
   }
 
