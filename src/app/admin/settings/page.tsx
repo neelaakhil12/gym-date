@@ -33,8 +33,8 @@ export default function AdminSettings() {
   async function loadConfig() {
     setLoading(true);
     const data = await getPlatformConfig();
-    // Filter out the 'user_referral_bonus' as requested
-    setConfig(data.filter((item: any) => item.key !== 'user_referral_bonus'));
+    // Filter out the 'referral_bonus_user' as requested
+    setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
     setLoading(false);
   }
 
