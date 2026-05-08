@@ -206,7 +206,7 @@ export default function PartnerRequestsPage() {
                         <div>
                           <p className="text-[10px] font-bold text-primary uppercase tracking-widest">REFERRED BY</p>
                           <p className="font-black text-secondary">
-                            {request.referrer_gym_name || request.referred_by}
+                            {request.referrer_gym_name || request.referrer_owner_name || request.referred_by}
                           </p>
                         </div>
                       </div>
