@@ -247,6 +247,7 @@ export async function updateGym(gymId: string, formData: FormData) {
     const rating = ratingStr && !isNaN(parseFloat(ratingStr)) ? parseFloat(ratingStr) : 0.0;
     const reviews = reviewsStr && !isNaN(parseInt(reviewsStr)) ? parseInt(reviewsStr) : 0;
     const hasOffer = formData.get("hasOffer") === "true";
+    const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
     const partnerReferralAmount = parseFloat(formData.get("partnerReferralAmount") as string) || 100;
 
     await query(
