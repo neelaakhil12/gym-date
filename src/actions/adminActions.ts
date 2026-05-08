@@ -219,7 +219,16 @@ export async function updateUser(id: string, data: any) {
 export async function getPartnerRequests() {
   try {
     // Basic query to ensure all leads are fetched
-    const result = await query("SELECT * FROM partner_requests ORDER BY created_at DESC");
+    const result = await query(`
+      SELECT 
+        pr.*,
+        g.name as referrer_gym_name,
+        u.full_name as referrer_owner_name
+      FROM partner_requests pr
+      LEFT JOIN users u ON pr.referred_by = u.referral_code
+      LEFT JOIN gyms g ON u.id::text = g.partner_id::text
+      ORDER BY pr.created_at DESC
+    `);
     
     // Attempt to enrich with referrer info, but don't fail if it doesn't work
     const enriched = [...(result.rows || [])];
