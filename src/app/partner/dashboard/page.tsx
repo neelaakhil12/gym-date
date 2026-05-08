@@ -89,7 +89,7 @@ export default function PartnerDashboard() {
         }, 0) || 0;
         
         setStats({
-          totalRevenue: Math.floor(netTotal),
+          totalRevenue: netTotal,
           bookingCount: bookingData?.length || 0
         });
 
@@ -407,7 +407,7 @@ export default function PartnerDashboard() {
                   </div>
                   <div className="flex justify-between items-center py-2">
                     <span className="text-gray-500 text-sm">Net Revenue</span>
-                    <span className="font-bold text-slate-900">₹{stats.totalRevenue.toLocaleString()}</span>
+                    <h3 className="text-3xl font-black text-secondary">₹{stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</h3>
                   </div>
                 </div>
               </div>

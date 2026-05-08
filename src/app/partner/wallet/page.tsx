@@ -54,7 +54,7 @@ export default function PartnerWallet() {
           return sum + (parseFloat(p.amount) || 0);
         }, 0) || 0;
         
-        setBalance(Math.max(0, Math.floor(totalEarnings - totalWithdrawn)));
+        setBalance(Math.max(0, totalEarnings - totalWithdrawn));
       }
       setLoading(false);
     }
@@ -181,7 +181,7 @@ export default function PartnerWallet() {
             <Wallet className="w-4 h-4" />
             <span className="text-sm font-bold uppercase tracking-widest">Available Balance (Net)</span>
           </div>
-          <h2 className="text-5xl font-black mb-1 text-white">₹{balance.toLocaleString()}</h2>
+          <h2 className="text-5xl font-black mb-1 text-white">₹{balance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</h2>
           <p className="text-slate-400 text-xs mb-8 font-medium italic">After platform commission of {gym?.commission_rate || 10}%</p>
           
           <button 

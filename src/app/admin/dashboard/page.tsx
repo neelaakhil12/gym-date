@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                 <p className="text-sm font-bold text-gray-400">Total Profit (Commissions)</p>
                 <div className="mt-2">
                   <h3 className="text-3xl font-black text-white">
-                    ₹{totalPlatformCommission.toLocaleString()}
+                    ₹{totalPlatformCommission.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
                   </h3>
                 </div>
                 <button 
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
                 <p className="text-sm font-bold text-gray-500">Gross Platform Revenue</p>
                 <div className="mt-2">
                   <h3 className="text-3xl font-black text-secondary">
-                    ₹{totalGrossRevenue.toLocaleString()}
+                    ₹{totalGrossRevenue.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}
                   </h3>
                 </div>
                 <button 
