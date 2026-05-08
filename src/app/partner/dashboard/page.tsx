@@ -547,7 +547,6 @@ export default function PartnerDashboard() {
             </div>
           </div>
 
-          {/* Referral Activity / Transaction History */}
           <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between">
               <div>
