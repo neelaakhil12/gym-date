@@ -33,7 +33,7 @@ export default function AdminSettings() {
   async function loadConfig() {
     setLoading(true);
     const data = await getPlatformConfig();
-    // Filter out the 'referral_bonus_user' as requested
+    // Only hide the redundant key we deleted earlier
     setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
     setLoading(false);
   }
@@ -101,7 +101,9 @@ export default function AdminSettings() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
-                    {item.key.replace(/_/g, ' ')}
+                    {item.key === 'refer_a_friend' ? 'User Referral Bonus' : 
+                     item.key === 'partner_referral_bonus' ? 'Partner Referral Bonus' : 
+                     item.key.replace(/_/g, ' ')}
                   </h3>
                   <p className="text-xs text-gray-400 font-medium mt-1">
                     {item.description || "No description provided for this setting."}

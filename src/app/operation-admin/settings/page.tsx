@@ -35,7 +35,7 @@ export default function OperationSettings() {
     const data = await getPlatformConfig();
     // For Operations staff, we might want to only show specific keys, 
     // but the user asked for "same user refer bonus edit option", so showing all is fine.
-    // UPDATE: User now asked to remove 'referral_bonus_user' from the panel.
+    // Only hide the redundant key we deleted earlier
     setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
     setLoading(false);
   }
@@ -46,6 +46,7 @@ export default function OperationSettings() {
     const res = await updatePlatformConfig(key, value);
     if (res.success) {
       setMessage({ type: 'success', text: `Successfully updated ${key.replace(/_/g, ' ')}` });
+      // Clear message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
     } else {
       setMessage({ type: 'error', text: res.error || "Update failed" });
@@ -70,9 +71,9 @@ export default function OperationSettings() {
     <div className="max-w-4xl space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-secondary uppercase tracking-tight">Operations Settings</h1>
+        <h1 className="text-2xl font-black text-secondary">Staff Settings</h1>
         <p className="text-gray-500 mt-1 text-sm font-medium">
-          Manage referral bonuses and core platform configurations.
+          Manage referral bonuses, wallet usage limits, and core platform rules.
         </p>
       </div>
 
@@ -102,7 +103,9 @@ export default function OperationSettings() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
-                    {item.key.replace(/_/g, ' ')}
+                    {item.key === 'refer_a_friend' ? 'User Referral Bonus' : 
+                     item.key === 'partner_referral_bonus' ? 'Partner Referral Bonus' : 
+                     item.key.replace(/_/g, ' ')}
                   </h3>
                   <p className="text-xs text-gray-400 font-medium mt-1">
                     {item.description || "Platform configuration value."}
