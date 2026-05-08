@@ -281,7 +281,7 @@ export async function updateGym(gymId: string, formData: FormData) {
     
   } catch (err: any) {
     console.error("Unexpected error in updateGym:", err);
-    return { error: "An unexpected error occurred." };
+    return { error: `Server Error: ${err.message || "An unexpected error occurred."}` };
   }
 }
 
