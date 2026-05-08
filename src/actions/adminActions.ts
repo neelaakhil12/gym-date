@@ -299,22 +299,38 @@ export async function getCities() {
   }
 }
 
-export async function addCity(data: any) {
+export async function addCity(formData: FormData) {
   try {
-    await query("INSERT INTO cities (name, image, is_featured) VALUES ($1, $2, $3)", 
-      [data.name, data.image, data.is_featured]);
+    const name = formData.get("name") as string;
+    const image = formData.get("image") as string || formData.get("existingImageUrl") as string;
+    const is_featured = formData.get("is_featured") === "true";
+    const is_coming_soon = formData.get("is_coming_soon") === "true";
+
+    if (!name) return { error: "City name is required" };
+
+    await query("INSERT INTO cities (name, image, is_featured, is_coming_soon) VALUES ($1, $2, $3, $4)", 
+      [name, image, is_featured, is_coming_soon]);
     return { success: true };
   } catch (error: any) {
+    console.error("Add City Error:", error);
     return { error: error.message };
   }
 }
 
-export async function updateCity(id: string, data: any) {
+export async function updateCity(id: string, formData: FormData) {
   try {
-    await query("UPDATE cities SET name = $1, image = $2, is_featured = $3 WHERE id = $4",
-      [data.name, data.image, data.is_featured, id]);
+    const name = formData.get("name") as string;
+    const image = formData.get("image") as string || formData.get("existingImageUrl") as string;
+    const is_featured = formData.get("is_featured") === "true";
+    const is_coming_soon = formData.get("is_coming_soon") === "true";
+
+    if (!name) return { error: "City name is required" };
+
+    await query("UPDATE cities SET name = $1, image = $2, is_featured = $3, is_coming_soon = $4 WHERE id = $5",
+      [name, image, is_featured, is_coming_soon, id]);
     return { success: true };
   } catch (error: any) {
+    console.error("Update City Error:", error);
     return { error: error.message };
   }
 }
