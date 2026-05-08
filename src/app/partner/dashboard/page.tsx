@@ -609,7 +609,7 @@ export default function PartnerDashboard() {
                           {item.type === 'credit' ? '+' : '-'}₹{parseFloat(item.amount).toLocaleString()}
                         </td>
                         <td className="px-8 py-4 text-right text-gray-400 font-medium">
-                          {new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                         </td>
                       </tr>
                     ))
