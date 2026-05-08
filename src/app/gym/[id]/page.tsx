@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Star, MapPin, Clock, User, Wifi, Wind, Car, ShieldCheck, Droplets, CheckCircle2, AlertCircle, Loader2, Gift } from "lucide-react";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { useRazorpay } from "@/hooks/useRazorpay";
+import { useSession } from "next-auth/react";
 
 const getAmenityIcon = (amenity: string) => {
   switch (amenity.toLowerCase()) {
