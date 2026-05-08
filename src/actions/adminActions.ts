@@ -225,15 +225,25 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
       // Credit Referral Bonus if approved and referred by someone
       if (status === "approved" && lead.referred_by) {
         try {
-          // Get partner referral bonus from config
-          const configRes = await query("SELECT value FROM platform_config WHERE key = 'partner_referral_bonus'");
-          const bonusAmount = parseFloat(configRes.rows[0]?.value || '1500');
+          // Get partner referral bonus from config via reusable helper
+          // Get global default from config
+          const { getConfigValue } = await import('@/lib/config');
+          const bonusStr = await getConfigValue('partner_referral_bonus');
+          let bonusAmount = parseFloat(bonusStr ?? '500');
 
           // Find the referrer
-          const referrerRes = await query("SELECT id, email FROM users WHERE referral_code = $1", [lead.referred_by]);
+          const referrerRes = await query("SELECT id, email, role_id FROM users WHERE referral_code = $1", [lead.referred_by]);
           
           if (referrerRes.rows.length > 0) {
             const referrer = referrerRes.rows[0];
+            
+            // If the referrer is a partner, check if they have a custom referral amount set
+            if (referrer.role_id === 'partner') {
+              const gymRes = await query("SELECT partner_referral_amount FROM gyms WHERE partner_id = $1 LIMIT 1", [referrer.id]);
+              if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
+                bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
+              }
+            }
             
             // Start Transaction to credit wallet and record it
             await query("BEGIN");

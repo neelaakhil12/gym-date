@@ -171,11 +171,30 @@ export async function POST(req: NextRequest) {
             if (referrerRes.rows.length > 0) {
               const referrer = referrerRes.rows[0];
               
-              // Get configuration for bonus amount
+              // Get configuration for bonus amounts (user and partner)
               const configRes = await query(
-                "SELECT value FROM platform_config WHERE key = 'refer_a_friend'"
+                "SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'partner_referral_bonus')"
               );
-              const bonusAmount = parseFloat(configRes.rows[0]?.value || '50');
+              const configMap: Record<string, string> = {};
+              configRes.rows.forEach((r: any) => { configMap[r.key] = r.value; });
+              const userBonus = parseFloat(configMap['refer_a_friend'] || '50');
+              const partnerBonus = parseFloat(configMap['partner_referral_bonus'] || '500');
+
+              // Determine if referrer is a partner
+              const referrerInfo = await query('SELECT id, email, role_id FROM users WHERE referral_code ILIKE $1', [referredBy]);
+              const referrerUser = referrerInfo.rows[0];
+              const isPartnerReferrer = referrerUser?.role_id === 'partner';
+              
+              let bonusAmount = userBonus;
+              if (isPartnerReferrer) {
+                // Priority: 1. Gym-specific amount, 2. Global platform config, 3. Default 500
+                const gymRes = await query('SELECT partner_referral_amount FROM gyms WHERE partner_id = $1 LIMIT 1', [referrerUser.id]);
+                if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
+                  bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
+                } else {
+                  bonusAmount = partnerBonus;
+                }
+              }
 
               console.log(`[Referral] Crediting ₹${bonusAmount} to referrer ${referrer.email}`);
 

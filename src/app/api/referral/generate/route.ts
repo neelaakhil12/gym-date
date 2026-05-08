@@ -32,12 +32,15 @@ export async function GET(req: NextRequest) {
     );
 
     // 4. Get config
-    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'max_wallet_per_txn')`);
+    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'partner_referral_bonus', 'max_wallet_per_txn')`);
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });
 
-    // Use the "User Referral Bonus" setting from Super Admin for everyone
-    let bonusPerReferral = parseFloat(configMap['refer_a_friend'] || '30');
+    // Determine correct bonus based on role
+    let bonusPerReferral = isPartner 
+      ? parseFloat(configMap['partner_referral_bonus'] || '500')
+      : parseFloat(configMap['refer_a_friend'] || '30');
+
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gymdate.in';
     const referralLink = isPartner 
