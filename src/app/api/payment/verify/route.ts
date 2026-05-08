@@ -140,76 +140,65 @@ export async function POST(req: NextRequest) {
     // ── 5. Credit Referral Bonus ──────────────────────────────────────────
     try {
       if (finalUserId) {
-        // Check if this user was referred AND this is their first purchase
-        const referralCheck = await query(
-          `SELECT u.referred_by, (SELECT COUNT(*) FROM bookings WHERE user_id = $1) as booking_count
-           FROM users u WHERE u.id = $1`,
+        // Fetch user data directly from Postgres
+        const userRes = await query(
+          'SELECT id, email, wallet_balance, referred_by FROM users WHERE id = $1',
           [finalUserId]
         );
-
-        const referredBy = referralCheck.rows[0]?.referred_by;
-        const bookingCount = parseInt(referralCheck.rows[0]?.booking_count || '0');
         
-        console.log(`[Referral] Checking bonus for ${customerEmail}. ReferredBy: ${referredBy}, BookingCount: ${bookingCount}`);
+        const dbUser = userRes.rows[0];
 
-        // Only credit on first purchase and if they were referred
-        if (referredBy && bookingCount <= 1) {
-          // Find the referrer (Using ILIKE for case-insensitivity)
-          const referrerRes = await query(
-            'SELECT id, email FROM users WHERE referral_code ILIKE $1',
-            [referredBy]
+        if (dbUser && dbUser.referred_by) {
+          const referredBy = dbUser.referred_by;
+          
+          // Check if this is the user's first subscription ever
+          const bookingCheck = await query(
+            'SELECT COUNT(*) as count FROM bookings WHERE user_id = $1',
+            [dbUser.id]
           );
+          
+          const bookingCount = parseInt(bookingCheck.rows[0]?.count || '0');
+          console.log(`[Referral] Checking bonus for ${customerEmail}. ReferredBy: ${referredBy}, BookingCount: ${bookingCount}`);
 
-          if (referrerRes.rows.length > 0) {
-            const referrerId = referrerRes.rows[0].id;
-            const referrerEmail = referrerRes.rows[0].email;
-
-            // Get configured bonus amount and max referrals limit
-            const configRes = await query(
-              `SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_referrals_allowed')`
+          // Only credit on first purchase
+          if (bookingCount <= 1) {
+            // Find the referrer
+            const referrerRes = await query(
+              'SELECT id, email FROM users WHERE referral_code ILIKE $1',
+              [referredBy]
             );
-            const configMap: Record<string, string> = {};
-            configRes.rows.forEach(r => configMap[r.key] = r.value);
-            
-            const bonusAmount = parseFloat(configMap['user_referral_bonus'] || '50');
-            const maxAllowed = parseInt(configMap['max_referrals_allowed'] || '50');
 
-            // Check how many successful referrals this referrer already has
-            const currentCountRes = await query(
-              `SELECT COUNT(*) as count FROM referral_transactions WHERE referrer_id::text = $1::text AND status = 'credited'`,
-              [referrerId]
-            );
-            const currentCount = parseInt(currentCountRes.rows[0]?.count || '0');
-
-            if (currentCount < maxAllowed) {
-              console.log(`[Referral] Crediting ₹${bonusAmount} to ${referrerEmail} for referring ${customerEmail}`);
+            if (referrerRes.rows.length > 0) {
+              const referrer = referrerRes.rows[0];
               
-              // Credit wallet
+              // Get configuration for bonus amount
+              const configRes = await query(
+                "SELECT value FROM platform_config WHERE key = 'refer_a_friend'"
+              );
+              const bonusAmount = parseFloat(configRes.rows[0]?.value || '50');
+
+              console.log(`[Referral] Crediting ₹${bonusAmount} to referrer ${referrer.email}`);
+
+              // 1. Credit the referrer's wallet
               await query(
-                'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id::text = $2::text',
-                [bonusAmount, referrerId]
+                'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
+                [bonusAmount, referrer.id]
               );
 
-              // Log transaction
+              // 2. Record the transaction
               await query(
                 `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
-                 VALUES ($1, $2, 'user', $3, 'credited')`,
-                [referrerId, customerEmail, bonusAmount]
+                 VALUES ($1, $2, 'credit', $3, 'credited')`,
+                [referrer.id, customerEmail, bonusAmount]
               );
 
-              console.log(`[Referral] SUCCESS: Credited ₹${bonusAmount} to referrer ${referrerId}`);
-            } else {
-              console.log(`[Referral] Referrer ${referrerId} reached limit of ${maxAllowed} referrals.`);
+              console.log(`[Referral] Successfully credited bonus for ${customerEmail}`);
             }
-          } else {
-            console.log(`[Referral] Referrer with code ${referredBy} NOT FOUND.`);
           }
-        } else {
-          console.log(`[Referral] Not eligible. ReferredBy: ${referredBy}, Count: ${bookingCount}`);
         }
       }
-    } catch (refErr) {
-      console.error("[Referral] bonus credit failed:", refErr);
+    } catch (err: any) {
+      console.error("[Referral] Bonus Error:", err);
     }
 
 
