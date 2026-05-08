@@ -419,7 +419,7 @@ export default function PartnerDashboard() {
                 <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total Earned</span>
               </div>
               <div className="text-4xl font-black text-slate-900 mb-2">₹{(walletData?.totalEarned || 0).toLocaleString()}</div>
-              <p className="text-gray-400 text-xs font-medium">₹{walletData?.bonusPerReferral || 100} per partner</p>
+              <p className="text-gray-400 text-xs font-medium">₹{gym?.partner_referral_amount || walletData?.bonusPerReferral || 100} per partner</p>
             </div>
           </div>
 
@@ -428,7 +428,7 @@ export default function PartnerDashboard() {
             <div className="max-w-2xl">
               <h3 className="text-2xl font-black text-slate-900 mb-4">Partner Referral Program</h3>
               <p className="text-gray-500 leading-relaxed mb-8">
-                Refer other gym owners to <span className="text-primary font-bold">GymDate</span>. When they join India's largest fitness network using your unique link, you earn <span className="text-slate-900 font-black">₹{walletData?.bonusPerReferral || 100}</span> as a referral bonus!
+                Refer other gym owners to <span className="text-primary font-bold">GymDate</span>. When they join India's largest fitness network using your unique link, you earn <span className="text-slate-900 font-black">₹{gym?.partner_referral_amount || walletData?.bonusPerReferral || 100}</span> as a referral bonus!
               </p>
 
               <div className="relative group">
@@ -455,7 +455,7 @@ export default function PartnerDashboard() {
               {[
                 { step: "1", title: "Share link", desc: "Send your link to other gym owners" },
                 { step: "2", title: "They Register", desc: "They fill the partner form" },
-                { step: "3", title: "You Earn", desc: "Get ₹100 when they join" }
+                { step: "3", title: "You Earn", desc: `Get ₹${gym?.partner_referral_amount || 100} when they join` }
               ].map((item, idx) => (
                 <div key={idx} className="flex flex-col items-center text-center">
                   <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center font-black text-sm mb-4">{item.step}</div>

@@ -329,7 +329,7 @@ export default function EditGymPage() {
                 <label className="text-sm font-bold text-gray-700">Referral Bonus for this Gym (₹)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <DollarSign className="h-5 w-5 text-green-500" />
+                    <span className="text-lg font-black text-green-600">₹</span>
                   </div>
                   <input
                     name="partnerReferralAmount"
