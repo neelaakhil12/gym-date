@@ -321,6 +321,17 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
   }
 }
 
+export async function deletePartnerRequest(id: string) {
+  try {
+    await query("DELETE FROM partner_requests WHERE id = $1", [id]);
+    revalidatePath("/admin/partner-requests");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting partner request:", error);
+    return { error: error.message };
+  }
+}
+
 export async function getCities() {
   try {
     const result = await query("SELECT * FROM cities ORDER BY name ASC");

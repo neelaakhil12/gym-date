@@ -12,9 +12,10 @@ import {
   XCircle,
   MessageSquare,
   Users,
-  Gift
+  Gift,
+  Trash2
 } from "lucide-react";
-import { getPartnerRequests, updatePartnerRequestStatus } from "@/actions/adminActions";
+import { getPartnerRequests, updatePartnerRequestStatus, deletePartnerRequest } from "@/actions/adminActions";
 import { toast } from "react-hot-toast";
 
 interface PartnerRequest {
@@ -66,6 +67,21 @@ export default function PartnerRequestsPage() {
     } catch (error: any) {
       console.error("Error updating status:", error);
       toast.error(error.message || "Failed to update status");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this lead? This action cannot be undone.")) return;
+    
+    try {
+      const result = await deletePartnerRequest(id);
+      if (result.error) throw new Error(result.error);
+      
+      setRequests(requests.filter(req => req.id !== id));
+      toast.success("Lead deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting lead:", error);
+      toast.error(error.message || "Failed to delete lead");
     }
   };
 
@@ -235,6 +251,13 @@ export default function PartnerRequestsPage() {
                       title="Mark as Contacted"
                     >
                       <Phone className="w-6 h-6" />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(request.id)}
+                      className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors border border-red-100"
+                      title="Delete Lead"
+                    >
+                      <Trash2 className="w-6 h-6" />
                     </button>
                   </div>
                 </div>
