@@ -44,6 +44,30 @@ export async function GET(req: NextRequest) {
       ? `${siteUrl}/partner?ref=${code}`
       : `${siteUrl}/login?ref=${code}`;
 
+    // Get recent transactions (earnings)
+    const transactions = await query(
+      `SELECT amount, created_at, referred_user_email as detail, 'credit' as type 
+       FROM referral_transactions 
+       WHERE referrer_id = $1 
+       ORDER BY created_at DESC LIMIT 10`,
+      [userId]
+    );
+
+    // Get recent payouts (withdrawals)
+    const payouts = await query(
+      `SELECT amount, created_at, status as detail, 'debit' as type 
+       FROM payout_requests p
+       JOIN gyms g ON p.gym_id = g.id
+       WHERE g.partner_id::text = $1::text AND p.payout_type = 'referral'
+       ORDER BY p.created_at DESC LIMIT 10`,
+      [userId]
+    );
+
+    // Combine and sort by date
+    const history = [...transactions.rows, ...payouts.rows]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 10);
+
     return NextResponse.json({
       success: true,
       referralCode: code,
@@ -53,7 +77,8 @@ export async function GET(req: NextRequest) {
       totalEarned: parseFloat(stats.rows[0].total_earned),
       bonusPerReferral,
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
-      isPartner
+      isPartner,
+      history
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

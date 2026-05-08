@@ -544,19 +544,82 @@ export default function PartnerDashboard() {
               </div>
             </div>
 
-            {/* Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 pt-12 border-t border-gray-50">
-              {[
-                { step: "1", title: "Share link", desc: "Send your link to other gym owners" },
-                { step: "2", title: "They Register", desc: "They fill the partner form" },
-                { step: "3", title: "You Earn", desc: `Get ₹${gym?.partner_referral_amount || 100} when they join` }
-              ].map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center font-black text-sm mb-4">{item.step}</div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-1">{item.title}</h4>
-                  <p className="text-gray-400 text-[11px] leading-tight">{item.desc}</p>
+            </div>
+          </div>
+
+          {/* Referral Activity / Transaction History */}
+          <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">Referral Activity</h3>
+                <p className="text-[10px] text-gray-400 font-medium">Earnings and withdrawal history.</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-[10px] font-bold text-gray-500">Earning</span>
                 </div>
-              ))}
+                <div className="flex items-center space-x-1 ml-4">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-[10px] font-bold text-gray-500">Withdrawal</span>
+                </div>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50">
+                    <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Type</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Details</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Amount</th>
+                    <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {!walletData?.history || walletData.history.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-8 py-10 text-center text-gray-400 font-bold italic">No recent referral activity.</td>
+                    </tr>
+                  ) : (
+                    walletData.history.map((item: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-8 py-4">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              item.type === 'credit' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'
+                            }`}>
+                              {item.type === 'credit' ? <TrendingUp className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
+                            </div>
+                            <span className={`font-black uppercase text-[10px] tracking-wider ${
+                              item.type === 'credit' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {item.type === 'credit' ? 'Earning' : 'Payout'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-800">{item.detail || (item.type === 'credit' ? 'Referral Bonus' : 'Withdrawal')}</span>
+                            {item.type === 'debit' && (
+                              <span className={`text-[9px] font-black uppercase mt-0.5 ${
+                                item.detail === 'completed' ? 'text-green-500' : 'text-amber-500'
+                              }`}>
+                                {item.detail}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className={`px-6 py-4 font-black ${item.type === 'credit' ? 'text-slate-900' : 'text-red-600'}`}>
+                          {item.type === 'credit' ? '+' : '-'}₹{parseFloat(item.amount).toLocaleString()}
+                        </td>
+                        <td className="px-8 py-4 text-right text-gray-400 font-medium">
+                          {new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
