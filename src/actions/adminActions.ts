@@ -409,7 +409,8 @@ export async function deletePlatformStat(id: string) {
 export async function getSectionVisibility() {
   try {
     const result = await query("SELECT * FROM platform_stats WHERE label = 'Visibility'");
-    return result.rows[0]?.value === 'true';
+    if (result.rows.length === 0) return true; // Default to visible
+    return result.rows[0].value === 'true';
   } catch (error) {
     return true;
   }
@@ -417,9 +418,18 @@ export async function getSectionVisibility() {
 
 export async function updateSectionVisibility(section: string, visible: boolean) {
   try {
-    await query("UPDATE platform_stats SET value = $1 WHERE label = 'Visibility'", [visible ? 'true' : 'false']);
+    const result = await query("UPDATE platform_stats SET value = $1 WHERE label = 'Visibility'", [visible ? 'true' : 'false']);
+    
+    if (result.rowCount === 0) {
+      // If it doesn't exist, insert it
+      await query("INSERT INTO platform_stats (id, label, value, display_order) VALUES ($1, 'Visibility', $2, 999)", 
+        [Math.random().toString(36).substring(2, 15), visible ? 'true' : 'false']);
+    }
+
+    revalidatePath("/");
     return { success: true };
   } catch (error: any) {
+    console.error("Error updating visibility:", error);
     return { error: error.message };
   }
 }
