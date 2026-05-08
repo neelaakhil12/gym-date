@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Banknote, CheckCircle2, Clock, MapPin, Building2, User, CreditCard, Eye, X, FileText, Smartphone, QrCode } from "lucide-react";
+import { Banknote, CheckCircle2, Clock, MapPin, Building2, User, CreditCard, Eye, X, FileText, Smartphone, QrCode, Gift } from "lucide-react";
 import { getPayoutRequests, updatePayoutStatus } from "@/actions/adminActions";
 
 export default function AdminPayouts() {
@@ -84,6 +84,12 @@ export default function AdminPayouts() {
                         }`}>
                           {req.payout_method === 'upi' ? 'UPI / QR' : 'Bank Transfer'}
                         </div>
+                        {req.payout_type === 'referral' && (
+                          <div className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-[10px] font-bold uppercase flex items-center gap-1">
+                            <Gift className="w-3 h-3" />
+                            Referral Bonus
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

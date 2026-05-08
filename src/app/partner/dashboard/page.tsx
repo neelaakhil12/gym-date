@@ -17,11 +17,22 @@ import {
   Copy,
   Check,
   TrendingUp,
+  ArrowDownCircle,
+  Banknote,
+  Building2,
+  User,
+  CreditCard,
+  Send,
+  X,
+  Smartphone,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
+import { getPartnerGym, getPartnerBookings, createPayoutRequest } from "@/actions/adminActions";
 import { updateGymStatus, updateGymOffer } from "@/actions/gymActions";
 import { generateInvoicePDF } from "@/lib/invoice";
+import { supabase } from "@/lib/supabase";
 
 export default function PartnerDashboard() {
   const [gym, setGym] = useState<any>(null);
@@ -35,6 +46,20 @@ export default function PartnerDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [walletData, setWalletData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+
+  // Withdrawal States
+  const [showRefWithdrawModal, setShowRefWithdrawModal] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawType, setWithdrawType] = useState<"bank" | "upi">("bank");
+  const [withdrawMessage, setWithdrawMessage] = useState<{ type: string, text: string } | null>(null);
+  const [withdrawForm, setWithdrawForm] = useState({
+    bankName: "",
+    accountHolder: "",
+    accountNumber: "",
+    ifscCode: "",
+    upiId: "",
+    mobileNumber: "",
+  });
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -89,6 +114,66 @@ export default function PartnerDashboard() {
   useEffect(() => {
     loadGym();
   }, []);
+
+  const handleRefWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gym || !walletData) return;
+
+    if (walletData.walletBalance < 1500) {
+      setWithdrawMessage({ type: "error", text: "Minimum ₹1,500 required to withdraw." });
+      return;
+    }
+
+    setWithdrawing(true);
+    setWithdrawMessage(null);
+
+    try {
+      const payload: any = {
+        gym_id: gym.id,
+        amount: 1500, // Fixed amount as requested
+        payout_method: withdrawType,
+        status: 'pending',
+        payout_type: 'referral'
+      };
+
+      if (withdrawType === "bank") {
+        if (!withdrawForm.bankName || !withdrawForm.accountHolder || !withdrawForm.accountNumber || !withdrawForm.ifscCode) {
+          throw new Error("Please fill all bank details.");
+        }
+        payload.bank_name = withdrawForm.bankName;
+        payload.account_holder = withdrawForm.accountHolder;
+        payload.account_number = withdrawForm.accountNumber;
+        payload.ifsc_code = withdrawForm.ifscCode;
+      } else {
+        if (!withdrawForm.upiId || !withdrawForm.mobileNumber) {
+          throw new Error("Please fill all UPI details.");
+        }
+        payload.upi_id = withdrawForm.upiId;
+        payload.mobile_number = withdrawForm.mobileNumber;
+      }
+
+      const result = await createPayoutRequest(payload);
+      if (result.error) throw new Error(result.error);
+
+      setWithdrawMessage({ type: "success", text: "Withdrawal request sent! Admin will approve it shortly." });
+      
+      // Optimistically update balance locally
+      setWalletData((prev: any) => ({
+        ...prev,
+        walletBalance: prev.walletBalance - 1500
+      }));
+
+      setTimeout(() => {
+        setShowRefWithdrawModal(false);
+        setWithdrawMessage(null);
+      }, 3000);
+
+    } catch (err: any) {
+      setWithdrawMessage({ type: "error", text: err.message || "Failed to send request." });
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   const toggleStatus = async () => {
     if (!gym || updating) return;
@@ -394,7 +479,16 @@ export default function PartnerDashboard() {
                   <span className="text-xs font-black uppercase tracking-widest">Referral Wallet</span>
                 </div>
                 <div className="text-5xl font-black mb-2">₹{(walletData?.walletBalance || 0).toLocaleString()}</div>
-                <p className="text-white/60 text-xs font-medium">Earned from partner referrals</p>
+                <p className="text-white/60 text-xs font-medium mb-6">Earned from partner referrals</p>
+                
+                <button 
+                  onClick={() => setShowRefWithdrawModal(true)}
+                  disabled={!walletData || walletData.walletBalance < 1500}
+                  className="w-full flex items-center justify-center space-x-2 py-3 bg-primary hover:bg-red-700 disabled:bg-white/10 disabled:text-white/30 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-primary/20"
+                >
+                  <ArrowDownCircle className="w-4 h-4" />
+                  <span>{walletData?.walletBalance >= 1500 ? "Withdraw ₹1,500" : "Min ₹1,500 to Withdraw"}</span>
+                </button>
               </div>
               {/* Decorative Circle */}
               <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
@@ -464,6 +558,185 @@ export default function PartnerDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Withdrawal Modal */}
+      {showRefWithdrawModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
+            <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Banknote className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900">Withdraw Referral Bonus</h3>
+              </div>
+              <button onClick={() => setShowRefWithdrawModal(false)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleRefWithdraw} className="overflow-y-auto">
+              <div className="p-8 space-y-6">
+                {/* Fixed Amount Info */}
+                <div className="bg-slate-900 rounded-2xl p-6 text-white relative overflow-hidden">
+                  <div className="relative z-10 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Fixed Withdrawal Amount</p>
+                      <div className="text-4xl font-black">₹1,500</div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Current Balance</p>
+                      <div className="text-xl font-bold text-primary">₹{walletData?.walletBalance?.toLocaleString()}</div>
+                    </div>
+                  </div>
+                  <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+                </div>
+
+                {withdrawMessage && (
+                  <div className={`p-4 rounded-xl flex items-center space-x-3 text-sm font-bold ${
+                    withdrawMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
+                  }`}>
+                    {withdrawMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                    <span>{withdrawMessage.text}</span>
+                  </div>
+                )}
+
+                {/* Tab Switcher */}
+                <div className="flex bg-gray-100 p-1.5 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawType("bank")}
+                    className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                      withdrawType === "bank" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    Bank Transfer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawType("upi")}
+                    className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                      withdrawType === "upi" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                    }`}
+                  >
+                    UPI / PhonePe
+                  </button>
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-4">
+                  {withdrawType === "bank" ? (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Bank Name</label>
+                        <div className="relative">
+                          <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                          <input
+                            required
+                            placeholder="e.g. HDFC Bank"
+                            value={withdrawForm.bankName}
+                            onChange={(e) => setWithdrawForm({ ...withdrawForm, bankName: e.target.value })}
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Holder Name</label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                          <input
+                            required
+                            placeholder="Full Name as per Bank"
+                            value={withdrawForm.accountHolder}
+                            onChange={(e) => setWithdrawForm({ ...withdrawForm, accountHolder: e.target.value })}
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Account Number</label>
+                          <div className="relative">
+                            <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                            <input
+                              required
+                              placeholder="Account Number"
+                              value={withdrawForm.accountNumber}
+                              onChange={(e) => setWithdrawForm({ ...withdrawForm, accountNumber: e.target.value })}
+                              className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">IFSC Code</label>
+                          <div className="relative">
+                            <Banknote className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                            <input
+                              required
+                              placeholder="IFSC Code"
+                              value={withdrawForm.ifscCode}
+                              onChange={(e) => setWithdrawForm({ ...withdrawForm, ifscCode: e.target.value.toUpperCase() })}
+                              className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">UPI ID</label>
+                        <div className="relative">
+                          <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                          <input
+                            required
+                            placeholder="username@okaxis"
+                            value={withdrawForm.upiId}
+                            onChange={(e) => setWithdrawForm({ ...withdrawForm, upiId: e.target.value })}
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Mobile Number</label>
+                        <div className="relative">
+                          <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                          <input
+                            required
+                            placeholder="Registered Mobile Number"
+                            value={withdrawForm.mobileNumber}
+                            onChange={(e) => setWithdrawForm({ ...withdrawForm, mobileNumber: e.target.value })}
+                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={withdrawing}
+                    className="w-full bg-primary text-white py-4 rounded-2xl font-black hover:bg-red-700 transition-all shadow-xl shadow-primary/20 flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    {withdrawing ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        <span>Submit Withdrawal Request</span>
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[10px] text-gray-400 text-center mt-4 font-medium italic">
+                    * Request will be sent to super admin for verification.
+                  </p>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

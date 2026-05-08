@@ -35,14 +35,16 @@ async function runSql() {
   const pool = new Pool({ connectionString: dbUrl });
   
   try {
-    const sqlPath = path.join(__dirname, 'standardize_config.sql');
+    const fileName = process.argv[2] || 'standardize_config.sql';
+    const sqlPath = path.join(__dirname, fileName);
+    console.log(`Reading SQL from ${sqlPath}...`);
     const sql = fs.readFileSync(sqlPath, 'utf8');
     
     console.log('Executing SQL...');
     await pool.query(sql);
-    console.log('Successfully standardized configuration keys.');
+    console.log('Successfully executed SQL.');
   } catch (err) {
-    console.error('Error running SQL:', err.message);
+    console.error('Error running SQL:', err);
   } finally {
     await pool.end();
   }

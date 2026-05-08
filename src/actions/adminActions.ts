@@ -437,6 +437,28 @@ export async function getPayoutRequests() {
 
 export async function updatePayoutStatus(id: string, newStatus: string) {
   try {
+    // 1. Fetch the request to check type
+    const requestRes = await query("SELECT * FROM payout_requests WHERE id = $1", [id]);
+    if (requestRes.rows.length === 0) return { error: "Request not found" };
+    const request = requestRes.rows[0];
+
+    // 2. If marking as completed and it's a referral payout, deduct from user wallet
+    if (newStatus === 'completed' && request.status !== 'completed' && request.payout_type === 'referral') {
+      // Find the partner_id associated with the gym
+      const gymRes = await query("SELECT partner_id FROM gyms WHERE id = $1", [request.gym_id]);
+      if (gymRes.rows.length > 0) {
+        const partnerId = gymRes.rows[0].partner_id;
+        if (partnerId) {
+          // Deduct from users table
+          await query(
+            "UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - $1) WHERE id = $2",
+            [request.amount, partnerId]
+          );
+          console.log(`[Payout] Deducted ₹${request.amount} from partner ${partnerId} wallet for referral payout.`);
+        }
+      }
+    }
+
     await query("UPDATE payout_requests SET status = $1 WHERE id = $2", [newStatus, id]);
     return { success: true };
   } catch (error: any) {
@@ -473,12 +495,13 @@ export async function createPayoutRequest(payload: any) {
       INSERT INTO payout_requests (
         id, gym_id, amount, payout_method, status,
         bank_name, account_holder, account_number, ifsc_code,
-        upi_id, mobile_number, qr_code_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        upi_id, mobile_number, qr_code_url, payout_type
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `, [
       id, payload.gym_id, payload.amount, payload.payout_method, payload.status || 'pending',
       payload.bank_name || null, payload.account_holder || null, payload.account_number || null, payload.ifsc_code || null,
-      payload.upi_id || null, payload.mobile_number || null, payload.qr_code_url || null
+      payload.upi_id || null, payload.mobile_number || null, payload.qr_code_url || null,
+      payload.payout_type || 'revenue'
     ]);
 
     return { success: true };
