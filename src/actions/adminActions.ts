@@ -7,6 +7,28 @@ import { partnerAuthOptions } from "@/app/api/auth/partner/[...nextauth]/route";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { sendPartnerLeadStatusEmail } from "@/lib/email";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+
+async function uploadCityImage(file: File): Promise<string | null> {
+  if (!file || !(file instanceof File) || file.size === 0) return null;
+  try {
+    const uploadDir = '/var/www/gymdate_uploads/cities';
+    await mkdir(uploadDir, { recursive: true });
+    
+    const ext = file.name.split(".").pop() || "jpg";
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const filePath = path.join(uploadDir, fileName);
+    
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filePath, buffer);
+
+    return `/uploads/cities/${fileName}`;
+  } catch (error) {
+    console.error("CITY UPLOADER ERROR:", error);
+    return null;
+  }
+}
 
 
 
@@ -302,14 +324,20 @@ export async function getCities() {
 export async function addCity(formData: FormData) {
   try {
     const name = formData.get("name") as string;
-    const image = formData.get("image") as string || formData.get("existingImageUrl") as string;
+    const imageFile = formData.get("image") as File;
     const is_featured = formData.get("is_featured") === "true";
     const is_coming_soon = formData.get("is_coming_soon") === "true";
 
     if (!name) return { error: "City name is required" };
 
+    let imageUrl = "/placeholder-city.jpg";
+    if (imageFile && imageFile.size > 0) {
+      const uploadedUrl = await uploadCityImage(imageFile);
+      if (uploadedUrl) imageUrl = uploadedUrl;
+    }
+
     await query("INSERT INTO cities (name, image, is_featured, is_coming_soon) VALUES ($1, $2, $3, $4)", 
-      [name, image, is_featured, is_coming_soon]);
+      [name, imageUrl, is_featured, is_coming_soon]);
     return { success: true };
   } catch (error: any) {
     console.error("Add City Error:", error);
@@ -320,14 +348,21 @@ export async function addCity(formData: FormData) {
 export async function updateCity(id: string, formData: FormData) {
   try {
     const name = formData.get("name") as string;
-    const image = formData.get("image") as string || formData.get("existingImageUrl") as string;
+    const imageFile = formData.get("image") as File;
+    const existingImageUrl = formData.get("existingImageUrl") as string;
     const is_featured = formData.get("is_featured") === "true";
     const is_coming_soon = formData.get("is_coming_soon") === "true";
 
     if (!name) return { error: "City name is required" };
 
+    let imageUrl = existingImageUrl;
+    if (imageFile && imageFile.size > 0 && typeof imageFile !== 'string') {
+      const uploadedUrl = await uploadCityImage(imageFile);
+      if (uploadedUrl) imageUrl = uploadedUrl;
+    }
+
     await query("UPDATE cities SET name = $1, image = $2, is_featured = $3, is_coming_soon = $4 WHERE id = $5",
-      [name, image, is_featured, is_coming_soon, id]);
+      [name, imageUrl, is_featured, is_coming_soon, id]);
     return { success: true };
   } catch (error: any) {
     console.error("Update City Error:", error);
