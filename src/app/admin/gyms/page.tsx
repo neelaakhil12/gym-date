@@ -18,8 +18,13 @@ import {
 } from "lucide-react";
 import { getGyms } from "@/actions/publicActions";
 import { deleteGym, updateGymOffer } from "@/actions/gymActions";
+import { useSession } from "next-auth/react";
 
 export default function AdminGyms() {
+  const { data: session } = useSession();
+  const isOpAdmin = (session?.user as any)?.role === "operation_admin";
+  const baseUrl = isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms";
+  const createUrl = isOpAdmin ? "/operation-admin/gyms/create" : "/admin/gyms/create";
   const [gyms, setGyms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,7 +65,7 @@ export default function AdminGyms() {
           <p className="text-gray-500 mt-1">View and manage all partner gyms on the platform.</p>
         </div>
         <Link 
-          href="/admin/gyms/create" 
+          href={createUrl} 
           className="flex items-center justify-center space-x-2 bg-primary text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-primary-dark transition-all shadow-sm"
         >
           <Plus className="w-5 h-5" />
@@ -197,7 +202,7 @@ export default function AdminGyms() {
                             <LayoutDashboard className="w-4 h-4" />
                           </Link>
                           <Link 
-                            href={`/admin/gyms/${gym.id}/edit`}
+                            href={`${baseUrl}/${gym.id}/edit`}
                             className="text-gray-400 hover:text-primary transition-colors p-2 rounded-lg hover:bg-gray-100"
                             title="Edit Gym"
                           >

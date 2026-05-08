@@ -8,11 +8,15 @@ import { ArrowLeft, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, 
 import { updateGym, getCoordinatesFromGoogle } from "@/actions/gymActions";
 import { getGymById, getPricingPlansByGymId } from "@/actions/publicActions";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "next-auth/react";
 
 export default function EditGymPage() {
   const router = useRouter();
   const params = useParams();
   const gymId = params.id as string;
+  const { data: session } = useSession();
+  const isOpAdmin = (session?.user as any)?.role === "operation_admin";
+  const backUrl = isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms";
 
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -241,7 +245,7 @@ export default function EditGymPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      router.push("/admin/gyms");
+      router.push(isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms");
     }
   };
 
@@ -258,7 +262,7 @@ export default function EditGymPage() {
       {/* Header section */}
       <div className="flex items-center space-x-4">
         <Link 
-          href="/admin/gyms" 
+          href={backUrl} 
           className="p-2 bg-white border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
