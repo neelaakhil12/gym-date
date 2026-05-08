@@ -15,6 +15,7 @@ interface PaymentOptions {
   customerEmail?: string;
   onSuccess?: (bookingId: string, paymentId: string) => void;
   onFailure?: (error: string) => void;
+  useWallet?: boolean;
 }
 
 declare global {
@@ -118,6 +119,7 @@ export function useRazorpay() {
               customerName: options.customerName || nextAuthSession?.user?.name || "",
               customerPhone: options.customerPhone,
               customerEmail: options.customerEmail || email,
+              useWallet: options.useWallet || false,
             }),
           });
 

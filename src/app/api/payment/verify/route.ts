@@ -109,6 +109,30 @@ export async function POST(req: NextRequest) {
         `UPDATE wallet SET balance = balance + $1, updated_at = NOW() WHERE id = 'platform_wallet'`,
         [Number(amount)]
       );
+
+      // ── 4.1 Deduct from User Wallet if used ─────────────────────────────
+      if (body.useWallet && finalUserId) {
+        // Get wallet config for max usable
+        const configRes = await query(
+          `SELECT value FROM platform_config WHERE key = 'max_wallet_per_transaction'`
+        );
+        const maxUsable = parseFloat(configRes.rows[0]?.value || '10');
+
+        // Deduct from user
+        await query(
+          'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) - $1 WHERE id::text = $2::text',
+          [maxUsable, finalUserId]
+        );
+
+        // Record the transaction
+        await query(
+          `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
+           VALUES ($1, $2, 'user', $3, 'debited')`,
+          [finalUserId, customerEmail, maxUsable]
+        );
+        
+        console.log(`[Wallet] Deducted ₹${maxUsable} from user ${finalUserId} for booking ${bookingId}`);
+      }
     } catch (e) {
       console.error("Wallet update error", e);
     }

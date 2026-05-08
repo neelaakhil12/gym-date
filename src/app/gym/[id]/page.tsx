@@ -31,6 +31,10 @@ export default function GymDetailsPage() {
   const [selectedPlanIdx, setSelectedPlanIdx] = useState<number | null>(0);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+  const [maxWalletPerTxn, setMaxWalletPerTxn] = useState(10);
+  const { data: session } = useSession();
 
   const { initiatePayment } = useRazorpay();
 
@@ -47,7 +51,27 @@ export default function GymDetailsPage() {
       setLoading(false);
     }
     fetchGymAndPlans();
-  }, [id]);
+
+    // Fetch wallet balance
+    if (session?.user?.email) {
+      fetch(`/api/user/get-profile?email=${session.user.email}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.profile) {
+            setWalletBalance(Number(data.profile.wallet_balance || 0));
+          }
+        });
+      
+      // Fetch max wallet per txn config
+      fetch('/api/referral/generate?userId=config')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setMaxWalletPerTxn(data.maxWalletPerTxn || 10);
+          }
+        });
+    }
+  }, [id, session]);
 
   if (loading) {
     return (
@@ -83,7 +107,9 @@ export default function GymDetailsPage() {
 
   const isClosed = gym.status === "Closed";
   const selectedPlan = selectedPlanIdx !== null ? plans[selectedPlanIdx] : null;
-  const selectedPrice = selectedPlan ? Number(String(selectedPlan.price).replace(/[^0-9.]/g, '')) : 0;
+  const rawPrice = selectedPlan ? Number(String(selectedPlan.price).replace(/[^0-9.]/g, '')) : 0;
+  const discount = (useWallet && walletBalance >= maxWalletPerTxn) ? maxWalletPerTxn : 0;
+  const selectedPrice = rawPrice - discount;
 
   let buttonLabel = "Select a Plan";
   if (paymentLoading) {
@@ -110,7 +136,8 @@ export default function GymDetailsPage() {
       gymId: gym.id,
       gymName: gym.name,
       planName: plan.name,
-      amount: price,
+      amount: selectedPrice,
+      useWallet: useWallet,
       onSuccess: (_bookingId: string, _paymentId: string) => {
         setPaymentLoading(false);
         setPaymentStatus({ type: "success", message: "Payment successful! Redirecting to your bookings..." });
@@ -284,6 +311,38 @@ export default function GymDetailsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Wallet Discount Option */}
+              {walletBalance >= maxWalletPerTxn && selectedPlan && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-100 rounded-2xl animate-in zoom-in-95 duration-300">
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${useWallet ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-white text-green-500 border border-green-200'}`}>
+                        <Gift className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-secondary uppercase tracking-tight">Wallet Discount</p>
+                        <p className="text-[10px] text-green-600 font-bold">Use ₹{maxWalletPerTxn} from balance</p>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      className="hidden"
+                      checked={useWallet}
+                      onChange={() => setUseWallet(!useWallet)}
+                    />
+                    <div className={`w-12 h-6 rounded-full p-1 transition-all ${useWallet ? 'bg-green-500' : 'bg-gray-200'}`}>
+                      <div className={`w-4 h-4 bg-white rounded-full transition-all transform ${useWallet ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </div>
+                  </label>
+                  {useWallet && (
+                    <div className="mt-3 pt-3 border-t border-green-100 flex justify-between text-[10px] font-black uppercase tracking-widest text-green-700">
+                      <span>Discount Applied</span>
+                      <span>-₹{maxWalletPerTxn}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {paymentStatus && (
                 <div
