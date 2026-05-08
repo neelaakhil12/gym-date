@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
 
             // Check how many successful referrals this referrer already has
             const currentCountRes = await query(
-              `SELECT COUNT(*) as count FROM referral_transactions WHERE referrer_id = $1 AND status = 'credited'`,
+              `SELECT COUNT(*) as count FROM referral_transactions WHERE referrer_id::text = $1::text AND status = 'credited'`,
               [referrerId]
             );
             const currentCount = parseInt(currentCountRes.rows[0]?.count || '0');
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
             if (currentCount < maxAllowed) {
               // Credit wallet
               await query(
-                'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
+                'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id::text = $2::text',
                 [bonusAmount, referrerId]
               );
 
