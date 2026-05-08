@@ -17,7 +17,7 @@ export default function PartnerLogin() {
 
   useEffect(() => {
     if (status === "authenticated" && (session?.user as any)?.role === "partner") {
-      router.push("/partner/dashboard");
+      window.location.href = "/partner/dashboard";
     }
   }, [session, status, router]);
 
@@ -38,7 +38,7 @@ export default function PartnerLogin() {
         throw new Error(res.error);
       }
 
-      router.push("/partner/dashboard");
+      window.location.href = "/partner/dashboard";
     } catch (err: any) {
       setError(err.message || "An error occurred during login.");
       setLoading(false);
