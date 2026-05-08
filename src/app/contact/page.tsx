@@ -21,9 +21,9 @@ export default function ContactPage() {
   });
 
   const onSubmit = async (data: ContactFormValues) => {
-    console.log("Contact form submitted:", data);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    alert("Message sent successfully! We'll get back to you soon.");
+    const formattedMessage = `Hello GymDate Support! 🚀\n\n*Name:* ${data.name}\n*Email:* ${data.email}\n*Subject:* ${data.subject}\n*Message:* ${data.message}`;
+    const whatsappUrl = `https://wa.me/918143186677?text=${encodeURIComponent(formattedMessage)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   return (
