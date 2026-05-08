@@ -225,7 +225,7 @@ export async function getPartnerRequests() {
         g.name as referrer_gym_name,
         u.full_name as referrer_owner_name
       FROM partner_requests pr
-      LEFT JOIN users u ON pr.referred_by = u.referral_code
+      LEFT JOIN users u ON TRIM(UPPER(pr.referred_by)) = TRIM(UPPER(u.referral_code))
       LEFT JOIN gyms g ON u.id::text = g.partner_id::text
       ORDER BY pr.created_at DESC
     `);
@@ -641,22 +641,20 @@ export async function deleteAccount(id: string, role: string) {
       const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text", [id]);
       if (gymRes.rows.length > 0) {
         const gymId = gymRes.rows[0].id;
-        // Import deleteGym here to avoid circular dependencies if any, 
-        // or just implement the logic here for safety.
-        
         await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
         await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
         await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
         await query("DELETE FROM gyms WHERE id = $1", [gymId]);
       }
+      // Delete from both potential tables to be safe
       await query("DELETE FROM partner_users WHERE id = $1", [id]);
+      await query("DELETE FROM users WHERE id = $1", [id]);
     } else if (role === "super_admin") {
       await query("DELETE FROM admin_users WHERE id = $1", [id]);
     } else if (role === "operation_admin") {
       await query("DELETE FROM staff_users WHERE id = $1", [id]);
     } else {
       // Default: Customer
-      // Clean up bookings for this user first
       await query("DELETE FROM bookings WHERE user_id = $1::text", [id]);
       await query("DELETE FROM users WHERE id = $1", [id]);
     }
