@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, CreditCard, Loader2, CheckCircle2 } from "lucide-react";
+import { X, CreditCard, Loader2, CheckCircle2, Gift } from "lucide-react";
 import { useRazorpay } from "@/hooks/useRazorpay";
 import { useSession } from "next-auth/react";
 import { computeEndDate } from "@/lib/planDuration";
@@ -18,6 +18,9 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+  const [maxWalletPerTxn, setMaxWalletPerTxn] = useState(10);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -61,6 +64,26 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
         }
       };
       fetchPlans();
+
+      // Fetch wallet balance
+      if (session?.user?.email) {
+        fetch(`/api/user/get-profile?email=${session.user.email}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.profile) {
+              setWalletBalance(Number(data.profile.wallet_balance || 0));
+            }
+          });
+        
+        // Fetch max wallet per txn config
+        fetch('/api/referral/generate?userId=config')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setMaxWalletPerTxn(data.maxWalletPerTxn || 10);
+            }
+          });
+      }
     }
   }, [isOpen, gym, session]);
 
@@ -85,6 +108,11 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
       finalAmount = Math.floor(parseFloat(rawPrice) - discount).toString();
     }
 
+    // Apply wallet discount
+    if (useWallet && walletBalance >= maxWalletPerTxn) {
+      finalAmount = (parseFloat(finalAmount) - maxWalletPerTxn).toString();
+    }
+
     setLoading(true);
     setError("");
 
@@ -97,6 +125,7 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
       customerName: formData.name,
       customerPhone: formData.phone,
       customerEmail: formData.email,
+      useWallet: useWallet,
       onSuccess: (bookingId, paymentId) => {
         setLoading(false);
         setSuccess(true);
@@ -254,6 +283,38 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
             </div>
           </div>
           </div>
+
+          {/* Wallet Discount Option */}
+          {walletBalance >= maxWalletPerTxn && formData.planId && (
+            <div className="p-4 bg-green-50 border border-green-100 rounded-2xl">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${useWallet ? 'bg-green-500 text-white shadow-lg shadow-green-200' : 'bg-white text-green-500 border border-green-200'}`}>
+                    <Gift className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-secondary uppercase tracking-tight">Wallet Discount</p>
+                    <p className="text-[10px] text-green-600 font-bold">Use ₹{maxWalletPerTxn} from balance</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  className="hidden"
+                  checked={useWallet}
+                  onChange={() => setUseWallet(!useWallet)}
+                />
+                <div className={`w-12 h-6 rounded-full p-1 transition-all ${useWallet ? 'bg-green-500' : 'bg-gray-200'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-all transform ${useWallet ? 'translate-x-6' : 'translate-x-0'}`} />
+                </div>
+              </label>
+              {useWallet && (
+                <div className="mt-3 pt-3 border-t border-green-100 flex justify-between text-[10px] font-black uppercase tracking-widest text-green-700">
+                  <span>Discount Applied</span>
+                  <span>-₹{maxWalletPerTxn}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {error && <p className="text-red-500 text-xs font-bold text-center bg-red-50 py-3 rounded-xl">{error}</p>}
 
