@@ -227,7 +227,7 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
         try {
           // Get partner referral bonus from config
           const configRes = await query("SELECT value FROM platform_config WHERE key = 'partner_referral_bonus'");
-          const bonusAmount = parseFloat(configRes.rows[0]?.value || '100');
+          const bonusAmount = parseFloat(configRes.rows[0]?.value || '1500');
 
           // Find the referrer
           const referrerRes = await query("SELECT id, email FROM users WHERE referral_code = $1", [lead.referred_by]);

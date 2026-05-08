@@ -35,11 +35,8 @@ export default function OperationSettings() {
     const data = await getPlatformConfig();
     // For Operations staff, we might want to only show specific keys, 
     // but the user asked for "same user refer bonus edit option", so showing all is fine.
-    // Hide redundant referral settings
-    setConfig(data.filter((item: any) => 
-      item.key !== 'referral_bonus_user' && 
-      item.key !== 'partner_referral_bonus'
-    ));
+    // Hide only the redundant user key we deleted earlier
+    setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
     setLoading(false);
   }
 
@@ -107,7 +104,7 @@ export default function OperationSettings() {
                 <div>
                   <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
                     {item.key === 'refer_a_friend' ? 'User Referral Bonus' : 
-                     item.key === 'partner_referral_bonus' ? 'Partner Referral Bonus' : 
+                     item.key === 'partner_referral_bonus' ? 'Partner Referral Bonus (Refer a Gym)' : 
                      item.key.replace(/_/g, ' ')}
                   </h3>
                   <p className="text-xs text-gray-400 font-medium mt-1">
