@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Dumbbell, PlusCircle, LogOut, Menu, X } from "lucide-react";
+import { Dumbbell, PlusCircle, LogOut, Menu, X, Settings } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import StaffAuthProvider from "@/components/StaffAuthProvider";
 
 const staffLinks = [
   { name: "All Gyms", href: "/operation-admin/gyms", icon: Dumbbell },
   { name: "Create Gym", href: "/operation-admin/gyms/create", icon: PlusCircle },
+  { name: "Settings", href: "/operation-admin/settings", icon: Settings },
 ];
 
 function StaffDashboardContent({ children }: { children: React.ReactNode }) {
