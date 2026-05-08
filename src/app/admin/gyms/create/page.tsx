@@ -6,9 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, DollarSign, Mail, Lock, AlignLeft, Plus, X, Image as ImageIcon, Percent, Star } from "lucide-react";
 import { createGymAndPartner, getCoordinatesFromGoogle, getGlobalAmenities, deleteGlobalAmenity } from "@/actions/gymActions";
+import { useSession } from "next-auth/react";
 
 export default function CreateGymPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isOpAdmin = (session?.user as any)?.role === "operation_admin";
+  const backUrl = isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reviews, setReviews] = useState("0");
@@ -187,7 +191,7 @@ export default function CreateGymPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      router.push("/admin/gyms");
+      router.push(isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms");
     }
   };
 
@@ -196,7 +200,7 @@ export default function CreateGymPage() {
       {/* Header section */}
       <div className="flex items-center space-x-4">
         <Link 
-          href="/admin/gyms" 
+          href={backUrl} 
           className="p-2 bg-white border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
