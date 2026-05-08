@@ -33,8 +33,11 @@ export default function AdminSettings() {
   async function loadConfig() {
     setLoading(true);
     const data = await getPlatformConfig();
-    // Only hide the redundant key we deleted earlier
-    setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
+    // Hide redundant referral settings
+    setConfig(data.filter((item: any) => 
+      item.key !== 'referral_bonus_user' && 
+      item.key !== 'partner_referral_bonus'
+    ));
     setLoading(false);
   }
 
