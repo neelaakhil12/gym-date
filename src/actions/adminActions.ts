@@ -32,8 +32,16 @@ export async function getAllBookings() {
 
 export async function getGyms() {
   try {
+    const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
+    const platformComm = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
+
     const result = await query("SELECT * FROM gyms ORDER BY created_at DESC");
-    return result.rows || [];
+    const gyms = result.rows || [];
+
+    return gyms.map((gym: any) => ({
+      ...gym,
+      commission_rate: (gym.commission_rate === null || gym.commission_rate === undefined) ? platformComm : gym.commission_rate
+    }));
   } catch (error) {
     console.error("Error fetching gyms", error);
     return [];
@@ -46,8 +54,15 @@ export async function getPartnerGym() {
     if (!session?.user) return null;
     
     const userId = (session.user as any).id;
-    const result = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [userId]);
-    return result.rows[0] || null;
+    const gymResult = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [userId]);
+    const gym = gymResult.rows[0] || null;
+
+    if (gym && (gym.commission_rate === null || gym.commission_rate === undefined)) {
+      const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
+      gym.commission_rate = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
+    }
+
+    return gym;
   } catch (error) {
     console.error("Error fetching partner gym", error);
     return null;
@@ -601,7 +616,19 @@ export async function createOperationAdmin(data: { email: string; password: stri
 export async function getPlatformConfig() {
   try {
     const result = await query("SELECT * FROM platform_config ORDER BY key ASC");
-    return result.rows;
+    let configs = result.rows || [];
+
+    // Ensure platform_commission exists so it shows in the Settings UI
+    if (!configs.find((c: any) => c.key === 'platform_commission')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['platform_commission', '10', 'Global platform commission percentage (fallback for all gyms).']
+      );
+      const updated = await query("SELECT * FROM platform_config ORDER BY key ASC");
+      configs = updated.rows;
+    }
+
+    return configs;
   } catch (error) {
     console.error("Error fetching platform config", error);
     return [];

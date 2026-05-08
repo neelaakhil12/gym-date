@@ -111,13 +111,13 @@ export async function createGymAndPartner(formData: FormData) {
     const finalGallery = galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"];
     const gymInsert = await query(
       `INSERT INTO gyms 
-       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage, partner_referral_amount) 
-       VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8::text[], 'Open', $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage, partner_referral_amount, commission_rate) 
+       VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8::text[], 'Open', $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`,
       [
         partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
         description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
         finalGallery,
-        rating, reviews, lat, lng, hasOffer, offerPercentage, partnerReferralAmount
+        rating, reviews, lat, lng, hasOffer, offerPercentage, partnerReferralAmount, parseFloat(commissionRate) || 10
       ]
     );
 
@@ -249,12 +249,13 @@ export async function updateGym(gymId: string, formData: FormData) {
     const hasOffer = formData.get("hasOffer") === "true";
     const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
     const partnerReferralAmount = parseFloat(formData.get("partnerReferralAmount") as string) || 100;
+    const commissionRate = parseFloat(formData.get("commissionRate") as string) || 10;
 
     await query(
-      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11, has_offer = $12, offer_percentage = $13, partner_referral_amount = $14 WHERE id = $15",
+      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11, has_offer = $12, offer_percentage = $13, partner_referral_amount = $14, commission_rate = $15 WHERE id = $16",
       [
         gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, hasOffer, offerPercentage, partnerReferralAmount, gymId
+        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, hasOffer, offerPercentage, partnerReferralAmount, commissionRate, gymId
       ]
     );
 

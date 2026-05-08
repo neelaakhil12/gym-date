@@ -5,11 +5,19 @@ import { gyms as mockGyms, cities as mockCities, pricingPlans as mockPricingPlan
 
 export async function getGyms() {
   try {
+    const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
+    const platformComm = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
+
     const result = await query('SELECT * FROM gyms ORDER BY created_at DESC');
-    return result.rows; // Return whatever is in the DB, even if empty
+    const gyms = result.rows || [];
+
+    return gyms.map((gym: any) => ({
+      ...gym,
+      commission_rate: (gym.commission_rate === null || gym.commission_rate === undefined) ? platformComm : gym.commission_rate
+    }));
   } catch (error) {
     console.error('Error fetching gyms:', error);
-    return mockGyms; // Only fallback to mock if the DB connection fails
+    return mockGyms;
   }
 }
 
@@ -18,8 +26,13 @@ export async function getGymById(id: string) {
     console.log("Fetching gym by ID:", id);
     const result = await query('SELECT * FROM gyms WHERE id = $1', [id]);
     if (result.rows.length > 0) {
-      console.log("Gym found in database:", result.rows[0].name);
-      return result.rows[0];
+      const gym = result.rows[0];
+      if (gym.commission_rate === null || gym.commission_rate === undefined) {
+        const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
+        gym.commission_rate = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
+      }
+      console.log("Gym found in database:", gym.name);
+      return gym;
     }
     
     console.log("Gym not found in database, checking mock data...");
