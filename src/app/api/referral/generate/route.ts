@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     const transactions = await query(
       `SELECT amount, created_at, referred_user_email as detail, 'credit' as type 
        FROM referral_transactions 
-       WHERE referrer_id = $1 
+       WHERE referrer_id::text = $1::text 
        ORDER BY created_at DESC LIMIT 10`,
       [userId]
     );
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
     );
 
     // Combine and sort by date
-    const history = [...transactions.rows, ...payouts.rows]
+    const history = [...(transactions.rows || []), ...(payouts.rows || [])]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 10);
 
@@ -72,9 +72,9 @@ export async function GET(req: NextRequest) {
       success: true,
       referralCode: code,
       referralLink,
-      walletBalance: parseFloat(walletBalance),
-      totalReferrals: parseInt(stats.rows[0].total),
-      totalEarned: parseFloat(stats.rows[0].total_earned),
+      walletBalance: parseFloat(walletBalance || '0'),
+      totalReferrals: parseInt(stats.rows[0]?.total || '0'),
+      totalEarned: parseFloat(stats.rows[0]?.total_earned || '0'),
       bonusPerReferral,
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
       isPartner,
