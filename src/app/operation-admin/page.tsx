@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { Lock, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import StaffAuthProvider from "@/components/StaffAuthProvider";
 
-export default function OperationAdminLogin() {
+function OperationAdminLoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,7 +16,7 @@ export default function OperationAdminLogin() {
 
   useEffect(() => {
     if (status === "authenticated" && (session?.user as any)?.role === "operation_admin") {
-      router.push("/operation-admin/dashboard");
+      router.push("/admin/gyms");
     }
   }, [session, status, router]);
 
@@ -27,20 +26,22 @@ export default function OperationAdminLogin() {
     setError("");
 
     try {
+      // Explicitly call the STAFF-ONLY auth endpoint
       const res = await signIn("credentials", {
         redirect: false,
         email,
         password,
+        callbackUrl: "/admin/gyms",
       });
 
       if (res?.error) {
-        setError("Invalid staff credentials or unauthorized role");
-      } else {
-        router.push("/operation-admin/dashboard");
+        setError("Staff account not found or invalid password.");
+      } else if (res?.ok) {
+        router.push("/admin/gyms");
         router.refresh();
       }
     } catch (err) {
-      setError("An error occurred during login");
+      setError("An error occurred during login.");
     } finally {
       setLoading(false);
     }
@@ -67,7 +68,7 @@ export default function OperationAdminLogin() {
       <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-3xl sm:px-10 border border-slate-100">
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-semibold text-center animate-shake">
+            <div className="mb-6 bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-semibold text-center">
               {error}
             </div>
           )}
@@ -101,7 +102,7 @@ export default function OperationAdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center space-x-2 py-4 px-4 border border-transparent rounded-2xl shadow-lg shadow-primary/20 text-sm font-black text-white bg-primary hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed group"
+                className="w-full flex justify-center items-center space-x-2 py-4 px-4 border border-transparent rounded-2xl shadow-lg shadow-primary/20 text-sm font-black text-white bg-primary hover:bg-red-700 focus:outline-none transition-all disabled:opacity-70 disabled:cursor-not-allowed group"
               >
                 {loading ? (
                   <span className="flex items-center">
@@ -129,5 +130,14 @@ export default function OperationAdminLogin() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrap with StaffAuthProvider so this page uses /api/auth/staff exclusively
+export default function OperationAdminLogin() {
+  return (
+    <StaffAuthProvider>
+      <OperationAdminLoginForm />
+    </StaffAuthProvider>
   );
 }
