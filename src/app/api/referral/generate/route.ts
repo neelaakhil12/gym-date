@@ -48,10 +48,10 @@ export async function GET(req: NextRequest) {
     let history: any[] = [];
     try {
       const transactions = await query(
-        `SELECT amount, referred_user_email as detail, 'credit' as type 
+        `SELECT amount, created_at, referred_user_email as detail, 'credit' as type 
          FROM referral_transactions 
          WHERE referrer_id::text = $1::text 
-         LIMIT 10`,
+         ORDER BY created_at DESC LIMIT 10`,
         [userId]
       );
       history = [...(transactions.rows || [])];
@@ -62,17 +62,24 @@ export async function GET(req: NextRequest) {
     // Get recent payouts (withdrawals)
     try {
       const payouts = await query(
-        `SELECT amount, status as detail, 'debit' as type 
+        `SELECT amount, created_at, status as detail, 'debit' as type 
          FROM payout_requests p
          JOIN gyms g ON p.gym_id = g.id
          WHERE g.partner_id::text = $1::text AND p.payout_type = 'referral'
-         LIMIT 10`,
+         ORDER BY p.created_at DESC LIMIT 10`,
         [userId]
       );
       history = [...history, ...(payouts.rows || [])];
     } catch (e) {
       console.error("Error fetching referral payouts:", e);
     }
+
+    // Sort combined history by date
+    history.sort((a, b) => {
+      if (!a.created_at) return 1;
+      if (!b.created_at) return -1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
     return NextResponse.json({
       success: true,
