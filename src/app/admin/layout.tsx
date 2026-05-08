@@ -49,9 +49,8 @@ export default function AdminLayout({
       return;
     }
 
-    // Role check (Super Admin or Operation Admin)
-    const allowedRoles = ["super_admin", "operation_admin"];
-    if (!allowedRoles.includes((session?.user as any)?.role) && !publicAdminPaths.includes(pathname)) {
+    // Role check (Super Admin only)
+    if (session?.user && (session?.user as any)?.role !== "super_admin" && !publicAdminPaths.includes(pathname)) {
       signOut({ callbackUrl: "/admin" });
     }
   }, [session, status, pathname, router]);
@@ -66,11 +65,8 @@ export default function AdminLayout({
     return <AdminAuthProvider>{children}</AdminAuthProvider>;
   }
 
-  // Filter links for Operation Admin
-  const isOpAdmin = (session?.user as any)?.role === "operation_admin";
-  const filteredLinks = isOpAdmin 
-    ? adminLinks.filter(l => ["Dashboard", "Gyms", "Partner Leads"].includes(l.name))
-    : adminLinks;
+  // Links for Super Admin
+  const filteredLinks = adminLinks;
 
   return (
     <AdminAuthProvider>
@@ -94,7 +90,7 @@ export default function AdminLayout({
           <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
             <Link href="/admin/dashboard" className="flex items-center">
               <span className="text-xl font-black text-white tracking-tighter">
-                GYMDATE <span className="text-primary">{isOpAdmin ? "OPERATIONS" : "SUPER"} ADMIN</span>
+                GYMDATE <span className="text-primary">SUPER ADMIN</span>
               </span>
             </Link>
             <button 
@@ -138,7 +134,7 @@ export default function AdminLayout({
                 <p className="text-sm font-medium text-white truncate">
                   {session?.user?.email || "Admin User"}
                 </p>
-                <p className="text-xs text-gray-400 truncate">{isOpAdmin ? "Operations Manager" : "Platform Manager"}</p>
+                <p className="text-xs text-gray-400 truncate">Platform Manager</p>
               </div>
             </div>
             <button 

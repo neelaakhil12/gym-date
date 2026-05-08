@@ -109,6 +109,10 @@ const Footer = () => {
             <Link href="/partner/login" className="text-gray-500 hover:text-primary transition-colors text-xs font-semibold">
               Gym Partner Login
             </Link>
+            <span className="text-gray-700">|</span>
+            <Link href="/operation-admin" className="text-gray-500 hover:text-primary transition-colors text-xs font-semibold">
+              Staff Login
+            </Link>
           </div>
           <div className="flex flex-col items-center md:items-end space-y-1">
             <span className="text-gray-500 text-xs">Made with ❤️ in India</span>

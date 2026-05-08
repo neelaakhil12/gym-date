@@ -31,17 +31,41 @@ export const authOptions = {
 
         const { email, otp, password, name, phone, role } = credentials;
 
-        // 1. Password Login (Admin/Partner)
+        // 1. Password Login (Admin/Staff/Partner)
         if (password) {
-          const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
-          if (userResult.rows.length === 0) throw new Error("User not found");
+          // If a specific role is requested from the login page, we only check that table
+          const targetRole = (credentials as any)?.role; // 'admin' for super admin, 'staff' for operation admin
+          
+          let userResult: any = { rows: [] };
+
+          if (targetRole === 'admin') {
+            // Super Admin login only checks admin_users
+            userResult = await query("SELECT id, email, full_name, password_hash, 'super_admin' as role_id FROM admin_users WHERE email = $1", [email]);
+          } else if (targetRole === 'staff') {
+            // Operations Admin login only checks staff_users
+            userResult = await query("SELECT id, email, full_name, password_hash, 'operation_admin' as role_id FROM staff_users WHERE email = $1", [email]);
+          } else {
+            // Default check for partners or generic login
+            userResult = await query("SELECT id, email, full_name, password_hash, role_id FROM users WHERE email = $1", [email]);
+            
+            // Legacy/fallback check
+            if (userResult.rows.length === 0) {
+              userResult = await query("SELECT id, email, full_name, password_hash, 'super_admin' as role_id FROM admin_users WHERE email = $1", [email]);
+            }
+            if (userResult.rows.length === 0) {
+              userResult = await query("SELECT id, email, full_name, password_hash, 'operation_admin' as role_id FROM staff_users WHERE email = $1", [email]);
+            }
+          }
+
+          if (userResult.rows.length === 0) throw new Error("User not found or incorrect role");
           
           const user = userResult.rows[0];
           const isValid = await bcrypt.compare(password, user.password_hash);
           if (!isValid) throw new Error("Invalid password");
 
-          // Only allow admins or partners to use password login
-          if (user.role_id === 'user') throw new Error("Unauthorized access");
+          // Only allow admins, staff, or partners to use password login here
+          const allowedRoles = ['super_admin', 'operation_admin', 'partner'];
+          if (!allowedRoles.includes(user.role_id)) throw new Error("Unauthorized access");
 
           return {
             id: user.id,

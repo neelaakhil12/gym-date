@@ -2,12 +2,12 @@
 
 import { SessionProvider } from "next-auth/react";
 
-export default function AdminAuthProvider({
+export default function StaffAuthProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider basePath="/api/auth/admin">{children}</SessionProvider>
+    <SessionProvider basePath="/api/auth/staff">{children}</SessionProvider>
   );
 }

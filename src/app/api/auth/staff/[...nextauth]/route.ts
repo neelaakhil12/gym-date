@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: "Admin Login",
+      name: "Staff Login",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
@@ -14,13 +14,13 @@ export const authOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // ONLY check the admin_users table
+        // ONLY check the staff_users table
         const userResult = await query(
-          "SELECT id, email, full_name, password_hash, 'super_admin' as role_id FROM admin_users WHERE email = $1",
+          "SELECT id, email, full_name, password_hash, 'operation_admin' as role_id FROM staff_users WHERE email = $1",
           [credentials.email]
         );
 
-        if (userResult.rows.length === 0) throw new Error("Super Admin account not found");
+        if (userResult.rows.length === 0) throw new Error("Staff account not found");
 
         const user = userResult.rows[0];
         const isValid = await bcrypt.compare(credentials.password, user.password_hash);
@@ -52,12 +52,12 @@ export const authOptions = {
     },
   },
   pages: {
-    signIn: "/admin",
+    signIn: "/operation-admin",
   },
-  // Dedicated cookie for Super Admin
+  // Dedicated cookie for staff
   cookies: {
     sessionToken: {
-      name: `gymdate.admin-token`,
+      name: `gymdate.staff-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",

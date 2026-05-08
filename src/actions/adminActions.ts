@@ -81,16 +81,25 @@ export async function getAllProfiles() {
 
     // 1. Fetch Admin Users
     try {
-      const adminRes = await query("SELECT id, email, full_name, phone, 'super_admin' as role_id FROM admin_users");
+      const adminRes = await query("SELECT id, email, full_name, 'super_admin' as role_id FROM admin_users");
       if (adminRes.rows) profiles.push(...adminRes.rows);
     } catch (e: any) {
       profiles.push({ id: 'err1', full_name: 'Admin Fetch Error', email: e.message, role_id: 'super_admin' });
     }
 
-    // 2. Fetch Partners
+    // 2. Fetch Staff (Operation Admins)
+    try {
+      const staffRes = await query("SELECT id, email, full_name, 'operation_admin' as role_id FROM staff_users");
+      if (staffRes.rows) profiles.push(...staffRes.rows);
+    } catch (e: any) {
+      // Don't push error if table doesn't exist yet, just log it
+      console.error("Staff Fetch Error:", e.message);
+    }
+
+    // 3. Fetch Partners
     try {
       const partnerRes = await query(`
-        SELECT u.id::text, u.email, u.full_name, u.role_id, g.name as gym_name
+        SELECT u.id::text, u.email, u.full_name, u.phone, u.role_id, g.name as gym_name
         FROM users u
         LEFT JOIN gyms g ON u.id::text = g.partner_id::text
         WHERE u.role_id = 'partner'
@@ -100,9 +109,9 @@ export async function getAllProfiles() {
       profiles.push({ id: 'err2', full_name: 'Partner Fetch Error', email: e.message, role_id: 'partner' });
     }
 
-    // 3. Fetch Regular Users
+    // 4. Fetch Regular Users
     try {
-      const userRes = await query("SELECT id::text, email, full_name, role_id FROM users WHERE role_id != 'partner' AND role_id != 'super_admin' OR role_id IS NULL");
+      const userRes = await query("SELECT id::text, email, full_name, phone, role_id FROM users WHERE role_id != 'partner' AND role_id != 'super_admin' AND role_id != 'operation_admin' OR role_id IS NULL");
       if (userRes.rows) profiles.push(...userRes.rows);
     } catch (e: any) {
       profiles.push({ id: 'err3', full_name: 'User Fetch Error', email: e.message, role_id: 'user' });
@@ -514,6 +523,8 @@ export async function deleteAccount(id: string, role: string) {
       await query("DELETE FROM partner_users WHERE id = $1", [id]);
     } else if (role === "super_admin") {
       await query("DELETE FROM admin_users WHERE id = $1", [id]);
+    } else if (role === "operation_admin") {
+      await query("DELETE FROM staff_users WHERE id = $1", [id]);
     } else {
       // Default: Customer
       // Clean up bookings for this user first
@@ -540,9 +551,9 @@ export async function createOperationAdmin(data: { email: string; password: stri
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create staff user in dedicated table
     await query(
-      "INSERT INTO users (email, password_hash, full_name, role_id) VALUES ($1, $2, $3, 'operation_admin')",
+      "INSERT INTO staff_users (email, password_hash, full_name) VALUES ($1, $2, $3)",
       [email, hashedPassword, full_name]
     );
 

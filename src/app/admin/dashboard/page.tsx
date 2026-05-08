@@ -12,7 +12,11 @@ import { toast } from "react-hot-toast";
 
 // Platform Analytics Dashboard Refresh Fix
 
+import { useSession } from "next-auth/react";
+
 export default function AdminDashboard() {
+  const { data: session } = useSession();
+  const isOpAdmin = (session?.user as any)?.role === "operation_admin";
   const router = useRouter();
   const [stats, setStats] = useState({ walletBalance: 0, totalGyms: 0, totalUsers: 0 });
   const [gymData, setGymData] = useState<any[]>([]);
@@ -252,55 +256,59 @@ export default function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Commission Wallet Card (Platform Owner Profit) */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 shadow-xl border border-white/10 relative overflow-hidden group transition-all hover:scale-[1.02]">
-          <div className="absolute -top-10 -right-10 opacity-10 transform group-hover:scale-110 transition-transform duration-700">
-            <Coins className="w-48 h-48 text-white" />
-          </div>
-          <div className="relative z-10 flex flex-col h-full">
-            <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4">
-              <Coins className="w-6 h-6 text-yellow-400" />
+        {!isOpAdmin && (
+          <>
+            {/* Commission Wallet Card (Platform Owner Profit) */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 shadow-xl border border-white/10 relative overflow-hidden group transition-all hover:scale-[1.02]">
+              <div className="absolute -top-10 -right-10 opacity-10 transform group-hover:scale-110 transition-transform duration-700">
+                <Coins className="w-48 h-48 text-white" />
+              </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4">
+                  <Coins className="w-6 h-6 text-yellow-400" />
+                </div>
+                <p className="text-sm font-bold text-gray-400">Total Profit (Commissions)</p>
+                <div className="mt-2">
+                  <h3 className="text-3xl font-black text-white">
+                    ₹{totalPlatformCommission.toLocaleString()}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowModal('commission')}
+                  className="mt-6 flex items-center justify-center space-x-2 bg-white text-slate-900 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-yellow-400 transition-colors shadow-lg"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>View Breakdown</span>
+                </button>
+              </div>
             </div>
-            <p className="text-sm font-bold text-gray-400">Total Profit (Commissions)</p>
-            <div className="mt-2">
-              <h3 className="text-3xl font-black text-white">
-                ₹{totalPlatformCommission.toLocaleString()}
-              </h3>
-            </div>
-            <button 
-              onClick={() => setShowModal('commission')}
-              className="mt-6 flex items-center justify-center space-x-2 bg-white text-slate-900 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-yellow-400 transition-colors shadow-lg"
-            >
-              <Eye className="w-4 h-4" />
-              <span>View Breakdown</span>
-            </button>
-          </div>
-        </div>
 
-        {/* Total Revenue Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group transition-all hover:shadow-md">
-          <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
-            <Wallet className="w-24 h-24 text-secondary" />
-          </div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-              <Wallet className="w-6 h-6 text-primary" />
+            {/* Total Revenue Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group transition-all hover:shadow-md">
+              <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
+                <Wallet className="w-24 h-24 text-secondary" />
+              </div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+                  <Wallet className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-sm font-bold text-gray-500">Gross Platform Revenue</p>
+                <div className="mt-2">
+                  <h3 className="text-3xl font-black text-secondary">
+                    ₹{totalGrossRevenue.toLocaleString()}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowModal('revenue')}
+                  className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>View Revenue per Gym</span>
+                </button>
+              </div>
             </div>
-            <p className="text-sm font-bold text-gray-500">Gross Platform Revenue</p>
-            <div className="mt-2">
-              <h3 className="text-3xl font-black text-secondary">
-                ₹{totalGrossRevenue.toLocaleString()}
-              </h3>
-            </div>
-            <button 
-              onClick={() => setShowModal('revenue')}
-              className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
-            >
-              <Eye className="w-4 h-4" />
-              <span>View Revenue per Gym</span>
-            </button>
-          </div>
-        </div>
+          </>
+        )}
 
         {/* Gyms Card */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
@@ -327,142 +335,148 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Users Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
-            <Users className="w-24 h-24 text-secondary" />
-          </div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4">
-              <Users className="w-6 h-6 text-blue-500" />
+        {!isOpAdmin && (
+          <>
+            {/* Users Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
+                <Users className="w-24 h-24 text-secondary" />
+              </div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-blue-500" />
+                </div>
+                <p className="text-sm font-bold text-gray-500">Global Customers</p>
+                <div className="mt-2">
+                  <h3 className="text-3xl font-black text-secondary">
+                    {stats.totalUsers}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowModal('users')}
+                  className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Users per Gym</span>
+                </button>
+              </div>
             </div>
-            <p className="text-sm font-bold text-gray-500">Global Customers</p>
-            <div className="mt-2">
-              <h3 className="text-3xl font-black text-secondary">
-                {stats.totalUsers}
-              </h3>
-            </div>
-            <button 
-              onClick={() => setShowModal('users')}
-              className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
-            >
-              <Eye className="w-4 h-4" />
-              <span>Users per Gym</span>
-            </button>
-          </div>
-        </div>
 
-        {/* Cities Card */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
-            <MapPin className="w-24 h-24 text-secondary" />
-          </div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center mb-4">
-              <MapPin className="w-6 h-6 text-green-500" />
+            {/* Cities Card */}
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-5 transform group-hover:scale-110 transition-transform duration-500">
+                <MapPin className="w-24 h-24 text-secondary" />
+              </div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center mb-4">
+                  <MapPin className="w-6 h-6 text-green-500" />
+                </div>
+                <p className="text-sm font-bold text-gray-500">Active Cities</p>
+                <div className="mt-2">
+                  <h3 className="text-3xl font-black text-secondary">
+                    {citiesData.length}
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setShowModal('cities')}
+                  className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  <span>Manage Cities</span>
+                </button>
+              </div>
             </div>
-            <p className="text-sm font-bold text-gray-500">Active Cities</p>
-            <div className="mt-2">
-              <h3 className="text-3xl font-black text-secondary">
-                {citiesData.length}
-              </h3>
-            </div>
-            <button 
-              onClick={() => setShowModal('cities')}
-              className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-              <span>Manage Cities</span>
-            </button>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
-      {/* Platform Stats Management */}
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h2 className="text-xl font-black text-secondary flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2 text-primary" />
-              Homepage Stats Management
-            </h2>
-            <p className="text-sm text-gray-500">Edit the numbers shown in the red stats section of the home page.</p>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Show Section</span>
+      {!isOpAdmin && (
+        /* Platform Stats Management */
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+              <h2 className="text-xl font-black text-secondary flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-primary" />
+                Homepage Stats Management
+              </h2>
+              <p className="text-sm text-gray-500">Edit the numbers shown in the red stats section of the home page.</p>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Show Section</span>
+                <button 
+                  onClick={() => handleToggleVisibility(!isStatsVisible)}
+                  disabled={updatingVisibility}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isStatsVisible ? 'bg-primary' : 'bg-gray-300'}`}
+                >
+                  <span className={`${isStatsVisible ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                </button>
+              </div>
+
               <button 
-                onClick={() => handleToggleVisibility(!isStatsVisible)}
-                disabled={updatingVisibility}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isStatsVisible ? 'bg-primary' : 'bg-gray-300'}`}
+                onClick={handleUpdateStats}
+                disabled={savingStats}
+                className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all disabled:opacity-50"
               >
-                <span className={`${isStatsVisible ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                {savingStats ? <Clock className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{savingStats ? "Saving..." : "Save Changes"}</span>
               </button>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {platformStats.map((stat, idx) => (
+              <div key={stat.id} className="group relative space-y-3 p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-primary/30 transition-all">
+                <button 
+                  onClick={() => handleDeleteStat(stat.id)}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 hover:bg-red-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Label</label>
+                  <input 
+                    type="text"
+                    value={stat.label}
+                    onChange={(e) => {
+                      const newStats = [...platformStats];
+                      newStats[idx].label = e.target.value;
+                      setPlatformStats(newStats);
+                    }}
+                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-primary"
+                    placeholder="e.g. Gyms"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Value</label>
+                  <input 
+                    type="text"
+                    value={stat.value}
+                    onChange={(e) => {
+                      const newStats = [...platformStats];
+                      newStats[idx].value = e.target.value;
+                      setPlatformStats(newStats);
+                    }}
+                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-black text-primary focus:outline-none focus:border-primary"
+                    placeholder="e.g. 500+"
+                  />
+                </div>
+              </div>
+            ))}
+            
+            {/* Add New Stat Card */}
             <button 
-              onClick={handleUpdateStats}
+              onClick={handleAddStat}
               disabled={savingStats}
-              className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-dark transition-all disabled:opacity-50"
+              className="flex flex-col items-center justify-center space-y-2 p-5 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group min-h-[140px]"
             >
-              {savingStats ? <Clock className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>{savingStats ? "Saving..." : "Save Changes"}</span>
+              <PlusCircle className="w-8 h-8 text-gray-300 group-hover:text-primary transition-colors" />
+              <span className="text-xs font-bold text-gray-400 group-hover:text-primary">Add New Stat</span>
             </button>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {platformStats.map((stat, idx) => (
-            <div key={stat.id} className="group relative space-y-3 p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-primary/30 transition-all">
-              <button 
-                onClick={() => handleDeleteStat(stat.id)}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 hover:bg-red-600"
-              >
-                <X className="w-3 h-3" />
-              </button>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Label</label>
-                <input 
-                  type="text"
-                  value={stat.label}
-                  onChange={(e) => {
-                    const newStats = [...platformStats];
-                    newStats[idx].label = e.target.value;
-                    setPlatformStats(newStats);
-                  }}
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-primary"
-                  placeholder="e.g. Gyms"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Value</label>
-                <input 
-                  type="text"
-                  value={stat.value}
-                  onChange={(e) => {
-                    const newStats = [...platformStats];
-                    newStats[idx].value = e.target.value;
-                    setPlatformStats(newStats);
-                  }}
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-black text-primary focus:outline-none focus:border-primary"
-                  placeholder="e.g. 500+"
-                />
-              </div>
-            </div>
-          ))}
-          
-          {/* Add New Stat Card */}
-          <button 
-            onClick={handleAddStat}
-            disabled={savingStats}
-            className="flex flex-col items-center justify-center space-y-2 p-5 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group min-h-[140px]"
-          >
-            <PlusCircle className="w-8 h-8 text-gray-300 group-hover:text-primary transition-colors" />
-            <span className="text-xs font-bold text-gray-400 group-hover:text-primary">Add New Stat</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Modal for Breakdowns */}
       {showModal && (

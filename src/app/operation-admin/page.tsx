@@ -17,14 +17,14 @@ export default function OperationAdminLogin() {
 
   useEffect(() => {
     if (status === "authenticated" && (session?.user as any)?.role === "operation_admin") {
-      router.push("/admin/dashboard");
+      router.push("/operation-admin/dashboard");
     }
   }, [session, status, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
 
     try {
       const res = await signIn("credentials", {
@@ -34,16 +34,13 @@ export default function OperationAdminLogin() {
       });
 
       if (res?.error) {
-        throw new Error(res.error);
+        setError("Invalid staff credentials or unauthorized role");
+      } else {
+        router.push("/operation-admin/dashboard");
+        router.refresh();
       }
-
-      // Check if user is actually an operation admin
-      // Since we don't have the role in the response easily without a refresh, 
-      // we'll redirect and let the layout handle the role check
-      window.location.href = "/admin/dashboard";
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Invalid credentials or unauthorized access.");
+    } catch (err) {
+      setError("An error occurred during login");
     } finally {
       setLoading(false);
     }
