@@ -76,7 +76,7 @@ export const partnerAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: false, // Set to false to allow login on all connections
       },
     },
     callbackUrl: {
@@ -84,7 +84,7 @@ export const partnerAuthOptions = {
       options: {
         sameSite: "lax" as const,
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
       },
     },
     csrfToken: {
@@ -93,7 +93,7 @@ export const partnerAuthOptions = {
         httpOnly: true,
         sameSite: "lax" as const,
         path: "/",
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
       },
     },
   },
