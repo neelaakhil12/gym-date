@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
     const endDate = computeEndDate(today, planName || "");
     const ticketCode = `GD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
-    // ── 3. Find or Create Profile ────────────────────────────────────────
-    let finalUserId = userId;
-    if (!finalUserId && customerEmail) {
+    // ── 3. Find or Create Profile (Always resolve internal ID from email for consistency) ──
+    let finalUserId = null;
+    if (customerEmail) {
       const userRes = await query('SELECT id FROM users WHERE email = $1', [customerEmail]);
       
       if (userRes.rows.length > 0) {
@@ -149,17 +149,20 @@ export async function POST(req: NextRequest) {
 
         const referredBy = referralCheck.rows[0]?.referred_by;
         const bookingCount = parseInt(referralCheck.rows[0]?.booking_count || '0');
+        
+        console.log(`[Referral] Checking bonus for ${customerEmail}. ReferredBy: ${referredBy}, BookingCount: ${bookingCount}`);
 
         // Only credit on first purchase and if they were referred
         if (referredBy && bookingCount <= 1) {
-          // Find the referrer
+          // Find the referrer (Using ILIKE for case-insensitivity)
           const referrerRes = await query(
-            'SELECT id FROM users WHERE referral_code = $1',
+            'SELECT id, email FROM users WHERE referral_code ILIKE $1',
             [referredBy]
           );
 
           if (referrerRes.rows.length > 0) {
             const referrerId = referrerRes.rows[0].id;
+            const referrerEmail = referrerRes.rows[0].email;
 
             // Get configured bonus amount and max referrals limit
             const configRes = await query(
@@ -168,8 +171,8 @@ export async function POST(req: NextRequest) {
             const configMap: Record<string, string> = {};
             configRes.rows.forEach(r => configMap[r.key] = r.value);
             
-            const bonusAmount = parseFloat(configMap['user_referral_bonus'] || '20');
-            const maxAllowed = parseInt(configMap['max_referrals_allowed'] || '5');
+            const bonusAmount = parseFloat(configMap['user_referral_bonus'] || '50');
+            const maxAllowed = parseInt(configMap['max_referrals_allowed'] || '50');
 
             // Check how many successful referrals this referrer already has
             const currentCountRes = await query(
@@ -179,6 +182,8 @@ export async function POST(req: NextRequest) {
             const currentCount = parseInt(currentCountRes.rows[0]?.count || '0');
 
             if (currentCount < maxAllowed) {
+              console.log(`[Referral] Crediting ₹${bonusAmount} to ${referrerEmail} for referring ${customerEmail}`);
+              
               // Credit wallet
               await query(
                 'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id::text = $2::text',
@@ -192,11 +197,15 @@ export async function POST(req: NextRequest) {
                 [referrerId, customerEmail, bonusAmount]
               );
 
-              console.log(`[Referral] Credited ₹${bonusAmount} to referrer ${referrerId} for referring ${customerEmail} (Referral #${currentCount + 1}/${maxAllowed})`);
+              console.log(`[Referral] SUCCESS: Credited ₹${bonusAmount} to referrer ${referrerId}`);
             } else {
-              console.log(`[Referral] Referrer ${referrerId} reached limit of ${maxAllowed} referrals. No bonus credited.`);
+              console.log(`[Referral] Referrer ${referrerId} reached limit of ${maxAllowed} referrals.`);
             }
+          } else {
+            console.log(`[Referral] Referrer with code ${referredBy} NOT FOUND.`);
           }
+        } else {
+          console.log(`[Referral] Not eligible. ReferredBy: ${referredBy}, Count: ${bookingCount}`);
         }
       }
     } catch (refErr) {

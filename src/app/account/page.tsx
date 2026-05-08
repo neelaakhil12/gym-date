@@ -530,7 +530,7 @@ export default function AccountPage() {
                       </div>
                       <h3 className="text-xl font-black text-secondary mb-2">No Active Subscriptions</h3>
                       <p className="text-gray-400 text-sm mb-8">You haven&apos;t subscribed to any gym plans yet.</p>
-                      <Link href="/gyms" className="px-10 py-4 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">Explore Gyms</Link>
+                      <Link href="/explore" className="px-10 py-4 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20 hover:scale-105 transition-all">Explore Gyms</Link>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
