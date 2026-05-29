@@ -1,26 +1,14 @@
 import { NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { getGyms } from "@/actions/publicActions";
+
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get('email');
-
-    if (!email) {
-      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
-    }
-
-    const result = await query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
-
-    const profile = result.rows[0];
-
+    const gyms = await getGyms();
     return NextResponse.json({ 
       success: true, 
-      profile: profile || null
+      gyms: gyms || [] 
     }, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
@@ -30,8 +18,13 @@ export async function GET(req: Request) {
       }
     });
   } catch (error: any) {
-    console.error("Get Profile Error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("API Get Gyms Error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }
 
@@ -44,3 +37,4 @@ export async function OPTIONS() {
     }
   });
 }
+

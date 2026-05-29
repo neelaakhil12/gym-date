@@ -7,7 +7,12 @@ export async function GET(req: Request) {
     const gymId = searchParams.get('gymId');
 
     if (!gymId) {
-      return NextResponse.json({ success: false, error: "Gym ID is required" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Gym ID is required" }, { 
+        status: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
     }
 
     const result = await query(
@@ -18,9 +23,31 @@ export async function GET(req: Request) {
     return NextResponse.json({ 
       success: true, 
       plans: result.rows || [] 
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
     });
   } catch (error: any) {
     console.error("Get Plans Error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }
+
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
+  });
+}
+
