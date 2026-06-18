@@ -13,6 +13,8 @@ import { Profile } from './components/member/Profile';
 import { OwnerDashboard } from './components/owner/OwnerDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { THEME } from './theme';
+// @ts-ignore
+import RootErrorBoundary from './components/shared/ErrorBoundary';
 
 // Safe Lucide Native Icons
 import { 
@@ -151,9 +153,11 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <GymDateProvider>
-      <AppContent />
-    </GymDateProvider>
+    <RootErrorBoundary>
+      <GymDateProvider>
+        <AppContent />
+      </GymDateProvider>
+    </RootErrorBoundary>
   );
 }
 
