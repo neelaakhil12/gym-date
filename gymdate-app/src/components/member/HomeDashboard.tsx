@@ -10,13 +10,27 @@ import {
 } from 'react-native';
 import { useGymDate, Gym } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   Search, 
   MapPin, 
   Star, 
   Bell, 
-  ChevronRight 
+  ChevronRight,
+  Menu 
 } from 'lucide-react-native';
+
+// ── Haversine distance (same as website & NearbyGyms) ─────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export const HomeDashboard: React.FC = () => {
   const { 
@@ -25,8 +39,23 @@ export const HomeDashboard: React.FC = () => {
     userProfile, 
     gyms,
     unreadNotificationsCount,
-    themeMode
+    themeMode,
+    userCoords,
   } = useGymDate();
+  const { isDark, bg } = useTheme();
+
+  // Compute real distance for a gym using global userCoords (persists across navigation)
+  const getGymDistance = (gym: Gym): string => {
+    if (
+      userCoords &&
+      gym.coordinates?.lat && gym.coordinates?.lng &&
+      gym.coordinates.lat !== 0 && gym.coordinates.lng !== 0
+    ) {
+      const km = haversineKm(userCoords.lat, userCoords.lng, gym.coordinates.lat, gym.coordinates.lng);
+      return km >= 100 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
+    }
+    return '-- km';
+  };
 
   const handleGymClick = (id: string) => {
     setSelectedGymId(id);
@@ -41,33 +70,56 @@ export const HomeDashboard: React.FC = () => {
     { name: 'Crossfit', icon: '🏋️' }
   ];
 
+  const getInitials = (name: string) => {
+    if (!name) return "GY";
+    const parts = name.split(' ');
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(userProfile.name);
   const isLight = themeMode === 'light';
 
   return (
-    <ScrollView style={[styles.container, isLight && { backgroundColor: '#F9F9F9' }]} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* 1. Header Toolbar */}
       <View style={styles.headerBar}>
         <View style={styles.profileRow}>
           <TouchableOpacity onPress={() => setActiveScreen('profile')} style={styles.avatarWrapper}>
-            <Image source={{ uri: userProfile.avatar }} style={styles.avatarImg} />
+            {userProfile.avatar ? (
+              <Image source={{ uri: userProfile.avatar }} style={styles.avatarImg} />
+            ) : (
+              <View style={[styles.avatarImg, styles.initialsAvatar]}>
+                <Text style={styles.initialsText}>{initials}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-          <View>
+          <View style={{ flexShrink: 1 }}>
             <Text style={styles.welcomeText}>Welcome back,</Text>
-            <Text style={[styles.nameText, isLight && { color: '#111827' }]}>{userProfile.name}</Text>
+            <Text style={[styles.nameText, isLight && { color: '#111827' }]} numberOfLines={1} ellipsizeMode="tail">{userProfile.name}</Text>
           </View>
         </View>
 
-        <TouchableOpacity 
-          onPress={() => setActiveScreen('notifications')} 
-          style={[styles.notificationBtn, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}
-        >
-          <Bell size={16} color={isLight ? '#374151' : '#ffffff'} />
-          {unreadNotificationsCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>{unreadNotificationsCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity 
+            onPress={() => setActiveScreen('notifications')} 
+            style={[styles.notificationBtn, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }, { marginRight: 8 }]}
+          >
+            <Bell size={16} color={isLight ? '#374151' : '#ffffff'} />
+            {unreadNotificationsCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadNotificationsCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={() => setActiveScreen('profile')} 
+            style={[styles.notificationBtn, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}
+          >
+            <Menu size={16} color={isLight ? '#374151' : '#ffffff'} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 2. Unified Search */}
@@ -82,25 +134,64 @@ export const HomeDashboard: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* 3. Promo Launch Banner */}
-      <View style={styles.promoContainer}>
-        <View style={styles.promoCard}>
-          <View style={styles.promoHeader}>
-            <Text style={styles.promoTag}>LAUNCH OFFER</Text>
-          </View>
-          <Text style={styles.promoTitle}>FITNESS FREEDOM{'\n'}AT 20% DISCOUNT</Text>
-          <Text style={styles.promoSub}>Access partnered gyms pan India with zero commitments.</Text>
-          
-          <View style={styles.couponRow}>
-            <Text style={styles.couponText}>GDGOLD20</Text>
-            <TouchableOpacity 
-              onPress={() => Alert.alert('Code Copied', 'Apply coupon "GDGOLD20" at membership checkout.')}
-              style={styles.couponBtn}
-            >
-              <Text style={styles.couponBtnText}>Copy</Text>
-            </TouchableOpacity>
-          </View>
+      {/* 3. Gym Image Banners Carousel */}
+      <View style={styles.videoSectionContainer}>
+        <View style={styles.videoSectionHeader}>
+          <Text style={[styles.videoSectionTitle, isLight && { color: '#111827' }]}>Featured Gym Environments</Text>
+          <Text style={styles.videoSectionSub}>Explore cinematic views of premium workout vibes.</Text>
         </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoScroll}>
+          {[
+            {
+              id: 'gym-1',
+              name: "Gold's Gym Elite",
+              location: "Bandra West, Mumbai",
+              image: require('../../../assets/gym_slide_reception.jpg'),
+              tag: "PREMIUM LOUNGE"
+            },
+            {
+              id: 'gym-2',
+              name: "UFC Gym & Octagon Club",
+              location: "Indiranagar, Bangalore",
+              image: require('../../../assets/gym_slide_floor.jpg'),
+              tag: "TRAINING FLOOR"
+            },
+            {
+              id: 'gym-3',
+              name: "Cult.fit Premium Center",
+              location: "Gachibowli, Hyderabad",
+              image: require('../../../assets/gym_slide_yoga.jpg'),
+              tag: "MIND & BODY"
+            },
+            {
+              id: 'gym-1',
+              name: "Gold's Gym Elite",
+              location: "Bandra West, Mumbai",
+              image: require('../../../assets/gym_slide_cardio.jpg'),
+              tag: "CARDIO ZONE"
+            },
+            {
+              id: 'gym-3',
+              name: "Cult.fit Premium Center",
+              location: "Gachibowli, Hyderabad",
+              image: require('../../../assets/gym_slide_crossfit.jpg'),
+              tag: "CROSSFIT RIG"
+            }
+          ].map((slide, idx) => (
+            <TouchableOpacity 
+              key={idx}
+              onPress={() => handleGymClick(slide.id)}
+              style={styles.videoCard}
+              activeOpacity={0.9}
+            >
+              <Image
+                source={slide.image}
+                style={styles.videoStyle}
+              />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {/* 4. Horizontal Categories Row */}
@@ -138,7 +229,7 @@ export const HomeDashboard: React.FC = () => {
             <Image source={{ uri: gym.image }} style={styles.gymImg} />
             <View style={styles.gymDistanceBadge}>
               <MapPin size={8} color={THEME.COLORS.primary} style={{ marginRight: 2 }} />
-              <Text style={styles.gymDistanceText}>{gym.distance} km</Text>
+              <Text style={styles.gymDistanceText}>{getGymDistance(gym)}</Text>
             </View>
             <View style={styles.gymPriceBadge}>
               <Text style={styles.gymPriceText}>₹{gym.pricePerDay}/d</Text>
@@ -157,47 +248,6 @@ export const HomeDashboard: React.FC = () => {
           </TouchableOpacity>
         ))}
       </ScrollView>
-
-      {/* 6. Active Fitness Challenge Banner */}
-      <View style={styles.challengeContainer}>
-        <View style={[styles.challengeCard, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}>
-          <View style={styles.challengeBadge}>
-            <Text style={styles.challengeBadgeIcon}>🔥</Text>
-          </View>
-          <View style={styles.challengeInfo}>
-            <Text style={styles.challengeLabel}>Active Challenge</Text>
-            <Text style={[styles.challengeTitle, isLight && { color: '#1F2937' }]}>7-Day HIIT Calorie Burner</Text>
-            <Text style={[styles.challengeDesc, isLight && { color: '#6B7280' }]}>Burn 800kcal daily to earn special profile badge.</Text>
-          </View>
-          <TouchableOpacity onPress={() => setActiveScreen('community')} style={styles.challengeBtn}>
-            <Text style={styles.challengeBtnText}>Join</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 7. Featured Personal Coaches */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={[styles.sectionTitle, isLight && { color: '#111827' }]}>Popular Personal Coaches</Text>
-      </View>
-
-      <View style={styles.coachesGrid}>
-        <View style={[styles.coachCard, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}>
-          <Image source={{ uri: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=100' }} style={styles.coachAvatar} />
-          <View style={styles.coachInfo}>
-            <Text style={[styles.coachName, isLight && { color: '#1F2937' }]}>Vikram Singh</Text>
-            <Text style={styles.coachSpec}>Strength Specialist</Text>
-          </View>
-        </View>
-
-        <View style={[styles.coachCard, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}>
-          <Image source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100' }} style={styles.coachAvatar} />
-          <View style={styles.coachInfo}>
-            <Text style={[styles.coachName, isLight && { color: '#1F2937' }]}>Riya Sharma</Text>
-            <Text style={styles.coachSpec}>HIIT Conditioning</Text>
-          </View>
-        </View>
-      </View>
-
     </ScrollView>
   );
 };
@@ -205,7 +255,6 @@ export const HomeDashboard: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   headerBar: {
     flexDirection: 'row',
@@ -219,6 +268,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    marginRight: 12,
   },
   avatarWrapper: {
     width: 38,
@@ -240,10 +291,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   nameText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '800',
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
   },
   notificationBtn: {
     width: 38,
@@ -290,77 +341,80 @@ const styles = StyleSheet.create({
     color: THEME.COLORS.textMuted,
     fontSize: 11,
   },
-  promoContainer: {
-    paddingHorizontal: 20,
+  videoSectionContainer: {
     paddingVertical: 10,
   },
-  promoCard: {
-    backgroundColor: THEME.COLORS.primary,
-    borderRadius: 24,
-    padding: 20,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: THEME.COLORS.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-  },
-  promoHeader: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  videoSectionHeader: {
+    paddingHorizontal: 20,
     marginBottom: 10,
   },
-  promoTag: {
+  videoSectionTitle: {
     color: '#ffffff',
+    
     fontWeight: '800',
-    fontSize: 8,
-    letterSpacing: 1,
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
-  promoTitle: {
+  videoSectionSub: {
+    color: THEME.COLORS.textMuted,
+    fontSize: 9,
+    marginTop: 2,
+  },
+  videoScroll: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  videoCard: {
+    width: 260,
+    height: 150,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#000000',
+    cursor: 'pointer' as any,
+  },
+  videoStyle: {
+    width: '100%',
+    height: '100%',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  videoContent: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+  },
+  videoTagContainer: {
+    alignSelf: 'flex-start',
+    backgroundColor: THEME.COLORS.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  videoTagText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    fontSize: 7,
     fontWeight: '900',
-    fontSize: 18,
-    lineHeight: 22,
+    letterSpacing: 0.5,
   },
-  promoSub: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 9,
-    marginTop: 6,
-    marginBottom: 16,
-  },
-  couponRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 8,
-  },
-  couponText: {
+  videoGymName: {
     color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 11,
-    fontFamily: 'monospace',
-    letterSpacing: 1.5,
-    marginLeft: 8,
-  },
-  couponBtn: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  couponBtnText: {
-    color: THEME.COLORS.primary,
     fontWeight: '800',
-    fontSize: 9,
-    textTransform: 'uppercase',
+    fontSize: 12,
+    
+  },
+  videoGymLoc: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 8.5,
+    marginTop: 1,
   },
   categoriesSection: {
     paddingVertical: 10,
@@ -394,7 +448,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '800',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -580,5 +634,18 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '600',
     marginTop: 1,
+  },
+  initialsAvatar: {
+    backgroundColor: THEME.COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%',
+  },
+  initialsText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+    
   }
 });

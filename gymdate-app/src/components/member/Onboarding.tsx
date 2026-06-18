@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
-import { Dumbbell, ArrowRight, ShieldCheck, Mail, Phone, Lock, Sparkles, Goal } from 'lucide-react-native';
+import { useTheme } from '../../useTheme';
+import { Dumbbell, ArrowRight, ShieldCheck, Mail, Phone, Lock, Sparkles, Goal, ChevronLeft } from 'lucide-react-native';
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
 
@@ -31,10 +32,11 @@ export const Onboarding: React.FC = () => {
     setUserProfile,
     themeMode
   } = useGymDate();
+  const { isDark, bg } = useTheme();
 
   const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register'>('intro');
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
-  const [regName, setRegName] = useState('');
+  const [regName, setRegName] = useState('NEELA AKHIL KUMAR');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regCity, setRegCity] = useState('');
@@ -55,6 +57,18 @@ export const Onboarding: React.FC = () => {
 
   const handleNextIntro = () => {
     setStep('goals');
+  };
+
+  const handleBack = () => {
+    if (step === 'goals') {
+      setStep('intro');
+    } else if (step === 'login') {
+      setStep('goals');
+    } else if (step === 'otp') {
+      setStep('login');
+    } else if (step === 'register') {
+      setStep('otp');
+    }
   };
 
   const handleSelectGoal = (goal: string) => {
@@ -89,16 +103,29 @@ export const Onboarding: React.FC = () => {
       try {
         const existingProfile = await apiService.getProfile(loginInput);
         if (existingProfile) {
-          setIsLoggedIn(true);
-          setActiveScreen('home');
+          if (existingProfile.email) {
+            setLoginInput(existingProfile.email);
+          }
+          setRegName(existingProfile.full_name || 'NEELA AKHIL KUMAR');
+          setRegEmail(existingProfile.email || (loginInput.includes('@') ? loginInput : ''));
+          setRegPhone(existingProfile.phone || (!loginInput.includes('@') ? loginInput : ''));
+          setRegCity(existingProfile.address?.split(', ')[1] || '');
+          setRegAddress(existingProfile.address?.split(', ')[0] || existingProfile.address || '');
+          setStep('register');
         } else {
+          setRegName('NEELA AKHIL KUMAR');
           setRegEmail(loginInput.includes('@') ? loginInput : '');
           setRegPhone(!loginInput.includes('@') ? loginInput : '');
+          setRegCity('');
+          setRegAddress('');
           setStep('register');
         }
       } catch (err) {
+        setRegName('NEELA AKHIL KUMAR');
         setRegEmail(loginInput.includes('@') ? loginInput : '');
         setRegPhone(!loginInput.includes('@') ? loginInput : '');
+        setRegCity('');
+        setRegAddress('');
         setStep('register');
       }
     } else {
@@ -144,6 +171,7 @@ export const Onboarding: React.FC = () => {
         phone: profile.phone || regPhone.trim(),
       }));
 
+      setLoginInput(regEmail.trim());
       setIsLoggedIn(true);
       setActiveScreen('home');
     } catch (err: any) {
@@ -151,44 +179,90 @@ export const Onboarding: React.FC = () => {
     }
   };
 
+
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyA_y5PoTdP0o2MZRDGkTVtFgguLTSaGIEE';
+
   const handleGetCurrentLocation = () => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
-              headers: { 'User-Agent': 'GymDateApp' }
-            });
-            const data = await res.json();
-            if (data && data.address) {
-              const city = data.address.city || data.address.town || data.address.village || data.address.state || '';
-              const address = data.display_name || '';
-              setRegCity(city);
-              setRegAddress(address);
-              showAlert('Location Found', `Successfully set location to: ${city}`);
-            } else {
-              setRegAddress(`Latitude: ${latitude.toFixed(4)}, Longitude: ${longitude.toFixed(4)}`);
-              setRegCity('Located');
-            }
-          } catch (e) {
-            setRegAddress(`Latitude: ${latitude.toFixed(4)}, Longitude: ${longitude.toFixed(4)}`);
-            setRegCity('Located');
-          } finally {
-            setIsLocating(false);
-          }
-        },
-        (error) => {
-          setIsLocating(false);
-          showAlert('Location Error', 'Could not retrieve current location. Please type manually.');
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } else {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
       showAlert('Not Supported', 'Geolocation is not supported on this platform.');
+      return;
     }
+
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Use Google Maps Geocoding API — same key as the website
+          const geoRes = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
+          );
+          const geoData = await geoRes.json();
+
+          let cityName = '';
+          let fullAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+          if (geoData.status === 'OK' && geoData.results.length > 0) {
+            fullAddress = geoData.results[0].formatted_address;
+
+            // Extract city from address_components
+            const components: any[] = geoData.results[0].address_components || [];
+            const cityComp = components.find((c: any) =>
+              c.types.includes('locality') ||
+              c.types.includes('sublocality_level_1') ||
+              c.types.includes('administrative_area_level_2')
+            );
+            const stateComp = components.find((c: any) =>
+              c.types.includes('administrative_area_level_1')
+            );
+            cityName = cityComp?.long_name || stateComp?.long_name || '';
+          }
+
+          setRegCity(cityName);
+          setRegAddress(fullAddress);
+
+          // Save lat/lng to backend profile immediately so NearbyGyms gets accurate distances
+          const email = regEmail.trim() || loginInput.trim();
+          if (email) {
+            try {
+              const { getApiUrl } = require('../../config');
+              await fetch(`${getApiUrl()}/api/user/sync-profile`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email,
+                  name: regName.trim(),
+                  phone: regPhone.trim(),
+                  lat: latitude,
+                  lng: longitude,
+                  address: fullAddress,
+                }),
+              });
+            } catch (_) {}
+          }
+
+          showAlert('✅ Location Found', `City: ${cityName || 'Detected'}`);
+        } catch (e) {
+          // Fallback: just store raw coordinates
+          setRegAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+          setRegCity('Current Location');
+          showAlert('Location Set', 'Could not reverse geocode — coordinates saved.');
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        let msg = 'Could not get location. Please type manually.';
+        if (error.code === 1) msg = 'Location permission denied. Please allow access in browser settings.';
+        if (error.code === 3) msg = 'Location request timed out. Please try again.';
+        showAlert('Location Error', msg);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   };
+
 
   return (
     <ScrollView contentContainerStyle={[styles.container, isLight && styles.containerLight]} keyboardShouldPersistTaps="handled">
@@ -221,6 +295,9 @@ export const Onboarding: React.FC = () => {
       {/* STEP 2: FIT GOALS SELECTOR */}
       {step === 'goals' && (
         <View style={styles.contentWrapper}>
+          <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+            <ChevronLeft size={16} color="#1a1a1a" />
+          </TouchableOpacity>
           <View style={styles.headerRow}>
             <Goal size={14} color={THEME.COLORS.primary} style={{ marginRight: 6 }} />
             <Text style={styles.headerRowLabel}>Select Focus</Text>
@@ -265,6 +342,9 @@ export const Onboarding: React.FC = () => {
       {step === 'login' && (
         <View style={styles.contentWrapper}>
           <View style={{ flex: 1, justifyContent: 'center' }}>
+            <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+              <ChevronLeft size={16} color="#1a1a1a" />
+            </TouchableOpacity>
             <View style={styles.logoBadgeSmall}>
               <Sparkles size={20} color={THEME.COLORS.primary} />
             </View>
@@ -282,9 +362,9 @@ export const Onboarding: React.FC = () => {
                 <TextInput
                   value={loginInput}
                   onChangeText={setLoginInput}
-                  placeholder="+91 98765 43210 or email@domain.com"
+                  placeholder="98765 43210 or email@domain.com"
                   placeholderTextColor={THEME.COLORS.textMuted}
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 12 }]}
                   keyboardType={loginInput.includes('@') ? 'email-address' : 'phone-pad'}
                   autoCapitalize="none"
                 />
@@ -304,10 +384,10 @@ export const Onboarding: React.FC = () => {
             </View>
 
             <View style={styles.socialGrid}>
-              <TouchableOpacity onPress={() => { setLoginInput('akash.k@gmail.com'); setStep('otp'); }} style={[styles.socialBtn, isLight && styles.socialBtnLight]}>
+              <TouchableOpacity onPress={() => { setLoginInput('neelaakhil12@gmail.com'); setStep('otp'); }} style={[styles.socialBtn, isLight && styles.socialBtnLight]}>
                 <Text style={[styles.socialBtnText, isLight && styles.textLight]}>Google</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setLoginInput('akash.apple@icloud.com'); setStep('otp'); }} style={[styles.socialBtn, isLight && styles.socialBtnLight]}>
+              <TouchableOpacity onPress={() => { setLoginInput('neelaakhil12@icloud.com'); setStep('otp'); }} style={[styles.socialBtn, isLight && styles.socialBtnLight]}>
                 <Text style={[styles.socialBtnText, isLight && styles.textLight]}>Apple</Text>
               </TouchableOpacity>
             </View>
@@ -319,6 +399,9 @@ export const Onboarding: React.FC = () => {
       {step === 'otp' && (
         <View style={styles.contentWrapper}>
           <View style={{ flex: 1, justifyContent: 'center' }}>
+            <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+              <ChevronLeft size={16} color="#1a1a1a" />
+            </TouchableOpacity>
             <View style={styles.logoBadgeSmall}>
               <Lock size={20} color={THEME.COLORS.primary} />
             </View>
@@ -356,8 +439,8 @@ export const Onboarding: React.FC = () => {
 
             <View style={[styles.infoBanner, isLight && styles.infoBannerLight]}>
               <ShieldCheck size={16} color={THEME.COLORS.success} style={{ marginRight: 6 }} />
-              <Text style={[styles.infoBannerText, isLight && styles.textMutedLight]}>
-                Demo Bypass Code: Enter <Text style={{ fontWeight: 'bold', color: isLight ? '#1a1a1a' : '#ffffff' }}>123456</Text> to instantly unlock Home Dashboard!
+              <Text style={[styles.infoBannerText, { color: '#4B5563' }]}>
+                Demo Bypass Code: Enter <Text style={{ fontWeight: 'bold', color: THEME.COLORS.primary }}>123456</Text> to instantly unlock Home Dashboard!
               </Text>
             </View>
 
@@ -377,6 +460,9 @@ export const Onboarding: React.FC = () => {
       {step === 'register' && (
         <View style={styles.contentWrapper}>
           <View style={{ flex: 1, justifyContent: 'center' }}>
+            <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+              <ChevronLeft size={16} color="#1a1a1a" />
+            </TouchableOpacity>
             <View style={styles.logoBadgeSmall}>
               <Sparkles size={20} color={THEME.COLORS.primary} />
             </View>
@@ -389,7 +475,7 @@ export const Onboarding: React.FC = () => {
                 <TextInput
                   value={regName}
                   onChangeText={setRegName}
-                  placeholder="e.g. Akash Kumar"
+                  placeholder="e.g. NEELA AKHIL KUMAR"
                   placeholderTextColor={THEME.COLORS.textMuted}
                   style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
                 />
@@ -477,10 +563,10 @@ export const Onboarding: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: THEME.COLORS.bgDark,
+    backgroundColor: '#ffffff',
   },
   containerLight: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#ffffff',
   },
   contentWrapper: {
     flex: 1,
@@ -493,8 +579,8 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   brandLogoImg: {
-    width: 340,
-    height: 110,
+    width: 380,
+    height: 140,
     resizeMode: 'contain',
     marginBottom: 20,
     marginTop: 20,
@@ -522,7 +608,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   brandTitle: {
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 32,
     color: '#ffffff',
@@ -539,7 +625,7 @@ const styles = StyleSheet.create({
   },
   brandDesc: {
     fontSize: 12,
-    color: THEME.COLORS.textSecondary,
+    color: '#4B5563',
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 20,
@@ -549,8 +635,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   cardPromo: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
     borderWidth: 1,
     padding: 16,
     borderRadius: 20,
@@ -573,12 +659,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   promoTitle: {
-    color: '#ffffff',
+    color: '#111827',
     fontWeight: '700',
     fontSize: 13,
   },
   promoDesc: {
-    color: THEME.COLORS.textMuted,
+    color: '#6B7280',
     fontSize: 10,
     marginTop: 2,
   },
@@ -597,7 +683,7 @@ const styles = StyleSheet.create({
   },
   btnPrimaryText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '700',
     fontSize: 13,
     textTransform: 'uppercase',
@@ -608,15 +694,27 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#e5e7eb',
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: '#f9fafb',
     marginTop: 10,
   },
   btnSecondaryText: {
-    color: THEME.COLORS.textSecondary,
+    color: '#4B5563',
     fontWeight: '600',
     fontSize: 12,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    cursor: 'pointer' as any,
   },
   headerRow: {
     flexDirection: 'row',
@@ -631,15 +729,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   titleText: {
-    color: '#ffffff',
-    fontFamily: 'Outfit',
+    color: '#111827',
+    
     fontWeight: '900',
     fontSize: 20,
     marginTop: 8,
     marginBottom: 4,
   },
   descText: {
-    color: THEME.COLORS.textSecondary,
+    color: '#4B5563',
     fontSize: 12,
     lineHeight: 18,
     marginBottom: 20,
@@ -686,12 +784,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   goalTitle: {
-    color: '#ffffff',
+    color: '#111827',
     fontWeight: '700',
     fontSize: 12,
   },
   goalDesc: {
-    color: THEME.COLORS.textSecondary,
+    color: '#4B5563',
     fontSize: 9,
     marginTop: 2,
   },
@@ -744,7 +842,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    color: '#ffffff',
+    color: '#111827',
     fontSize: 13,
     outlineStyle: 'none' as any,
   },
@@ -775,8 +873,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#ffffff',
+    borderColor: '#e5e7eb',
     borderWidth: 1,
   },
   socialBtnLight: {
@@ -789,23 +887,24 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   socialBtnText: {
-    color: '#ffffff',
+    color: '#1a1a1a',
     fontWeight: '600',
     fontSize: 12,
   },
   otpGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 8,
     marginBottom: 20,
   },
   otpInput: {
-    width: 44,
-    height: 52,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderRadius: 16,
-    color: '#ffffff',
+    width: 38,
+    height: 48,
+    backgroundColor: '#ffffff',
+    borderColor: '#000000',
+    borderWidth: 2,
+    borderRadius: 12,
+    color: '#000000',
     fontSize: 18,
     fontWeight: '700',
     outlineStyle: 'none' as any,
@@ -814,8 +913,8 @@ const styles = StyleSheet.create({
   },
   otpInputLight: {
     backgroundColor: '#ffffff',
-    borderColor: '#d1d5db',
-    color: '#1a1a1a',
+    borderColor: '#000000',
+    color: '#000000',
     textAlign: 'center',
     padding: 0,
   },

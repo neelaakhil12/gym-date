@@ -8,7 +8,9 @@ import {
   ScrollView, 
   SafeAreaView,
   StatusBar,
-  Dimensions
+  Dimensions,
+  useColorScheme,
+  useWindowDimensions
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
@@ -69,33 +71,52 @@ export const DeviceShell: React.FC<DeviceShellProps> = ({ children }) => {
     setActiveScreen('home');
   };
 
-  // If not on web (running on active native iOS/Android device), safely bypass the desktop shell!
-  if (Platform.OS !== 'web' || deviceFrame === 'fullscreen') {
+  const { width: windowWidth } = useWindowDimensions();
+  const systemScheme = useColorScheme();
+  const isDark = systemScheme === 'dark';
+  const isLight = themeMode === 'light';
+
+  // Responsive Check: If the window is narrow (e.g. less than 500px, which matches DevTools mobile simulation or actual mobile screens),
+  // render the pure clean fullscreen app directly without the custom outer frame border!
+  if (Platform.OS !== 'web' || windowWidth < 500 || deviceFrame === 'fullscreen') {
+    // On Android, SafeAreaView does NOT pad for the status bar.
+    // We must manually add StatusBar.currentHeight as paddingTop.
+    const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+    const bgColor = isLight ? '#ffffff' : '#060608';
     return (
-      <SafeAreaView style={styles.nativeWrapper}>
-        <StatusBar barStyle="light-content" backgroundColor="#060608" />
-        <View style={styles.nativeContainer}>{children}</View>
+      <SafeAreaView style={[styles.nativeWrapper, { backgroundColor: bgColor }]}>
+        <StatusBar 
+          barStyle={isLight ? 'dark-content' : 'light-content'} 
+          backgroundColor={bgColor}
+          translucent={false}
+        />
+        <View style={[
+          styles.nativeContainer,
+          { backgroundColor: bgColor, paddingTop: statusBarHeight }
+        ]}>
+          {children}
+        </View>
       </SafeAreaView>
     );
   }
 
-  // Desktop PWA Simulator wrapper for Web
+  // Otherwise, render the gorgeous widescreen desktop PWA simulator frame border!
   return (
-    <View style={[styles.simulatorContainer, themeMode === 'light' && styles.simulatorContainerLight]}>
+    <View style={[styles.simulatorContainer, isLight && styles.simulatorContainerLight]}>
       {/* Centered Simulated Phone Frame container */}
       <View style={styles.phoneViewportContainer}>
-        <View style={[styles.phoneShell, deviceFrame === 'android' && styles.phoneShellAndroid]}>
+        <View style={[styles.phoneShell, deviceFrame === 'android' && styles.phoneShellAndroid, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
           {/* Notch */}
           <View style={styles.phoneNotch} />
           
           {/* Screen */}
-          <View style={styles.phoneScreen}>
+          <View style={[styles.phoneScreen, isLight && { backgroundColor: '#ffffff' }]}>
             {/* Status bar mock */}
             <View style={styles.phoneStatusBar}>
-              <Text style={styles.phoneStatusText}>{time}</Text>
+              <Text style={[styles.phoneStatusText, isLight && { color: '#000000' }]}>{time}</Text>
               <View style={styles.phoneStatusRight}>
-                <Wifi size={10} color="#ffffff" style={{ marginRight: 4 }} />
-                <Text style={styles.phoneStatusText}>5G</Text>
+                <Wifi size={10} color={isLight ? '#000000' : '#ffffff'} style={{ marginRight: 4 }} />
+                <Text style={[styles.phoneStatusText, isLight && { color: '#000000' }]}>5G</Text>
               </View>
             </View>
 
@@ -105,7 +126,7 @@ export const DeviceShell: React.FC<DeviceShellProps> = ({ children }) => {
             </View>
 
             {/* Home indicator bar */}
-            <View style={styles.phoneHomeBar} />
+            <View style={[styles.phoneHomeBar, isLight && { backgroundColor: 'rgba(0, 0, 0, 0.3)' }]} />
           </View>
         </View>
       </View>
@@ -116,7 +137,7 @@ export const DeviceShell: React.FC<DeviceShellProps> = ({ children }) => {
 const styles = StyleSheet.create({
   nativeWrapper: {
     flex: 1,
-    backgroundColor: '#060608',
+    // backgroundColor set dynamically above based on color scheme
   },
   nativeContainer: {
     flex: 1,
@@ -180,7 +201,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   devLogoText: {
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
     color: '#ffffff',
@@ -309,7 +330,7 @@ const styles = StyleSheet.create({
   },
   dbWidgetHeaderText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '700',
     fontSize: 12,
   },
@@ -436,39 +457,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   phoneShell: {
-    width: 375,
-    height: 760,
-    borderRadius: 44,
+    width: 340,
+    height: 680,
+    borderRadius: 36,
     backgroundColor: THEME.COLORS.bgDark,
     borderColor: '#181920',
-    borderWidth: 10,
+    borderWidth: 8,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 25 },
-    shadowOpacity: 0.9,
-    shadowRadius: 50,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.85,
+    shadowRadius: 40,
     overflow: 'hidden',
     position: 'relative',
   },
   phoneShellAndroid: {
-    borderRadius: 32,
+    borderRadius: 24,
     borderColor: '#222222',
   },
   phoneNotch: {
     position: 'absolute',
-    top: 10,
+    top: 8,
     left: '50%',
-    transform: [{ translateX: -55 }],
-    width: 110,
-    height: 24,
+    transform: [{ translateX: -45 }],
+    width: 90,
+    height: 18,
     backgroundColor: '#000000',
-    borderRadius: 12,
+    borderRadius: 9,
     zIndex: 99,
   },
   phoneScreen: {
     width: '100%',
     height: '100%',
-    paddingTop: 36,
-    paddingBottom: 18,
+    paddingTop: 30,
+    paddingBottom: 14,
     backgroundColor: THEME.COLORS.bgDark,
   },
   phoneStatusBar: {
@@ -476,8 +497,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 36,
-    paddingHorizontal: 20,
+    height: 30,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -485,7 +506,7 @@ const styles = StyleSheet.create({
   },
   phoneStatusText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
   },
   phoneStatusRight: {
@@ -499,10 +520,10 @@ const styles = StyleSheet.create({
   },
   phoneHomeBar: {
     position: 'absolute',
-    bottom: 5,
+    bottom: 4,
     left: '50%',
-    transform: [{ translateX: -60 }],
-    width: 120,
+    transform: [{ translateX: -50 }],
+    width: 100,
     height: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,

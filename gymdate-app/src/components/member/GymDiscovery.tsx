@@ -9,10 +9,12 @@ import {
   Image, 
   Modal, 
   Linking,
-  Alert
+  Alert,
+  useColorScheme
 } from 'react-native';
 import { useGymDate, Trainer } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   Search, 
   MapPin, 
@@ -23,7 +25,8 @@ import {
   Clock,
   Compass,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  Menu
 } from 'lucide-react-native';
 
 export const GymDiscovery: React.FC = () => {
@@ -35,8 +38,57 @@ export const GymDiscovery: React.FC = () => {
     setSelectedGymId,
     userProfile,
     setUserProfile,
-    addBooking
+    addBooking,
+    userCoords,
   } = useGymDate();
+
+  // Haversine distance
+  const getGymDistance = (gym: { coordinates?: { lat: number; lng: number }; distance: number }): string => {
+    if (
+      userCoords &&
+      gym.coordinates?.lat && gym.coordinates?.lng &&
+      gym.coordinates.lat !== 0 && gym.coordinates.lng !== 0
+    ) {
+      const R = 6371;
+      const dLat = (gym.coordinates.lat - userCoords.lat) * Math.PI / 180;
+      const dLng = (gym.coordinates.lng - userCoords.lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(userCoords.lat*Math.PI/180) * Math.cos(gym.coordinates.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+      const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return km >= 100 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
+    }
+    return '-- km';
+  };
+
+  const {
+    isDark,
+    bg,
+    cardBg,
+    borderSoft: cardBorder,
+    textPrimary,
+    textSecond: textSecondary,
+    textMuted,
+    inputBg,
+    inputBorder,
+    cardBg: filterCardBg,
+    headerBg: headerBarBg,
+    headerBorder: headerBarBorder,
+    inputBg: backBtnBg,
+    cardBgSoft: timingCardBg,
+    borderSoft: timingCardBorder,
+    divider: sectionBorder,
+    cardBgSoft: amenityBg,
+    borderSoft: amenityBorder,
+    cardBgSoft: planCardBg,
+    modalBg,
+    modalCardBg,
+    cardBgSoft: billCardBg,
+    inputBg: payBtnBg,
+    borderSoft: payBtnBorder,
+  } = useTheme();
+
+  const mapCardBg = isDark ? 'rgba(229,9,20,0.08)' : 'rgba(229,9,20,0.04)';
+  const mapCardBorder = isDark ? 'rgba(229,9,20,0.2)' : 'rgba(229,9,20,0.15)';
+
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFacility, setActiveFacility] = useState<string | null>(null);
@@ -102,67 +154,83 @@ export const GymDiscovery: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       
       {/* ================= VIEW 1: SEARCH & DISCOVERY LIST ================= */}
       {!selectedGymId && (
         <View style={{ flex: 1 }}>
           <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 80 }}>
-            {/* Header */}
-            <View style={styles.headerBlock}>
-              <Text style={styles.titleText}>Find Your Gym</Text>
-              <Text style={styles.descText}>Discover premium multi-city fitness spaces nearby.</Text>
+            <View style={[styles.headerBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 20 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.titleText, { color: textPrimary }]}>Find Your Gym</Text>
+                <Text style={[styles.descText, { color: textSecondary }]}>Discover premium multi-city fitness spaces nearby.</Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => setActiveScreen('profile')} 
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  backgroundColor: inputBg,
+                  borderColor: inputBorder,
+                  borderWidth: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 12
+                }}
+              >
+                <Menu size={16} color={textSecondary} />
+              </TouchableOpacity>
             </View>
 
             {/* Search Input bar */}
             <View style={styles.searchRow}>
-              <View style={styles.searchBar}>
-                <Search size={14} color={THEME.COLORS.textMuted} style={{ marginRight: 8 }} />
+              <View style={[styles.searchBar, { backgroundColor: inputBg, borderColor: inputBorder }]}>
+                <Search size={14} color={textMuted} style={{ marginRight: 8 }} />
                 <TextInput
                   placeholder="Search Bandra, Indiranagar..."
-                  placeholderTextColor={THEME.COLORS.textMuted}
+                  placeholderTextColor={textMuted}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  style={styles.textInput}
+                  style={[styles.textInput, { color: textPrimary }]}
                 />
               </View>
               <TouchableOpacity 
                 onPress={() => setShowFilters(!showFilters)} 
-                style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
+                style={[styles.filterBtn, { backgroundColor: inputBg, borderColor: inputBorder }, showFilters && styles.filterBtnActive]}
               >
-                <SlidersHorizontal size={14} color={showFilters ? '#ffffff' : THEME.COLORS.textSecondary} />
+                <SlidersHorizontal size={14} color={showFilters ? '#ffffff' : textSecondary} />
               </TouchableOpacity>
             </View>
 
             {/* Filter Overlay panel */}
             {showFilters && (
-              <View style={styles.filtersCard}>
+              <View style={[styles.filtersCard, { backgroundColor: filterCardBg, borderColor: isDark ? THEME.COLORS.borderColor : 'rgba(0,0,0,0.08)' }]}>
                 <View style={styles.filterGroup}>
-                  <Text style={styles.filterGroupLabel}>Max Budget/Day: ₹{maxPrice}</Text>
-                  {/* Slider simulation using horizontal tabs */}
+                  <Text style={[styles.filterGroupLabel, { color: textSecondary }]}>Max Budget/Day: ₹{maxPrice}</Text>
                   <View style={styles.priceGrid}>
                     {[200, 300, 400, 500].map(pr => (
                       <TouchableOpacity
                         key={pr}
                         onPress={() => setMaxPrice(pr)}
-                        style={[styles.priceChip, maxPrice === pr && styles.priceChipActive]}
+                        style={[styles.priceChip, { borderColor: inputBorder, backgroundColor: inputBg }, maxPrice === pr && styles.priceChipActive]}
                       >
-                        <Text style={[styles.priceChipText, maxPrice === pr && styles.priceChipTextActive]}>₹{pr}</Text>
+                        <Text style={[styles.priceChipText, { color: textSecondary }, maxPrice === pr && styles.priceChipTextActive]}>₹{pr}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
 
                 <View style={styles.filterGroup}>
-                  <Text style={styles.filterGroupLabel}>Gym Amenity</Text>
+                  <Text style={[styles.filterGroupLabel, { color: textSecondary }]}>Gym Amenity</Text>
                   <View style={styles.facilityGrid}>
                     {facilitiesList.map(fac => (
                       <TouchableOpacity
                         key={fac}
                         onPress={() => setActiveFacility(activeFacility === fac ? null : fac)}
-                        style={[styles.facChip, activeFacility === fac && styles.facChipActive]}
+                        style={[styles.facChip, { borderColor: inputBorder, backgroundColor: inputBg }, activeFacility === fac && styles.facChipActive]}
                       >
-                        <Text style={[styles.facChipText, activeFacility === fac && styles.facChipTextActive]}>{fac}</Text>
+                        <Text style={[styles.facChipText, { color: textSecondary }, activeFacility === fac && styles.facChipTextActive]}>{fac}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -177,13 +245,13 @@ export const GymDiscovery: React.FC = () => {
                   <TouchableOpacity 
                     key={gym.id}
                     onPress={() => handleGymClick(gym.id)}
-                    style={styles.gymCard}
+                    style={[styles.gymCard, { backgroundColor: cardBg, borderColor: cardBorder }]}
                     activeOpacity={0.9}
                   >
                     <Image source={{ uri: gym.image }} style={styles.gymImg} />
                     <View style={styles.distBadge}>
                       <MapPin size={8} color={THEME.COLORS.primary} style={{ marginRight: 2 }} />
-                      <Text style={styles.distBadgeText}>{gym.distance} km</Text>
+                      <Text style={styles.distBadgeText}>{getGymDistance(gym)}</Text>
                     </View>
                     <View style={styles.priceBadge}>
                       <Text style={styles.priceBadgeText}>₹{gym.pricePerDay} / day</Text>
@@ -191,19 +259,19 @@ export const GymDiscovery: React.FC = () => {
 
                     <View style={styles.gymInfo}>
                       <View style={styles.titleRow}>
-                        <Text style={styles.gymTitle}>{gym.name}</Text>
+                        <Text style={[styles.gymTitle, { color: textPrimary }]}>{gym.name}</Text>
                         <View style={styles.ratingRow}>
                           <Star size={10} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginRight: 2 }} />
                           <Text style={styles.ratingText}>{gym.rating}</Text>
                         </View>
                       </View>
                       
-                      <Text style={styles.gymLoc}>{gym.location}</Text>
+                      <Text style={[styles.gymLoc, { color: textMuted }]}>{gym.location}</Text>
 
                       <View style={styles.amenityRow}>
                         {gym.facilities.slice(0, 3).map((f, i) => (
-                          <View key={i} style={styles.amenityTag}>
-                            <Text style={styles.amenityTagText}>{f}</Text>
+                          <View key={i} style={[styles.amenityTag, { backgroundColor: amenityBg, borderColor: amenityBorder }]}>
+                            <Text style={[styles.amenityTagText, { color: textSecondary }]}>{f}</Text>
                           </View>
                         ))}
                       </View>
@@ -213,7 +281,7 @@ export const GymDiscovery: React.FC = () => {
               ) : (
                 <View style={styles.emptyContainer}>
                   <Text style={styles.emptyIcon}>🏋️‍♀️</Text>
-                  <Text style={styles.emptyText}>No gyms match your active search filter.</Text>
+                  <Text style={[styles.emptyText, { color: textMuted }]}>No gyms match your active search filter.</Text>
                 </View>
               )}
             </View>
@@ -225,11 +293,11 @@ export const GymDiscovery: React.FC = () => {
       {selectedGymId && activeGym && (
         <View style={{ flex: 1 }}>
           {/* Header toolbar */}
-          <View style={styles.detailHeaderBar}>
-            <TouchableOpacity onPress={handleBackToList} style={styles.backBtn}>
-              <ChevronLeft size={16} color="#ffffff" />
+          <View style={[styles.detailHeaderBar, { backgroundColor: headerBarBg, borderBottomColor: headerBarBorder }]}>
+            <TouchableOpacity onPress={handleBackToList} style={[styles.backBtn, { backgroundColor: backBtnBg, borderColor: headerBarBorder }]}>
+              <ChevronLeft size={16} color={textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.detailTitle}>Gym Profile Details</Text>
+            <Text style={[styles.detailTitle, { color: textPrimary }]}>Gym Profile Details</Text>
             <View style={{ width: 34 }} />
           </View>
 
@@ -249,31 +317,31 @@ export const GymDiscovery: React.FC = () => {
             </View>
 
             {/* Profile body content */}
-            <View style={styles.detailContent}>
+            <View style={[styles.detailContent, { backgroundColor: bg }]}>
               
               {/* Timings */}
-              <View style={styles.timingCard}>
+              <View style={[styles.timingCard, { backgroundColor: timingCardBg, borderColor: timingCardBorder }]}>
                 <Clock size={16} color={THEME.COLORS.primary} style={{ marginRight: 10 }} />
                 <View>
-                  <Text style={styles.timingCardLabel}>Workout Timings</Text>
-                  <Text style={styles.timingCardText}>{activeGym.timings}</Text>
+                  <Text style={[styles.timingCardLabel, { color: textMuted }]}>Workout Timings</Text>
+                  <Text style={[styles.timingCardText, { color: textPrimary }]}>{activeGym.timings}</Text>
                 </View>
               </View>
 
               {/* Description */}
               <View style={styles.sectionBlock}>
-                <Text style={styles.detailSectionTitle}>About this Gym</Text>
-                <Text style={styles.detailDescText}>{activeGym.description}</Text>
+                <Text style={[styles.detailSectionTitle, { color: textPrimary, borderBottomColor: sectionBorder }]}>About this Gym</Text>
+                <Text style={[styles.detailDescText, { color: textSecondary }]}>{activeGym.description}</Text>
               </View>
 
               {/* Amenities Grid */}
               <View style={styles.sectionBlock}>
-                <Text style={styles.detailSectionTitle}>Available Amenities</Text>
+                <Text style={[styles.detailSectionTitle, { color: textPrimary, borderBottomColor: sectionBorder }]}>Available Amenities</Text>
                 <View style={styles.detailAmenitiesGrid}>
                   {activeGym.facilities.map((fac, idx) => (
-                    <View key={idx} style={styles.amenityCard}>
+                    <View key={idx} style={[styles.amenityCard, { backgroundColor: amenityBg, borderColor: amenityBorder }]}>
                       <Check size={12} color={THEME.COLORS.success} style={{ marginRight: 6 }} />
-                      <Text style={styles.amenityCardText}>{fac}</Text>
+                      <Text style={[styles.amenityCardText, { color: textSecondary }]}>{fac}</Text>
                     </View>
                   ))}
                 </View>
@@ -281,21 +349,21 @@ export const GymDiscovery: React.FC = () => {
 
               {/* Plans pass packages */}
               <View style={styles.sectionBlock}>
-                <Text style={styles.detailSectionTitle}>Gym Passes Available</Text>
+                <Text style={[styles.detailSectionTitle, { color: textPrimary, borderBottomColor: sectionBorder }]}>Gym Passes Available</Text>
                 <View style={styles.plansContainer}>
                   {activeGym.plans.map((plan, idx) => (
-                    <View key={idx} style={styles.planCard}>
+                    <View key={idx} style={[styles.planCard, { backgroundColor: planCardBg, borderColor: amenityBorder }]}>
                       <View style={styles.planHeader}>
                         <View>
-                          <Text style={styles.planTitle}>{plan.name}</Text>
-                          <Text style={styles.planDuration}>{plan.duration} access duration</Text>
+                          <Text style={[styles.planTitle, { color: textPrimary }]}>{plan.name}</Text>
+                          <Text style={[styles.planDuration, { color: textSecondary }]}>{plan.duration} access duration</Text>
                         </View>
                         <Text style={styles.planPrice}>₹{plan.price}</Text>
                       </View>
 
                       <View style={styles.planFeatures}>
                         {plan.features.map((f, i) => (
-                          <Text key={i} style={styles.planFeatureItem}>• {f}</Text>
+                          <Text key={i} style={[styles.planFeatureItem, { color: textSecondary }]}>• {f}</Text>
                         ))}
                       </View>
 
@@ -310,45 +378,6 @@ export const GymDiscovery: React.FC = () => {
                 </View>
               </View>
 
-              {/* Coaches list */}
-              {activeGym.trainers.length > 0 && (
-                <View style={styles.sectionBlock}>
-                  <Text style={styles.detailSectionTitle}>Expert Coaches</Text>
-                  <View style={styles.coachesContainer}>
-                    {activeGym.trainers.map(trainer => (
-                      <View key={trainer.id} style={styles.coachGridCard}>
-                        <View style={styles.coachGridProfile}>
-                          <Image source={{ uri: trainer.avatar }} style={styles.coachGridImg} />
-                          <View>
-                            <Text style={styles.coachGridName}>{trainer.name}</Text>
-                            <Text style={styles.coachGridSpec}>{trainer.specialization}</Text>
-                          </View>
-                        </View>
-                        <TouchableOpacity 
-                          onPress={() => handleBookTrainerSlot(trainer)}
-                          style={styles.coachGridBtn}
-                        >
-                          <Text style={styles.coachGridBtnText}>Book Coach</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Google map simulator */}
-              <View style={styles.sectionBlock}>
-                <Text style={styles.detailSectionTitle}>Location Directions</Text>
-                <TouchableOpacity 
-                  onPress={() => Linking.openURL(`https://maps.google.com/?q=${activeGym.coordinates.lat},${activeGym.coordinates.lng}`)}
-                  style={styles.mapCard}
-                >
-                  <Compass size={20} color={THEME.COLORS.primary} style={{ marginBottom: 6 }} />
-                  <Text style={styles.mapCardTitle}>Google Maps directions</Text>
-                  <Text style={styles.mapCardSub}>Lat: {activeGym.coordinates.lat} | Lng: {activeGym.coordinates.lng}</Text>
-                  <Text style={styles.mapCardBtn}>Tap to Open Directions</Text>
-                </TouchableOpacity>
-              </View>
 
             </View>
           </ScrollView>
@@ -357,43 +386,43 @@ export const GymDiscovery: React.FC = () => {
 
       {/* ================= MODAL: PAYMENT GATEWAY CHECKOUT ================= */}
       <Modal visible={showCheckoutModal} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+        <View style={[styles.modalBackdrop, { backgroundColor: modalBg }]}>
+          <View style={[styles.modalCard, { backgroundColor: modalCardBg }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTag}>Razorpay Secure</Text>
-              <Text style={styles.modalTitle}>Gateway Checkout</Text>
+              <Text style={[styles.modalTitle, { color: textPrimary }]}>Gateway Checkout</Text>
             </View>
 
             {selectedPlan && activeGym && (
-              <View style={styles.billCard}>
+              <View style={[styles.billCard, { backgroundColor: billCardBg }]}>
                 <View style={styles.billRow}>
-                  <Text style={styles.billLabel}>Partner Gym:</Text>
-                  <Text style={styles.billVal}>{activeGym.name}</Text>
+                  <Text style={[styles.billLabel, { color: textSecondary }]}>Partner Gym:</Text>
+                  <Text style={[styles.billVal, { color: textPrimary }]}>{activeGym.name}</Text>
                 </View>
                 <View style={styles.billRow}>
-                  <Text style={styles.billLabel}>Pass Package:</Text>
-                  <Text style={styles.billVal}>{selectedPlan.name}</Text>
+                  <Text style={[styles.billLabel, { color: textSecondary }]}>Pass Package:</Text>
+                  <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.name}</Text>
                 </View>
-                <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.05)', paddingTop: 10, marginTop: 6 }]}>
-                  <Text style={[styles.billLabel, { fontWeight: '700', color: '#ffffff' }]}>Total Payment:</Text>
+                <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: sectionBorder, paddingTop: 10, marginTop: 6 }]}>
+                  <Text style={[styles.billLabel, { fontWeight: '700', color: textPrimary }]}>Total Payment:</Text>
                   <Text style={styles.billPrice}>₹{selectedPlan.price}</Text>
                 </View>
               </View>
             )}
 
             <View style={styles.payMethods}>
-              <Text style={styles.payMethodsTitle}>Choose Mode of Payment</Text>
-              <TouchableOpacity onPress={handleConfirmPayment} style={styles.payMethodBtn}>
-                <Text style={styles.payMethodText}>📱 Unified UPI (GooglePay/PhonePe)</Text>
-                <ChevronRight size={12} color={THEME.COLORS.textMuted} />
+              <Text style={[styles.payMethodsTitle, { color: textSecondary }]}>Choose Mode of Payment</Text>
+              <TouchableOpacity onPress={handleConfirmPayment} style={[styles.payMethodBtn, { backgroundColor: payBtnBg, borderColor: payBtnBorder }]}>
+                <Text style={[styles.payMethodText, { color: textPrimary }]}>📱 Unified UPI (GooglePay/PhonePe)</Text>
+                <ChevronRight size={12} color={textMuted} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmPayment} style={styles.payMethodBtn}>
-                <Text style={styles.payMethodText}>💳 Credit / Debit Card</Text>
-                <ChevronRight size={12} color={THEME.COLORS.textMuted} />
+              <TouchableOpacity onPress={handleConfirmPayment} style={[styles.payMethodBtn, { backgroundColor: payBtnBg, borderColor: payBtnBorder }]}>
+                <Text style={[styles.payMethodText, { color: textPrimary }]}>💳 Credit / Debit Card</Text>
+                <ChevronRight size={12} color={textMuted} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmPayment} style={styles.payMethodBtn}>
-                <Text style={styles.payMethodText}>💼 Wallet Netbanking</Text>
-                <ChevronRight size={12} color={THEME.COLORS.textMuted} />
+              <TouchableOpacity onPress={handleConfirmPayment} style={[styles.payMethodBtn, { backgroundColor: payBtnBg, borderColor: payBtnBorder }]}>
+                <Text style={[styles.payMethodText, { color: textPrimary }]}>💼 Wallet Netbanking</Text>
+                <ChevronRight size={12} color={textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -409,601 +438,103 @@ export const GymDiscovery: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
-  },
-  scrollList: {
-    flex: 1,
-  },
-  headerBlock: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 6,
-  },
-  titleText: {
-    color: '#ffffff',
-    fontFamily: 'Outfit',
-    fontWeight: '900',
-    fontSize: 20,
-  },
-  descText: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 46,
-  },
-  textInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 12,
-  },
-  filterBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterBtnActive: {
-    backgroundColor: THEME.COLORS.primary,
-    borderColor: THEME.COLORS.primary,
-  },
-  filtersCard: {
-    backgroundColor: THEME.COLORS.cardDark,
-    borderColor: THEME.COLORS.borderColor,
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    gap: 16,
-  },
-  filterGroup: {
-    gap: 8,
-  },
-  filterGroupLabel: {
-    color: THEME.COLORS.textSecondary,
-    fontWeight: '700',
-    fontSize: 10,
-    textTransform: 'uppercase',
-  },
-  priceGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  priceChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    alignItems: 'center',
-  },
-  priceChipActive: {
-    backgroundColor: THEME.COLORS.primary,
-    borderColor: THEME.COLORS.primary,
-  },
-  priceChipText: {
-    color: THEME.COLORS.textSecondary,
-    fontWeight: '700',
-    fontSize: 10,
-  },
-  priceChipTextActive: {
-    color: '#ffffff',
-  },
-  facilityGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  facChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-  },
-  facChipActive: {
-    backgroundColor: THEME.COLORS.primary,
-    borderColor: THEME.COLORS.primary,
-  },
-  facChipText: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  facChipTextActive: {
-    color: '#ffffff',
-  },
-  gymGrid: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  gymCard: {
-    backgroundColor: 'rgba(22, 23, 33, 0.6)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderRadius: 24,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  gymImg: {
-    width: '100%',
-    height: 140,
-    objectFit: 'cover',
-  },
-  distBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  distBadgeText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  priceBadge: {
-    position: 'absolute',
-    bottom: 96,
-    right: 12,
-    backgroundColor: THEME.COLORS.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  priceBadgeText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  gymInfo: {
-    padding: 16,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  gymTitle: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    color: THEME.COLORS.warning,
-    fontWeight: '800',
-    fontSize: 11,
-  },
-  gymLoc: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 10,
-    marginTop: 2,
-    marginBottom: 10,
-  },
-  amenityRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  amenityTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  amenityTagText: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 8,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 32,
-  },
-  emptyText: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 11,
-    marginTop: 8,
-  },
-  detailHeaderBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(12, 13, 18, 0.75)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  backBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailTitle: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  coverImageBlock: {
-    height: 180,
-    position: 'relative',
-  },
-  coverImg: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  coverOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 16,
-  },
-  coverName: {
-    color: '#ffffff',
-    fontFamily: 'Outfit',
-    fontWeight: '900',
-    fontSize: 18,
-  },
-  coverMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  coverMetaText: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '600',
-  },
-  detailContent: {
-    padding: 20,
-    gap: 20,
-  },
-  timingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 16,
-  },
-  timingCardLabel: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 8,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  timingCardText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  sectionBlock: {
-    gap: 8,
-  },
-  detailSectionTitle: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    paddingBottom: 4,
-  },
-  detailDescText: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 11,
-    lineHeight: 18,
-  },
-  detailAmenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  amenityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.01)',
-    borderColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 12,
-  },
-  amenityCardText: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  plansContainer: {
-    gap: 12,
-  },
-  planCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    padding: 16,
-    borderRadius: 20,
-    gap: 12,
-  },
-  planHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  planTitle: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  planDuration: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 9,
-    marginTop: 1,
-  },
-  planPrice: {
-    color: THEME.COLORS.primary,
-    fontWeight: '900',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  planFeatures: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: 8,
-    gap: 4,
-  },
-  planFeatureItem: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 9,
-  },
-  planBuyBtn: {
-    backgroundColor: THEME.COLORS.primary,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  planBuyBtnText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  coachesContainer: {
-    gap: 8,
-  },
-  coachGridCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.01)',
-    borderColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 16,
-  },
-  coachGridProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  coachGridImg: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    objectFit: 'cover',
-  },
-  coachGridName: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  coachGridSpec: {
-    color: THEME.COLORS.primary,
-    fontSize: 8,
-    fontWeight: '600',
-  },
-  coachGridBtn: {
-    borderColor: 'rgba(229, 9, 20, 0.25)',
-    borderWidth: 1,
-    backgroundColor: 'rgba(229, 9, 20, 0.08)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  coachGridBtnText: {
-    color: THEME.COLORS.primary,
-    fontWeight: '800',
-    fontSize: 8,
-    textTransform: 'uppercase',
-  },
-  mapCard: {
-    backgroundColor: THEME.COLORS.cardDark,
-    borderColor: THEME.COLORS.borderColor,
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    alignItems: 'center',
-  },
-  mapCardTitle: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  mapCardSub: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 8,
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  mapCardBtn: {
-    color: THEME.COLORS.primary,
-    fontWeight: '800',
-    fontSize: 9,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 10,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: THEME.COLORS.cardDark,
-    borderColor: 'rgba(229, 9, 20, 0.2)',
-    borderWidth: 1,
-    borderRadius: 28,
-    padding: 20,
-    gap: 16,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    paddingBottom: 10,
-  },
-  modalTag: {
-    color: THEME.COLORS.primary,
-    fontSize: 8,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    backgroundColor: 'rgba(229, 9, 20, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  modalTitle: {
-    color: '#ffffff',
-    fontFamily: 'Outfit',
-    fontWeight: '900',
-    fontSize: 16,
-  },
-  billCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 16,
-    gap: 6,
-  },
-  billRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  billLabel: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 11,
-  },
-  billVal: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  billPrice: {
-    color: THEME.COLORS.success,
-    fontWeight: '900',
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  payCancelBtn: {
-    height: 44,
-    borderRadius: 14,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.01)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  payCancelBtnText: {
-    color: THEME.COLORS.textSecondary,
-    fontWeight: '700',
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
-  payMethods: {
-    gap: 8,
-  },
-  payMethodsTitle: {
-    color: THEME.COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  payMethodBtn: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 12,
-  },
-  payMethodText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 11,
-  }
+  container: { flex: 1 },
+  scrollList: { flex: 1 },
+  headerBlock: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 6 },
+  titleText: {  fontWeight: '900', fontSize: 20 },
+  descText: { fontSize: 11, marginTop: 2 },
+  searchRow: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 10, gap: 8 },
+  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, paddingHorizontal: 16, height: 46 },
+  textInput: { flex: 1, fontSize: 12 },
+  filterBtn: { width: 46, height: 46, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  filterBtnActive: { backgroundColor: '#e50914', borderColor: '#e50914' },
+  filtersCard: { borderWidth: 1, borderRadius: 20, padding: 16, marginHorizontal: 20, marginBottom: 16, gap: 16 },
+  filterGroup: { gap: 8 },
+  filterGroupLabel: { fontWeight: '700', fontSize: 10, textTransform: 'uppercase' },
+  priceGrid: { flexDirection: 'row', gap: 8 },
+  priceChip: { flex: 1, paddingVertical: 8, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
+  priceChipActive: { backgroundColor: '#e50914', borderColor: '#e50914' },
+  priceChipText: { fontWeight: '700', fontSize: 10 },
+  priceChipTextActive: { color: '#ffffff' },
+  facilityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  facChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1 },
+  facChipActive: { backgroundColor: '#e50914', borderColor: '#e50914' },
+  facChipText: { fontSize: 9, fontWeight: '700' },
+  facChipTextActive: { color: '#ffffff' },
+  gymGrid: { paddingHorizontal: 20, gap: 16 },
+  gymCard: { borderWidth: 1, borderRadius: 24, overflow: 'hidden', position: 'relative' },
+  gymImg: { width: '100%', height: 140, objectFit: 'cover' },
+  distBadge: { flexDirection: 'row', alignItems: 'center', position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  distBadgeText: { color: '#ffffff', fontSize: 9, fontWeight: '900' },
+  priceBadge: { position: 'absolute', bottom: 96, right: 12, backgroundColor: '#e50914', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  priceBadgeText: { color: '#ffffff', fontSize: 9, fontWeight: '900' },
+  gymInfo: { padding: 16 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  gymTitle: { fontWeight: '800', fontSize: 13 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center' },
+  ratingText: { color: '#fac800', fontWeight: '800', fontSize: 11 },
+  gymLoc: { fontSize: 10, marginTop: 2, marginBottom: 10 },
+  amenityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  amenityTag: { borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  amenityTagText: { fontSize: 8, fontWeight: '600', textTransform: 'uppercase' },
+  emptyContainer: { alignItems: 'center', paddingVertical: 60 },
+  emptyIcon: { fontSize: 32 },
+  emptyText: { fontSize: 11, marginTop: 8 },
+  detailHeaderBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1 },
+  backBtn: { width: 34, height: 34, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  detailTitle: { fontWeight: '800', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
+  coverImageBlock: { height: 180, position: 'relative' },
+  coverImg: { width: '100%', height: '100%', objectFit: 'cover' },
+  coverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.6)', padding: 16 },
+  coverName: { color: '#ffffff',  fontWeight: '900', fontSize: 18 },
+  coverMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  coverMetaText: { color: '#99a1af', fontSize: 9, fontWeight: '600' },
+  detailContent: { padding: 20, gap: 20 },
+  timingCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, padding: 12, borderRadius: 16 },
+  timingCardLabel: { fontSize: 8, textTransform: 'uppercase', fontWeight: '700' },
+  timingCardText: { fontSize: 12, fontWeight: '700', marginTop: 1 },
+  sectionBlock: { gap: 8 },
+  detailSectionTitle: { fontWeight: '800', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, borderBottomWidth: 1, paddingBottom: 4 },
+  detailDescText: { fontSize: 11, lineHeight: 18, fontWeight: '500' },
+  detailAmenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  amenityCard: { flexDirection: 'row', alignItems: 'center', width: '48%', borderWidth: 1, padding: 10, borderRadius: 12 },
+  amenityCardText: { fontSize: 10, fontWeight: '600' },
+  plansContainer: { gap: 12 },
+  planCard: { borderWidth: 1, padding: 16, borderRadius: 20, gap: 12 },
+  planHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  planTitle: { fontWeight: '800', fontSize: 12 },
+  planDuration: { fontSize: 9, marginTop: 1 },
+  planPrice: { color: '#e50914', fontWeight: '900', fontSize: 14, fontFamily: 'monospace' },
+  planFeatures: { borderTopWidth: 1, paddingTop: 8, gap: 4 },
+  planFeatureItem: { fontSize: 9 },
+  planBuyBtn: { backgroundColor: '#e50914', height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  planBuyBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  coachesContainer: { gap: 8 },
+  coachGridCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, padding: 10, borderRadius: 16 },
+  coachGridProfile: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  coachGridImg: { width: 32, height: 32, borderRadius: 10, objectFit: 'cover' },
+  coachGridName: { fontWeight: '700', fontSize: 11 },
+  coachGridSpec: { color: '#e50914', fontSize: 8, fontWeight: '600' },
+  coachGridBtn: { borderColor: 'rgba(229,9,20,0.25)', borderWidth: 1, backgroundColor: 'rgba(229,9,20,0.08)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  coachGridBtnText: { color: '#e50914', fontWeight: '800', fontSize: 8, textTransform: 'uppercase' },
+  mapCard: { borderWidth: 1, borderRadius: 20, padding: 16, alignItems: 'center' },
+  mapCardTitle: { fontWeight: '700', fontSize: 11 },
+  mapCardSub: { fontSize: 8, fontFamily: 'monospace', marginTop: 2 },
+  mapCardBtn: { color: '#e50914', fontWeight: '800', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 10 },
+  modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalCard: { width: '100%', maxWidth: 320, borderColor: 'rgba(229,9,20,0.2)', borderWidth: 1, borderRadius: 28, padding: 20, gap: 16 },
+  modalHeader: { alignItems: 'center', borderBottomWidth: 1, paddingBottom: 10 },
+  modalTag: { color: '#e50914', fontSize: 8, fontWeight: '800', textTransform: 'uppercase', backgroundColor: 'rgba(229,9,20,0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 4 },
+  modalTitle: {  fontWeight: '900', fontSize: 16 },
+  billCard: { borderWidth: 1, padding: 12, borderRadius: 16, gap: 6 },
+  billRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  billLabel: { fontSize: 11 },
+  billVal: { fontWeight: '700', fontSize: 11 },
+  billPrice: { color: '#00c758', fontWeight: '900', fontSize: 14, fontFamily: 'monospace' },
+  payCancelBtn: { height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  payCancelBtnText: { fontWeight: '700', fontSize: 11, textTransform: 'uppercase' },
+  payMethods: { gap: 8 },
+  payMethodsTitle: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', marginBottom: 2 },
+  payMethodBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, padding: 10, borderRadius: 12 },
+  payMethodText: { fontWeight: '600', fontSize: 11 },
 });

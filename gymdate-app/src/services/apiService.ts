@@ -4,6 +4,9 @@ export interface ApiProfile {
   email: string;
   full_name: string;
   phone: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
   role_id?: string;
   created_at?: string;
 }

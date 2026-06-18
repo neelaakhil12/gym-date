@@ -1,14 +1,13 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GymDateProvider, useGymDate } from './src/context/GymDateContext';
 import { DeviceShell } from './src/components/shared/DeviceShell';
 import { Onboarding } from './src/components/member/Onboarding';
 import { HomeDashboard } from './src/components/member/HomeDashboard';
 import { GymDiscovery } from './src/components/member/GymDiscovery';
-import { BookingPage } from './src/components/member/BookingPage';
 import { PartnerForm } from './src/components/member/PartnerForm';
-import { CommunityFeed } from './src/components/member/CommunityFeed';
+import { NearbyGyms } from './src/components/member/NearbyGyms';
 import { Notifications } from './src/components/member/Notifications';
 import { Profile } from './src/components/member/Profile';
 import { OwnerDashboard } from './src/components/owner/OwnerDashboard';
@@ -19,9 +18,8 @@ import { THEME } from './src/theme';
 import { 
   Home, 
   Search, 
-  Calendar, 
   Handshake, 
-  Users 
+  MapPin 
 } from 'lucide-react-native';
 
 const AppContent: React.FC = () => {
@@ -30,8 +28,10 @@ const AppContent: React.FC = () => {
     activeScreen, 
     setActiveScreen, 
     isLoggedIn,
-    themeMode
+    themeMode,
+    setThemeMode
   } = useGymDate();
+
 
   // Screen Switcher routing engine
   const renderScreen = () => {
@@ -61,11 +61,11 @@ const AppContent: React.FC = () => {
       case 'gym-details':
         return <GymDiscovery />;
       case 'bookings':
-        return <BookingPage />;
+        return <Profile />;
       case 'partner':
         return <PartnerForm />;
-      case 'community':
-        return <CommunityFeed />;
+      case 'nearby':
+        return <NearbyGyms />;
       case 'notifications':
         return <Notifications />;
       case 'profile':
@@ -83,7 +83,7 @@ const AppContent: React.FC = () => {
 
   return (
     <DeviceShell>
-      <View style={[styles.appViewport, isLight && { backgroundColor: '#F9F9F9' }]}>
+      <View style={[styles.appViewport, isLight && { backgroundColor: '#ffffff' }]}>
         <StatusBar style={isLight ? 'dark' : 'light'} />
         
         {/* Active Screen View */}
@@ -118,18 +118,7 @@ const AppContent: React.FC = () => {
               ]}>Explore</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity 
-              onPress={() => setActiveScreen('bookings')}
-              style={styles.navItem}
-            >
-              <Calendar size={18} color={activeScreen === 'bookings' ? THEME.COLORS.primary : inactiveIconColor} />
-              <Text style={[
-                styles.navText, 
-                isLight && { color: '#6B7280' },
-                activeScreen === 'bookings' && styles.navTextActive
-              ]}>Bookings</Text>
-            </TouchableOpacity>
-            
+
             <TouchableOpacity 
               onPress={() => setActiveScreen('partner')}
               style={styles.navItem}
@@ -143,15 +132,15 @@ const AppContent: React.FC = () => {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              onPress={() => setActiveScreen('community')}
+              onPress={() => setActiveScreen('nearby')}
               style={styles.navItem}
             >
-              <Users size={18} color={activeScreen === 'community' ? THEME.COLORS.primary : inactiveIconColor} />
+              <MapPin size={18} color={activeScreen === 'nearby' ? THEME.COLORS.primary : inactiveIconColor} />
               <Text style={[
                 styles.navText, 
                 isLight && { color: '#6B7280' },
-                activeScreen === 'community' && styles.navTextActive
-              ]}>Feed</Text>
+                activeScreen === 'nearby' && styles.navTextActive
+              ]}>Nearby</Text>
             </TouchableOpacity>
           </View>
         )}

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   Bell, 
   Calendar, 
@@ -18,13 +19,14 @@ import {
 
 export const Notifications: React.FC = () => {
   const { notifications, markNotificationsAsRead, setActiveScreen } = useGymDate();
+  const { isDark, bg } = useTheme();
 
   useEffect(() => {
     markNotificationsAsRead();
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       {/* Header bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => setActiveScreen('home')} style={styles.backBtn}>
@@ -82,7 +84,6 @@ export const Notifications: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   headerBar: {
     flexDirection: 'row',

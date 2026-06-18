@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "gymdate-app",
-    "slug": "gymdate-app",
+    "name": "GymDate",
+    "slug": "gym-date",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,8 +10,16 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.neelaakhil12.gymdateapp",
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +28,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c3eca0f7-d7d2-4532-bd3a-2d3a9acdc011"
+      }
+    },
+    "owner": "neelaakhil143"
   }
 }

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useGymDate, Booking } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   Calendar, 
   Clock, 
@@ -20,6 +21,7 @@ import {
 
 export const BookingPage: React.FC = () => {
   const { bookings, cancelBooking, addBooking, gyms, userProfile } = useGymDate();
+  const { isDark, bg } = useTheme();
   const [filterTab, setFilterTab] = useState<'upcoming' | 'history'>('upcoming');
   const [showBookNew, setShowBookNew] = useState(false);
 
@@ -79,7 +81,7 @@ export const BookingPage: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Title */}
       <View style={styles.headerBlock}>
         <View style={styles.headerTitleRow}>
@@ -351,7 +353,6 @@ export const BookingPage: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   headerBlock: {
     paddingHorizontal: 20,
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
   },
@@ -546,7 +547,7 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '700',
     fontSize: 12,
     textTransform: 'uppercase',

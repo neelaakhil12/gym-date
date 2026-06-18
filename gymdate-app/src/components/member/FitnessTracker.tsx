@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   Flame, 
   Droplet, 
@@ -29,6 +30,7 @@ export const FitnessTracker: React.FC = () => {
     addWeightLog, 
     userProfile 
   } = useGymDate();
+  const { isDark, bg } = useTheme();
 
   const [weightInput, setWeightInput] = useState('');
   const [showWeightModal, setShowWeightModal] = useState(false);
@@ -53,7 +55,7 @@ export const FitnessTracker: React.FC = () => {
   const weightRange = maxWeight - minWeight || 1;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Title */}
       <View style={styles.headerBlock}>
         <View style={styles.headerTitleRow}>
@@ -257,7 +259,6 @@ export const FitnessTracker: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   headerBlock: {
     paddingHorizontal: 20,
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
   },
@@ -491,7 +492,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '800',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -592,7 +593,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '800',
     fontSize: 14,
   },

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, ApiGym, ApiPlan, ApiBooking } from '../services/apiService';
 
 // Types Definitions
@@ -14,6 +16,7 @@ export type ActiveScreen =
   | 'bookings' 
   | 'partner' 
   | 'community' 
+  | 'nearby'
   | 'profile' 
   | 'notifications';
 
@@ -30,6 +33,9 @@ export interface UserProfile {
   membershipType: 'none' | 'Daily Pass' | '7-Day Pass' | 'Monthly Premium' | 'Elite Annual';
   membershipExpiry: string | null;
   qrCodeValue: string;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
 }
 
 export interface Trainer {
@@ -181,6 +187,9 @@ export interface GymDateContextType {
   rejectGymRequest: (id: string) => void;
   loading: boolean;
   refreshData: () => Promise<void>;
+  // User real GPS coordinates (fetched once, persisted globally)
+  userCoords: { lat: number; lng: number } | null;
+  setUserCoords: React.Dispatch<React.SetStateAction<{ lat: number; lng: number } | null>>;
 }
 
 const GymDateContext = createContext<GymDateContextType | undefined>(undefined);
@@ -269,6 +278,7 @@ const INITIAL_GYMS: Gym[] = [
 ];
 
 export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isRestored = React.useRef(false);
   // KVM Connection & Loading states
   const [loading, setLoading] = useState(false);
 
@@ -281,8 +291,73 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginInput, setLoginInput] = useState('');
 
+  // Gym Member Profile state
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: 'NEELA AKHIL KUMAR',
+    phone: '',
+    email: 'neelaakhil12@gmail.com',
+    height: 178,
+    weight: 76.5,
+    bmi: 24.1,
+    goal: 'Build Muscle',
+    avatar: '',
+    savedGyms: ['gym-1', 'gym-3'],
+    membershipType: 'none',
+    membershipExpiry: null,
+    qrCodeValue: 'GD-MEMBER-9988-77'
+  });
+
+  // Bookings list state
+  const [bookings, setBookings] = useState<Booking[]>([
+    {
+      id: 'b-1',
+      gymId: 'gym-1',
+      gymName: 'Gold\'s Gym Elite',
+      dateTime: '2026-05-29T08:00:00',
+      trainerName: 'Vikram Singh',
+      sessionType: 'trainer',
+      status: 'confirmed'
+    },
+    {
+      id: 'b-2',
+      gymId: 'gym-3',
+      gymName: 'Cult.fit Premium Center',
+      dateTime: '2026-05-27T18:00:00',
+      sessionType: 'class',
+      className: 'HRX Strength & Conditioning',
+      status: 'completed'
+    }
+  ]);
+
   // Simulator background theme Mode
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+
+  // User's real GPS coordinates — stored globally so all screens share them
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Fetch user's saved lat/lng from backend once after login
+  const resolveUserCoords = React.useCallback(async (email: string) => {
+    try {
+      const res = await fetch(`https://gymdate.in/api/user/get-profile?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (data.success && data.profile?.latitude) {
+        const lat = parseFloat(data.profile.latitude);
+        const lng = parseFloat(data.profile.longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          setUserCoords({ lat, lng });
+          return;
+        }
+      }
+    } catch (_) {}
+    // Fallback: browser geolocation
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   // Gyms Database
   const [gyms, setGyms] = useState<Gym[]>(INITIAL_GYMS);
@@ -294,10 +369,52 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.log("[Context] Fetching live gym listings from KVM PostgreSQL database...");
       const apiGyms = await apiService.getGyms();
       if (apiGyms && apiGyms.length > 0) {
-        const mappedGyms: Gym[] = apiGyms.map(gym => {
+        const mappedGyms: Gym[] = await Promise.all(apiGyms.map(async gym => {
           let price = 290;
           if (gym.price_per_day) {
             price = typeof gym.price_per_day === 'string' ? parseFloat(gym.price_per_day) : gym.price_per_day;
+          }
+
+          // Fetch actual pricing plans from PostgreSQL database
+          let gymPlans: { name: string; price: number; duration: string; features: string[] }[] = [];
+          try {
+            const apiPlans = await apiService.getPlans(gym.id);
+            if (apiPlans && apiPlans.length > 0) {
+              gymPlans = apiPlans.map(plan => {
+                const planPrice = typeof plan.price === 'string'
+                  ? parseFloat(plan.price.replace(/[^0-9.]/g, ''))
+                  : Number(plan.price);
+                
+                let duration = '30 Days';
+                const lowerName = plan.name.toLowerCase();
+                if (lowerName.includes('day') || lowerName.includes('daily') || lowerName.includes('pack') || lowerName.includes('pass')) {
+                  if (lowerName.includes('10-day')) duration = '10 Days';
+                  else if (lowerName.includes('7-day') || lowerName.includes('weekly')) duration = '7 Days';
+                  else duration = '1 Day';
+                } else if (lowerName.includes('week')) {
+                  duration = '7 Days';
+                } else if (lowerName.includes('year') || lowerName.includes('annual') || lowerName.includes('yearly')) {
+                  duration = '365 Days';
+                }
+                
+                return {
+                  name: plan.name,
+                  price: planPrice || price,
+                  duration,
+                  features: plan.features || ['Full Gym Access', 'Locker Room']
+                };
+              });
+            }
+          } catch (e) {
+            console.warn(`[Context] Plans load failed for gym ${gym.id}, using default plans.`, e);
+          }
+
+          if (gymPlans.length === 0) {
+            gymPlans = [
+              { name: 'Daily Pass', price: price, duration: '1 Day', features: ['Full Gym Access', 'Locker Room'] },
+              { name: 'Weekly Pass', price: price * 5, duration: '7 Days', features: ['Full Gym Access', 'Locker Room'] },
+              { name: 'Monthly Pass', price: price * 12, duration: '30 Days', features: ['Unlimited Gym Access', 'Locker Room'] }
+            ];
           }
           
           return {
@@ -305,10 +422,13 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
             name: gym.name,
             rating: Number(gym.rating) || 4.5,
             reviewsCount: Number(gym.reviews) || 0,
-            distance: Number(gym.distance) || 1.2,
+            distance: 0, // not used — haversine from userCoords is always used instead
             pricePerDay: price,
             location: gym.location,
-            coordinates: { lat: 19.076, lng: 72.8777 },
+            coordinates: { 
+              lat: (gym as any).lat ? parseFloat((gym as any).lat) : 0, 
+              lng: (gym as any).lng ? parseFloat((gym as any).lng) : 0 
+            },
             facilities: gym.amenities || ['Locker Room', 'Air Conditioned', 'Free Weights'],
             image: gym.image || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
             gallery: gym.gallery && gym.gallery.length > 0 ? gym.gallery : ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48'],
@@ -317,12 +437,9 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
             trainers: [
               { id: 't-1', name: 'Vikram Singh', specialization: 'Strength & Conditioning', rating: 4.9, avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=150', availability: ['07:00 AM - 09:00 AM', '05:00 PM - 07:00 PM'], bio: 'Expert strength conditioning coach.' }
             ],
-            plans: [
-              { name: '1-Day Pass', price: price, duration: '1 Day', features: ['Full Gym Access', 'Locker Room'] },
-              { name: 'Monthly Pass', price: price * 12, duration: '30 Days', features: ['Unlimited Gym Access', 'Locker Room', 'Personal Trainer consultation'] }
-            ]
+            plans: gymPlans
           };
-        });
+        }));
         setGyms(mappedGyms);
       }
     } catch (error) {
@@ -344,8 +461,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.log(`[Context] First-time login detected. Registering ${loginInput} in database...`);
         profile = await apiService.syncProfile({
           email: loginInput,
-          name: 'Akash Kumar',
-          phone: '+91 98765 43210'
+          name: 'NEELA AKHIL KUMAR',
+          phone: ''
         });
       }
 
@@ -355,6 +472,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
           name: profile.full_name || prev.name,
           phone: profile.phone || prev.phone,
           email: profile.email || prev.email,
+          avatar: (profile as any).image || prev.avatar,
+          address: (profile as any).address || prev.address
         }));
       }
 
@@ -387,6 +506,10 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (isLoggedIn) {
       syncAndFetchUser();
+      // Load user's real GPS coordinates into global context once on login
+      if (loginInput) {
+        resolveUserCoords(loginInput);
+      }
     }
   }, [isLoggedIn, loginInput]);
 
@@ -397,43 +520,94 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Gym Member Profile state
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: 'Akash Kumar',
-    phone: '+91 98765 43210',
-    email: 'akash.k@gmail.com',
-    height: 178,
-    weight: 76.5,
-    bmi: 24.1,
-    goal: 'Build Muscle',
-    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=150',
-    savedGyms: ['gym-1', 'gym-3'],
-    membershipType: 'none',
-    membershipExpiry: null,
-    qrCodeValue: 'GD-MEMBER-9988-77'
-  });
+  // 1. Restore User Session on mount (for persistent login across refreshes)
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        let savedIsLoggedIn: string | null = null;
+        let savedLoginInput: string | null = null;
+        let savedProfile: string | null = null;
+        let savedBookings: string | null = null;
+        let savedThemeMode: string | null = null;
 
-  // Bookings list state
-  const [bookings, setBookings] = useState<Booking[]>([
-    {
-      id: 'b-1',
-      gymId: 'gym-1',
-      gymName: 'Gold\'s Gym Elite',
-      dateTime: '2026-05-29T08:00:00',
-      trainerName: 'Vikram Singh',
-      sessionType: 'trainer',
-      status: 'confirmed'
-    },
-    {
-      id: 'b-2',
-      gymId: 'gym-3',
-      gymName: 'Cult.fit Premium Center',
-      dateTime: '2026-05-27T18:00:00',
-      sessionType: 'class',
-      className: 'HRX Strength & Conditioning',
-      status: 'completed'
-    }
-  ]);
+        if (Platform.OS === 'web') {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            savedIsLoggedIn = localStorage.getItem('gymdate_is_logged_in');
+            savedLoginInput = localStorage.getItem('gymdate_login_input');
+            savedProfile = localStorage.getItem('gymdate_user_profile');
+            savedBookings = localStorage.getItem('gymdate_bookings');
+            savedThemeMode = localStorage.getItem('gymdate_theme_mode_v3');
+          }
+        } else {
+          savedIsLoggedIn = await AsyncStorage.getItem('gymdate_is_logged_in');
+          savedLoginInput = await AsyncStorage.getItem('gymdate_login_input');
+          savedProfile = await AsyncStorage.getItem('gymdate_user_profile');
+          savedBookings = await AsyncStorage.getItem('gymdate_bookings');
+          savedThemeMode = await AsyncStorage.getItem('gymdate_theme_mode_v3');
+        }
+
+        if (savedIsLoggedIn === 'true') {
+          setIsLoggedIn(true);
+          setActiveScreen('home');
+        }
+        if (savedLoginInput) {
+          const processedInput = savedLoginInput.includes('akash') ? 'neelaakhil12@gmail.com' : savedLoginInput;
+          setLoginInput(processedInput);
+        }
+        if (savedProfile) {
+          const parsed = JSON.parse(savedProfile);
+          if (parsed && (parsed.name === 'Akash Kumar' || parsed.email?.includes('akash'))) {
+            parsed.name = 'NEELA AKHIL KUMAR';
+            parsed.email = 'neelaakhil12@gmail.com';
+          }
+          setUserProfile(parsed);
+        }
+        if (savedBookings) {
+          setBookings(JSON.parse(savedBookings));
+        }
+        if (savedThemeMode === 'dark' || savedThemeMode === 'light') {
+          setThemeMode(savedThemeMode as 'light' | 'dark');
+        }
+      } catch (e) {
+        console.warn("[Context] Session restore failed:", e);
+      } finally {
+        isRestored.current = true;
+      }
+    };
+
+    restoreSession();
+  }, []);
+
+  // 2. Persist User Session on any state changes
+  useEffect(() => {
+    if (!isRestored.current) return; // Prevent overwriting during mount restoration!
+    
+    const saveSession = async () => {
+      try {
+        if (Platform.OS === 'web') {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            localStorage.setItem('gymdate_is_logged_in', isLoggedIn ? 'true' : 'false');
+            localStorage.setItem('gymdate_login_input', loginInput || '');
+            localStorage.setItem('gymdate_user_profile', JSON.stringify(userProfile));
+            localStorage.setItem('gymdate_bookings', JSON.stringify(bookings));
+            localStorage.setItem('gymdate_theme_mode_v3', themeMode);
+          }
+        } else {
+          await AsyncStorage.setItem('gymdate_is_logged_in', isLoggedIn ? 'true' : 'false');
+          await AsyncStorage.setItem('gymdate_login_input', loginInput || '');
+          await AsyncStorage.setItem('gymdate_user_profile', JSON.stringify(userProfile));
+          await AsyncStorage.setItem('gymdate_bookings', JSON.stringify(bookings));
+          await AsyncStorage.setItem('gymdate_theme_mode_v3', themeMode);
+        }
+      } catch (e) {
+        console.warn("[Context] Session save failed:", e);
+      }
+    };
+
+    saveSession();
+  }, [isLoggedIn, loginInput, userProfile, bookings, themeMode]);
+
+
 
   // Fitness metrics log
   const [fitnessMetrics, setFitnessMetrics] = useState<FitnessMetrics>({
@@ -659,7 +833,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // If scanning member's QR
     if (qrCode === userProfile.qrCodeValue) {
       if (userProfile.membershipType === 'none') {
-        return { success: false, message: 'Scan Failed. Akash Kumar has no active membership pass. Purchase pass first.' };
+        return { success: false, message: `Scan Failed. ${userProfile.name} has no active membership pass. Purchase pass first.` };
       }
       
       setOwnerProfile(prev => ({
@@ -773,7 +947,9 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       approveGymRequest,
       rejectGymRequest,
       loading,
-      refreshData
+      refreshData,
+      userCoords,
+      setUserCoords,
     }}>
       {children}
     </GymDateContext.Provider>

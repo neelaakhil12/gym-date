@@ -3,6 +3,20 @@
 import { query } from "@/lib/db";
 import { gyms as mockGyms, cities as mockCities, pricingPlans as mockPricingPlans } from "@/data/mockData";
 
+const BASE_URL = "https://gymdate.in";
+
+/**
+ * Converts a relative path like /uploads/gyms/image.jpg
+ * into a full URL: https://gymdate.in/uploads/gyms/image.jpg
+ * Leaves external URLs (http/https) untouched.
+ */
+function toAbsoluteUrl(image: string | null | undefined): string {
+  if (!image) return '';
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  // Relative path: prepend the live domain
+  return `${BASE_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+}
+
 export async function getGyms() {
   try {
     const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
@@ -13,6 +27,8 @@ export async function getGyms() {
 
     return gyms.map((gym: any) => ({
       ...gym,
+      // Convert relative image paths to full URLs so the mobile app can load them
+      image: toAbsoluteUrl(gym.image),
       commission_rate: (gym.commission_rate === null || gym.commission_rate === undefined) ? platformComm : gym.commission_rate
     }));
   } catch (error) {

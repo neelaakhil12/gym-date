@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { apiService } from '../../services/apiService';
 import { 
   Handshake,
@@ -25,6 +26,7 @@ import {
 
 export const PartnerForm: React.FC = () => {
   const { themeMode } = useGymDate();
+  const { isDark, bg } = useTheme();
   const isLight = themeMode === 'light';
 
   // Form states
@@ -150,7 +152,7 @@ export const PartnerForm: React.FC = () => {
 
   return (
     <ScrollView 
-      style={[styles.container, isLight && { backgroundColor: '#F9F9F9' }]} 
+      style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} 
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
     >
@@ -350,7 +352,6 @@ export const PartnerForm: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -373,7 +374,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 26,
     textAlign: 'center',
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
-    fontFamily: 'Outfit',
+    
   },
   benefitsGrid: {
     gap: 12,
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
     marginBottom: 4,
-    fontFamily: 'Outfit',
+    
   },
   benefitDesc: {
     color: THEME.COLORS.textSecondary,
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 20,
     fontWeight: '900',
-    fontFamily: 'Outfit',
+    
     marginBottom: 6,
   },
   formHeaderDesc: {

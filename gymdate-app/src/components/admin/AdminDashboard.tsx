@@ -147,9 +147,9 @@ export const AdminDashboard: React.FC = () => {
       <View style={styles.logsCard}>
         <Text style={styles.logsTitle}>Moderator Action Audits</Text>
         <View style={styles.logsContainer}>
-          <Text style={styles.logText}>[2026-05-27 10:20] LOG_IN: Akash Kumar verified OTP successfully.</Text>
+          <Text style={styles.logText}>[2026-05-27 10:20] LOG_IN: NEELA AKHIL KUMAR verified OTP successfully.</Text>
           <Text style={styles.logText}>[2026-05-27 10:22] PAY_APPROVED: Gold's Gym premium pass purchase validated.</Text>
-          <Text style={styles.logText}>[2026-05-27 10:24] SYSTEM_CHECK_IN: Akash Kumar checked in at Gold's Gym.</Text>
+          <Text style={styles.logText}>[2026-05-27 10:24] SYSTEM_CHECK_IN: NEELA AKHIL KUMAR checked in at Gold's Gym.</Text>
         </View>
       </View>
 
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
   },

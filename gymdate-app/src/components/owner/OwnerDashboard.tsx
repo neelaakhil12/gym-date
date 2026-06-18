@@ -108,7 +108,7 @@ export const OwnerDashboard: React.FC = () => {
               onPress={() => handleSelectDemoCode(userProfile.qrCodeValue)}
               style={styles.demoChip}
             >
-              <Text style={styles.demoChipText}>Akash's active QR</Text>
+              <Text style={styles.demoChipText}>Akhil's active QR</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               onPress={() => handleSelectDemoCode('GD-MEMBER-GUEST')}
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
   },

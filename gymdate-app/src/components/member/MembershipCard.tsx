@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   QrCode, 
   Sparkles, 
@@ -20,6 +21,7 @@ import {
 
 export const MembershipCard: React.FC = () => {
   const { userProfile, setUserProfile } = useGymDate();
+  const { isDark, bg } = useTheme();
   const [showPlans, setShowPlans] = useState(false);
 
   const mockPlans = [
@@ -62,7 +64,7 @@ export const MembershipCard: React.FC = () => {
   const hasActivePass = userProfile.membershipType !== 'none';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Title */}
       <View style={styles.headerBlock}>
         <Text style={styles.titleText}>Digital Pass Card</Text>
@@ -200,7 +202,6 @@ export const MembershipCard: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   headerBlock: {
     paddingHorizontal: 20,
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
   },
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
   },
   cardName: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 16,
   },
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '800',
     fontSize: 11,
-    fontFamily: 'Outfit',
+    
   },
   plansHeaderClose: {
     color: THEME.COLORS.textSecondary,

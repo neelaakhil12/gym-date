@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { useTheme } from '../../useTheme';
 import { 
   Heart, 
   MessageCircle, 
@@ -18,11 +19,13 @@ import {
   Sparkles, 
   Award, 
   PlusCircle, 
-  Image as ImageIcon 
+  Image as ImageIcon,
+  Menu 
 } from 'lucide-react-native';
 
 export const CommunityFeed: React.FC = () => {
-  const { posts, addPost, toggleLikePost, addComment, userProfile } = useGymDate();
+  const { posts, addPost, toggleLikePost, addComment, userProfile, setActiveScreen } = useGymDate();
+  const { isDark, bg } = useTheme();
   
   const [newPostText, setNewPostText] = useState('');
   const [selectedMockImage, setSelectedMockImage] = useState<string | undefined>(undefined);
@@ -62,22 +65,30 @@ export const CommunityFeed: React.FC = () => {
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Title */}
       <View style={styles.headerBlock}>
         <View style={styles.headerTitleRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.titleText}>Community Feed</Text>
             <Text style={styles.descText}>Interact with other gym members & expert coaches.</Text>
           </View>
-          {!showPublisher && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {!showPublisher && (
+              <TouchableOpacity 
+                onPress={() => setShowPublisher(true)}
+                style={styles.pubBtn}
+              >
+                <PlusCircle size={18} color={THEME.COLORS.primary} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity 
-              onPress={() => setShowPublisher(true)}
+              onPress={() => setActiveScreen('profile')} 
               style={styles.pubBtn}
             >
-              <PlusCircle size={18} color={THEME.COLORS.primary} />
+              <Menu size={16} color={isDark ? '#ffffff' : '#6B7280'} />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </View>
 
@@ -208,7 +219,7 @@ export const CommunityFeed: React.FC = () => {
               <View style={styles.writeCommentRow}>
                 <TextInput
                   placeholder="Write a supportive comment..."
-                  placeholderTextColor={THEME.COLORS.textMuted}
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   value={commentInputs[post.id] || ''}
                   onChangeText={(val) => setCommentInputs(prev => ({ ...prev, [post.id]: val }))}
                   style={styles.commentInput}
@@ -233,7 +244,6 @@ export const CommunityFeed: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.COLORS.bgDark,
   },
   headerBlock: {
     paddingHorizontal: 20,
@@ -247,7 +257,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     color: '#ffffff',
-    fontFamily: 'Outfit',
+    
     fontWeight: '900',
     fontSize: 20,
   },
@@ -435,7 +445,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   feedContent: {
-    color: THEME.COLORS.textSecondary,
+    color: '#ffffff',
     fontSize: 11,
     lineHeight: 16,
     paddingHorizontal: 2,
@@ -464,7 +474,7 @@ const styles = StyleSheet.create({
     // highlighted states
   },
   controlBtnText: {
-    color: THEME.COLORS.textSecondary,
+    color: '#ffffff',
     fontSize: 9,
     fontWeight: '700',
   },
@@ -497,7 +507,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   commentContent: {
-    color: THEME.COLORS.textSecondary,
+    color: '#ffffff',
     fontSize: 9,
     lineHeight: 12,
     marginTop: 1,
@@ -514,8 +524,8 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
