@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     maxWidth: 1600,
     width: '100%',
-    marginHorizontal: 'auto' as any,
+    marginHorizontal: Platform.OS === 'web' ? ('auto' as any) : 0,
     padding: 24,
     gap: 24,
   },

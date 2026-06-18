@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#111827',
     fontSize: 13,
-    outlineStyle: 'none' as any,
+    outlineStyle: (Platform.OS === 'web' ? 'none' : undefined) as any,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 18,
     fontWeight: '700',
-    outlineStyle: 'none' as any,
+    outlineStyle: (Platform.OS === 'web' ? 'none' : undefined) as any,
     textAlign: 'center',
     padding: 0,
   },
