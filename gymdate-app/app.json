@@ -20,9 +20,7 @@
       ],
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -34,6 +32,9 @@
         "projectId": "c3eca0f7-d7d2-4532-bd3a-2d3a9acdc011"
       }
     },
-    "owner": "neelaakhil143"
+    "owner": "neelaakhil143",
+    "plugins": [
+      "expo-status-bar"
+    ]
   }
 }

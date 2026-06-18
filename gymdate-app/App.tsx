@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    cursor: 'pointer' as any,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
   navText: {
     color: THEME.COLORS.textMuted,

@@ -32,7 +32,10 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["expo-av", "expo-modules-jsi"]
+        "exclude": [
+          "expo-av",
+          "expo-modules-jsi"
+        ]
       }
     }
   }

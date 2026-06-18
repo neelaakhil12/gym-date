@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   ScrollView, 
   Image, 
-  Alert 
+  Alert,
+  Platform
 } from 'react-native';
 import { useGymDate, Gym } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#000000',
-    cursor: 'pointer' as any,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
   videoStyle: {
     width: '100%',

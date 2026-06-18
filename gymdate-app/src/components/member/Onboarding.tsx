@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    cursor: 'pointer' as any,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
   headerRow: {
     flexDirection: 'row',

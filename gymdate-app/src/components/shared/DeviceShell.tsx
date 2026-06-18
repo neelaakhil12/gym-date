@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   simulatorContainer: {
     flex: 1,
-    minHeight: '100vh' as any,
+    minHeight: (Platform.OS === 'web' ? '100vh' : '100%') as any,
     backgroundColor: '#030303',
     position: 'relative',
   },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     gap: 8,
     zIndex: 999,
-    cursor: 'pointer' as any,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 15,
     backgroundColor: 'transparent',
-    cursor: 'pointer' as any,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
   toggleBtnActive: {
     backgroundColor: THEME.COLORS.primary,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
-    cursor: 'pointer' as any,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
   tabHeaderBtnActive: {
     backgroundColor: THEME.COLORS.primary,
