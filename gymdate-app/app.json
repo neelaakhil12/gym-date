@@ -34,7 +34,20 @@
     },
     "owner": "neelaakhil143",
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow GymDate to access your location to find nearby gyms.",
+          "locationWhenInUsePermission": "Allow GymDate to access your location to find nearby gyms."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GymDate to access your photo gallery to upload a profile avatar."
+        }
+      ]
     ]
   }
 }
