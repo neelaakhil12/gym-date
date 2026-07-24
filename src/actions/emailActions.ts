@@ -46,8 +46,15 @@ export async function sendPasswordResetEmail(email: string, redirectTo: string =
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://gymdate.in');
 
-    // 1. Check if user exists
-    const userResult = await query("SELECT id FROM users WHERE email = $1", [email]);
+    // 1. Check if user exists in users, admin_users, or staff_users
+    let userResult = await query("SELECT id FROM users WHERE email = $1", [email]);
+    if (userResult.rows.length === 0) {
+      userResult = await query("SELECT id FROM admin_users WHERE email = $1", [email]);
+    }
+    if (userResult.rows.length === 0) {
+      userResult = await query("SELECT id FROM staff_users WHERE email = $1", [email]);
+    }
+
     if (userResult.rows.length === 0) {
       // For security, don't reveal if user exists. Just say "If your email is in our system..."
       return { success: true, message: "If your email is registered, you will receive a reset link shortly." };

@@ -19,9 +19,17 @@ export async function resetPasswordWithToken(email: string, token: string, newPa
     // 2. Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 3. Update user password
+    // 3. Update user password across users, admin_users, and staff_users
     await query(
       "UPDATE users SET password_hash = $1 WHERE email = $2",
+      [hashedPassword, email]
+    );
+    await query(
+      "UPDATE admin_users SET password_hash = $1 WHERE email = $2",
+      [hashedPassword, email]
+    );
+    await query(
+      "UPDATE staff_users SET password_hash = $1 WHERE email = $2",
       [hashedPassword, email]
     );
 

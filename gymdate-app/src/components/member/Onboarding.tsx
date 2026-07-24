@@ -15,9 +15,10 @@ import {
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
-import { Dumbbell, ArrowRight, ShieldCheck, Mail, Phone, Lock, Sparkles, Goal, ChevronLeft } from 'lucide-react-native';
+import { Dumbbell, ArrowRight, ShieldCheck, Mail, Phone, Lock, Sparkles, Goal, ChevronLeft, Check } from 'lucide-react-native';
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
+import { getCurrentLocation, reverseGeocode } from '../../utils/location';
 
 const { width, height } = Dimensions.get('window');
 
@@ -180,87 +181,41 @@ export const Onboarding: React.FC = () => {
   };
 
 
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyA_y5PoTdP0o2MZRDGkTVtFgguLTSaGIEE';
-
-  const handleGetCurrentLocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      showAlert('Not Supported', 'Geolocation is not supported on this platform.');
-      return;
-    }
-
+  const handleGetCurrentLocation = async () => {
     setIsLocating(true);
+    try {
+      const coords = await getCurrentLocation();
+      const { city, address } = await reverseGeocode(coords.latitude, coords.longitude);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
+      setRegCity(city || 'Current Location');
+      setRegAddress(address);
+
+      // Save lat/lng to backend profile immediately so NearbyGyms gets accurate distances
+      const email = regEmail.trim() || loginInput.trim();
+      if (email) {
         try {
-          // Use Google Maps Geocoding API — same key as the website
-          const geoRes = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
-          );
-          const geoData = await geoRes.json();
+          const { getApiUrl } = require('../../config');
+          await fetch(`${getApiUrl()}/api/user/sync-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              name: regName.trim(),
+              phone: regPhone.trim(),
+              lat: coords.latitude,
+              lng: coords.longitude,
+              address: address,
+            }),
+          });
+        } catch (_) {}
+      }
 
-          let cityName = '';
-          let fullAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-
-          if (geoData.status === 'OK' && geoData.results.length > 0) {
-            fullAddress = geoData.results[0].formatted_address;
-
-            // Extract city from address_components
-            const components: any[] = geoData.results[0].address_components || [];
-            const cityComp = components.find((c: any) =>
-              c.types.includes('locality') ||
-              c.types.includes('sublocality_level_1') ||
-              c.types.includes('administrative_area_level_2')
-            );
-            const stateComp = components.find((c: any) =>
-              c.types.includes('administrative_area_level_1')
-            );
-            cityName = cityComp?.long_name || stateComp?.long_name || '';
-          }
-
-          setRegCity(cityName);
-          setRegAddress(fullAddress);
-
-          // Save lat/lng to backend profile immediately so NearbyGyms gets accurate distances
-          const email = regEmail.trim() || loginInput.trim();
-          if (email) {
-            try {
-              const { getApiUrl } = require('../../config');
-              await fetch(`${getApiUrl()}/api/user/sync-profile`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  email,
-                  name: regName.trim(),
-                  phone: regPhone.trim(),
-                  lat: latitude,
-                  lng: longitude,
-                  address: fullAddress,
-                }),
-              });
-            } catch (_) {}
-          }
-
-          showAlert('✅ Location Found', `City: ${cityName || 'Detected'}`);
-        } catch (e) {
-          // Fallback: just store raw coordinates
-          setRegAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-          setRegCity('Current Location');
-          showAlert('Location Set', 'Could not reverse geocode — coordinates saved.');
-        } finally {
-          setIsLocating(false);
-        }
-      },
-      (error) => {
-        setIsLocating(false);
-        let msg = 'Could not get location. Please type manually.';
-        if (error.code === 1) msg = 'Location permission denied. Please allow access in browser settings.';
-        if (error.code === 3) msg = 'Location request timed out. Please try again.';
-        showAlert('Location Error', msg);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+      showAlert('✅ Location Found', `City: ${city || 'Detected'}`);
+    } catch (error: any) {
+      showAlert('Location Error', error.message || 'Could not get location. Please type manually.');
+    } finally {
+      setIsLocating(false);
+    }
   };
 
 
@@ -314,7 +269,10 @@ export const Onboarding: React.FC = () => {
                 style={[
                   styles.goalCard, 
                   isLight && styles.goalCardLight,
-                  selectedGoal === goal.title && styles.goalCardActive
+                  selectedGoal === goal.title && styles.goalCardActive,
+                  selectedGoal === goal.title && {
+                    backgroundColor: isLight ? '#FFF5F5' : 'rgba(229, 9, 20, 0.15)',
+                  }
                 ]}
               >
                 <View style={styles.goalInfo}>
@@ -325,7 +283,7 @@ export const Onboarding: React.FC = () => {
                   </View>
                 </View>
                 <View style={[styles.radioOuter, selectedGoal === goal.title && styles.radioOuterActive]}>
-                  {selectedGoal === goal.title && <View style={styles.radioInner} />}
+                  {selectedGoal === goal.title && <Check size={10} color="#ffffff" strokeWidth={3} />}
                 </View>
               </TouchableOpacity>
             ))}
@@ -772,8 +730,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   goalCardActive: {
-    backgroundColor: 'rgba(229, 9, 20, 0.08)',
     borderColor: THEME.COLORS.primary,
+    borderWidth: 1.5,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   goalInfo: {
     flexDirection: 'row',
