@@ -158,7 +158,7 @@ export const GymDiscovery: React.FC = () => {
     <View style={[styles.container, { backgroundColor: bg }]}>
       
       {/* ================= VIEW 1: SEARCH & DISCOVERY LIST ================= */}
-      {!showDetails ? (
+      {!selectedGymId || !activeGym ? (
         <View style={{ flex: 1 }}>
           <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
             <View style={[styles.headerBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 20 }]}>
@@ -287,6 +287,7 @@ export const GymDiscovery: React.FC = () => {
               )}
             </View>
           </ScrollView>
+        </View>
       ) : (
         /* ================= VIEW 2: GYM DETAILS DEEP VIEW ================= */
         <View style={{ flex: 1 }}>
@@ -299,7 +300,7 @@ export const GymDiscovery: React.FC = () => {
             <View style={{ width: 34 }} />
           </View>
 
-          <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 80 }}>
+          <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
             {/* Cover image */}
             <View style={styles.coverImageBlock}>
               <Image source={{ uri: activeGym.image }} style={styles.coverImg} />
