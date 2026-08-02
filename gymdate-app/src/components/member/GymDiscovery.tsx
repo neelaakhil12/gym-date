@@ -118,6 +118,7 @@ export const GymDiscovery: React.FC = () => {
   });
 
   const activeGym = gyms.find(g => g.id === selectedGymId);
+  const showDetails = Boolean(selectedGymId && activeGym);
 
   const handleBuyPassClick = (plan: { name: string; price: number; duration: string }) => {
     setSelectedPlan(plan);
@@ -157,7 +158,7 @@ export const GymDiscovery: React.FC = () => {
     <View style={[styles.container, { backgroundColor: bg }]}>
       
       {/* ================= VIEW 1: SEARCH & DISCOVERY LIST ================= */}
-      {!selectedGymId && (
+      {!showDetails ? (
         <View style={{ flex: 1 }}>
           <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
             <View style={[styles.headerBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 20 }]}>
@@ -286,11 +287,8 @@ export const GymDiscovery: React.FC = () => {
               )}
             </View>
           </ScrollView>
-        </View>
-      )}
-
-      {/* ================= VIEW 2: GYM DETAILS DEEP VIEW ================= */}
-      {selectedGymId && activeGym && (
+      ) : (
+        /* ================= VIEW 2: GYM DETAILS DEEP VIEW ================= */
         <View style={{ flex: 1 }}>
           {/* Header toolbar */}
           <View style={[styles.detailHeaderBar, { backgroundColor: headerBarBg, borderBottomColor: headerBarBorder }]}>

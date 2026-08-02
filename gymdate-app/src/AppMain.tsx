@@ -29,6 +29,7 @@ const AppContent: React.FC = () => {
     currentRole, 
     activeScreen, 
     setActiveScreen, 
+    setSelectedGymId,
     isLoggedIn,
     themeMode,
     setThemeMode
@@ -109,7 +110,10 @@ const AppContent: React.FC = () => {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              onPress={() => setActiveScreen('discovery')}
+              onPress={() => {
+                setSelectedGymId(null);
+                setActiveScreen('discovery');
+              }}
               style={styles.navItem}
             >
               <Search size={18} color={activeScreen === 'discovery' || activeScreen === 'gym-details' ? THEME.COLORS.primary : inactiveIconColor} />
