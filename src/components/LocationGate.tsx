@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { MapPin, Crosshair, Search, Loader2, Navigation } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { reverseGeocode, searchLocation, LocationResult } from "@/lib/location";
 
 export default function LocationGate({ children }: { children: React.ReactNode }) {
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
@@ -10,6 +11,9 @@ export default function LocationGate({ children }: { children: React.ReactNode }
   const [showModal, setShowModal] = useState(false);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
 
   const checkLocation = async () => {
     try {
@@ -47,7 +51,7 @@ export default function LocationGate({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    // Safety fallback: Never keep the user on a white screen for more than 5 seconds
+    // Safety fallback: Never keep the user on a white screen for more than 2 seconds
     const safetyTimer = setTimeout(() => {
       setLoading(false);
     }, 2000);
@@ -58,6 +62,52 @@ export default function LocationGate({ children }: { children: React.ReactNode }
 
     return () => clearTimeout(safetyTimer);
   }, [nextAuthSession, nextAuthStatus]);
+
+  // Search location effect
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingLoc(true);
+      const results = await searchLocation(searchQuery);
+      setSearchResults(results);
+      setIsSearchingLoc(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSelectLocation = async (item: LocationResult) => {
+    setLocating(true);
+    setError("");
+    try {
+      const email = nextAuthSession?.user?.email;
+      const response = await fetch('/api/user/sync-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          lat: item.lat,
+          lng: item.lng,
+          address: item.address
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        localStorage.setItem('gymdate_location_verified', 'true');
+        setShowModal(false);
+        window.location.reload();
+      } else {
+        setError(result.error || "Failed to save location");
+      }
+    } catch (err) {
+      setError("Failed to save location");
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleGetLocation = () => {
     setLocating(true);
@@ -75,19 +125,7 @@ export default function LocationGate({ children }: { children: React.ReactNode }
         
         try {
           const email = nextAuthSession?.user?.email;
-          
-          // Reverse geocode to get a readable address
-          let readableAddress = "Current Location";
-          try {
-            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-            const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`);
-            const geoData = await geoRes.json();
-            if (geoData.status === "OK" && geoData.results.length > 0) {
-              readableAddress = geoData.results[0].formatted_address;
-            }
-          } catch (e) {
-            console.error("Reverse geocoding failed:", e);
-          }
+          const readableAddress = await reverseGeocode(latitude, longitude);
 
           const response = await fetch('/api/user/sync-profile', {
             method: 'POST',
@@ -116,9 +154,9 @@ export default function LocationGate({ children }: { children: React.ReactNode }
       },
       (err) => {
         let msg = "Please enable location access";
-        if (err.code === 1) msg = "Location access denied. Please enable in settings.";
-        if (err.code === 2) msg = "Location unavailable. Try searching manually.";
-        if (err.code === 3) msg = "Request timed out. Try again or search manually.";
+        if (err.code === 1) msg = "Location access denied. Please enable in settings or search your city.";
+        if (err.code === 2) msg = "Location unavailable. Try searching manually below.";
+        if (err.code === 3) msg = "Request timed out. Try again or search manually below.";
         setError(msg);
         setLocating(false);
       },
@@ -126,47 +164,20 @@ export default function LocationGate({ children }: { children: React.ReactNode }
     );
   };
 
-  const handleManualLocation = async (cityName: string) => {
-    // Mock coordinates for major cities
-    const cityCoords: any = {
-      "hyderabad": { lat: 17.3850, lng: 78.4867 },
-      "bangalore": { lat: 12.9716, lng: 77.5946 },
-      "mumbai": { lat: 19.0760, lng: 72.8777 },
-      "delhi": { lat: 28.6139, lng: 77.2090 },
-    };
-
-    const lowerCity = cityName.toLowerCase().trim();
-    const coords = cityCoords[lowerCity];
-    
-    if (!coords) {
-      setError("City not supported for manual search. Please use current location.");
-      setLocating(false);
-      return;
-    }
-
+  const handleManualLocationSubmit = async (queryText: string) => {
+    if (!queryText.trim()) return;
     setLocating(true);
+    setError("");
     try {
-      const email = nextAuthSession?.user?.email;
-      const response = await fetch('/api/user/sync-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          lat: coords.lat,
-          lng: coords.lng,
-          address: cityName
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        localStorage.setItem('gymdate_location_verified', 'true');
-        setShowModal(false);
-        window.location.reload();
+      const results = await searchLocation(queryText);
+      if (results.length > 0) {
+        await handleSelectLocation(results[0]);
+      } else {
+        setError("Location not found. Please try searching with city name (e.g. Hyderabad).");
+        setLocating(false);
       }
-    } catch (err) {
-      setError("Failed to save location");
-    } finally {
+    } catch (e) {
+      setError("Search failed. Please try again.");
       setLocating(false);
     }
   };
@@ -222,16 +233,34 @@ export default function LocationGate({ children }: { children: React.ReactNode }
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search your city (e.g. Hyderabad)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search your city or area (e.g. Hyderabad, Alwal)"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleManualLocation((e.target as HTMLInputElement).value);
+                      if (e.key === 'Enter') handleManualLocationSubmit(searchQuery);
                     }}
-                    className="w-full pl-14 pr-5 py-5 rounded-[24px] bg-gray-50 border border-gray-100 outline-none focus:bg-white focus:border-primary transition-all font-bold"
+                    className="w-full pl-14 pr-10 py-5 rounded-[24px] bg-gray-50 border border-gray-100 outline-none focus:bg-white focus:border-primary transition-all font-bold text-sm"
                   />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within:opacity-100 transition-opacity">
-                    <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded-md">PRESS ENTER</span>
-                  </div>
+                  {isSearchingLoc && (
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+                  )}
                 </div>
+
+                {/* Search Results Dropdown */}
+                {searchResults.length > 0 && (
+                  <div className="w-full bg-white border border-gray-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto divide-y divide-gray-50 text-left">
+                    {searchResults.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectLocation(item)}
+                        className="w-full p-3.5 hover:bg-primary/5 flex items-center space-x-3 text-xs font-bold text-secondary transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">{item.address}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 
                 {error && (
                   <p className="text-red-500 text-xs font-bold bg-red-50 py-3 px-4 rounded-xl flex items-center justify-center space-x-2">

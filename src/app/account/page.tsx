@@ -38,6 +38,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { gyms as mockGyms } from "@/data/mockData";
 import { getGyms } from "@/lib/supabase";
+import { reverseGeocode, searchLocation, LocationResult } from "@/lib/location";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -52,6 +53,9 @@ export default function AccountPage() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
+  const [isSearchingLoc, setIsSearchingLoc] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const { data: nextAuthSession, status } = useSession();
@@ -205,12 +209,57 @@ export default function AccountPage() {
     }
   };
 
+  // Search location effect
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingLoc(true);
+      const results = await searchLocation(searchQuery);
+      setSearchResults(results);
+      setIsSearchingLoc(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSelectLocation = async (item: LocationResult) => {
+    try {
+      setLocating(true);
+      setLocError("");
+      const response = await fetch('/api/user/sync-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: displayEmail,
+          lat: item.lat,
+          lng: item.lng,
+          address: item.address
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSupabaseUser(result.user);
+        setIsLocationModalOpen(false);
+        setSearchQuery("");
+        setSearchResults([]);
+      } else {
+        setLocError(result.error || "Failed to save location");
+      }
+    } catch (err) {
+      setLocError("Failed to save location");
+    } finally {
+      setLocating(false);
+    }
+  };
+
   const handleUpdateLocation = () => {
     setLocating(true);
     setLocError("");
 
     if (!navigator.geolocation) {
-      setLocError("Geolocation is not supported");
+      setLocError("Geolocation is not supported by your browser");
       setLocating(false);
       return;
     }
@@ -219,27 +268,8 @@ export default function AccountPage() {
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
+          const detectedAddress = await reverseGeocode(latitude, longitude);
 
-          // 1. Fetch State name using Reverse Geocoding (Nominatim - Free)
-          let detectedAddress = "Current Location";
-          try {
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
-            const geoData = await geoRes.json();
-            
-            // Combine City/Village and State
-            const city = geoData.address?.city || geoData.address?.town || geoData.address?.village || geoData.address?.suburb || geoData.address?.county;
-            const state = geoData.address?.state;
-            
-            if (city && state) {
-              detectedAddress = `${city}, ${state}`;
-            } else {
-              detectedAddress = city || state || "Current Location";
-            }
-          } catch (geoErr) {
-            console.error("Reverse geocoding error:", geoErr);
-          }
-
-          // 2. Sync profile with the detected state/address
           const response = await fetch('/api/user/sync-profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -254,6 +284,8 @@ export default function AccountPage() {
           if (result.success) {
             setSupabaseUser(result.user);
             setIsLocationModalOpen(false);
+          } else {
+            setLocError(result.error || "Failed to save location");
           }
         } catch (err) {
           setLocError("Failed to save location");
@@ -262,7 +294,7 @@ export default function AccountPage() {
         }
       },
       () => {
-        setLocError("Location access denied");
+        setLocError("Location access denied. Please search your area manually below.");
         setLocating(false);
       }
     );
@@ -510,9 +542,18 @@ export default function AccountPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Location</label>
-                      <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 font-bold text-secondary flex items-center">
-                        <MapPin className="w-4 h-4 mr-2 text-primary" />
-                        <span>{supabaseUser?.address || "Location not set"}</span>
+                      <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 font-bold text-secondary flex items-center justify-between">
+                        <div className="flex items-center space-x-2 min-w-0 pr-2">
+                          <MapPin className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-sm break-words">{supabaseUser?.address || "Location not set"}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsLocationModalOpen(true)}
+                          className="px-4 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl text-xs font-black transition-all flex items-center space-x-1 shrink-0 ml-2"
+                        >
+                          <span>Edit</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -785,47 +826,81 @@ export default function AccountPage() {
       {/* Add Address Modal */}
       {isLocationModalOpen && (
         <div className="fixed inset-0 z-[200] bg-secondary/80 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-md rounded-[40px] p-10 shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="bg-white w-full max-w-md rounded-[40px] p-8 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                 <MapPin className="w-8 h-8 text-primary" />
               </div>
               
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-secondary tracking-tighter">Add Address</h3>
-                <p className="text-gray-400 text-xs font-medium">Select how you want to add your new gym location.</p>
+                <h3 className="text-2xl font-black text-secondary tracking-tighter">Update Location</h3>
+                <p className="text-gray-400 text-xs font-medium">Use GPS or search your area to set your gym location.</p>
               </div>
 
-              <div className="w-full space-y-4 pt-4">
+              <div className="w-full space-y-4 pt-2">
                 <button
                   onClick={handleUpdateLocation}
                   disabled={locating}
-                  className="w-full py-5 bg-primary text-white rounded-[24px] font-black flex items-center justify-center space-x-3 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-70"
+                  className="w-full py-4 bg-primary text-white rounded-[24px] font-black flex items-center justify-center space-x-3 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-70 text-sm"
                 >
                   {locating ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <Crosshair className="w-5 h-5" />
                   )}
-                  <span>{locating ? "Locating..." : "Use Current Location"}</span>
+                  <span>{locating ? "Detecting location..." : "Use Current GPS Location"}</span>
                 </button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-100"></span>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase">
+                    <span className="bg-white px-3 text-gray-400 font-black tracking-widest">or search area</span>
+                  </div>
+                </div>
 
                 <div className="relative group">
                   <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search city or area"
-                    className="w-full pl-14 pr-5 py-5 rounded-[24px] bg-gray-50 border border-gray-100 outline-none focus:bg-white focus:border-primary transition-all font-bold text-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search city or area (e.g. Alwal, Hyderabad)"
+                    className="w-full pl-14 pr-10 py-4 rounded-[24px] bg-gray-50 border border-gray-100 outline-none focus:bg-white focus:border-primary transition-all font-bold text-xs"
                   />
+                  {isSearchingLoc && (
+                    <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+                  )}
                 </div>
+
+                {/* Search Results Dropdown */}
+                {searchResults.length > 0 && (
+                  <div className="w-full bg-white border border-gray-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto divide-y divide-gray-50 text-left">
+                    {searchResults.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectLocation(item)}
+                        className="w-full p-3.5 hover:bg-primary/5 flex items-center space-x-3 text-xs font-bold text-secondary transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate">{item.address}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 
                 {locError && (
                   <p className="text-red-500 text-[10px] font-black uppercase bg-red-50 py-3 px-4 rounded-xl">{locError}</p>
                 )}
 
                 <button 
-                  onClick={() => setIsLocationModalOpen(false)}
-                  className="w-full py-4 text-gray-400 font-bold text-xs hover:text-secondary transition-all"
+                  onClick={() => {
+                    setIsLocationModalOpen(false);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                  }}
+                  className="w-full py-3 text-gray-400 font-bold text-xs hover:text-secondary transition-all"
                 >
                   Cancel
                 </button>
