@@ -82,7 +82,7 @@ export const HomeDashboard: React.FC = () => {
   const isLight = themeMode === 'light';
 
   return (
-    <ScrollView style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} contentContainerStyle={{ paddingBottom: 95 }}>
       {/* 1. Header Toolbar */}
       <View style={styles.headerBar}>
         <View style={styles.profileRow}>
