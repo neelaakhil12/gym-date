@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Dumbbell, PlusCircle, LogOut, Menu, X, Settings } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import StaffAuthProvider from "@/components/StaffAuthProvider";
+import { isStaffSettingsEnabled } from "@/actions/adminActions";
 
 const staffLinks = [
   { name: "All Gyms", href: "/operation-admin/gyms", icon: Dumbbell },
@@ -18,8 +19,17 @@ function StaffDashboardContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [allowSettings, setAllowSettings] = useState<boolean | null>(null);
 
   const publicPaths = ["/operation-admin"];
+
+  useEffect(() => {
+    async function checkPermission() {
+      const enabled = await isStaffSettingsEnabled();
+      setAllowSettings(enabled);
+    }
+    checkPermission();
+  }, [pathname]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -30,7 +40,10 @@ function StaffDashboardContent({ children }: { children: React.ReactNode }) {
     if (session && (session.user as any)?.role !== "operation_admin" && !publicPaths.includes(pathname)) {
       signOut({ callbackUrl: "/operation-admin" });
     }
-  }, [session, status, pathname, router]);
+    if (allowSettings === false && pathname === "/operation-admin/settings") {
+      router.push("/operation-admin/gyms");
+    }
+  }, [session, status, pathname, router, allowSettings]);
 
   // On public login page — render without sidebar
   if (publicPaths.includes(pathname)) {
@@ -52,6 +65,13 @@ function StaffDashboardContent({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  const visibleLinks = staffLinks.filter((link) => {
+    if (link.href === "/operation-admin/settings") {
+      return allowSettings === true;
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -75,7 +95,7 @@ function StaffDashboardContent({ children }: { children: React.ReactNode }) {
 
           {/* Links */}
           <div className="flex-1 px-4 py-6 space-y-2">
-            {staffLinks.map((link) => {
+            {visibleLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname?.startsWith(link.href);
               return (

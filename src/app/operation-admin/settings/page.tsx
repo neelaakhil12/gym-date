@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { 
   Settings as SettingsIcon, 
   Save, 
@@ -10,9 +11,11 @@ import {
   Gift,
   Coins,
   ShieldCheck,
-  UserPlus
+  UserPlus,
+  ShieldAlert,
+  ArrowLeft
 } from "lucide-react";
-import { getPlatformConfig, updatePlatformConfig } from "@/actions/adminActions";
+import { getPlatformConfig, updatePlatformConfig, isStaffSettingsEnabled } from "@/actions/adminActions";
 
 interface ConfigItem {
   key: string;
@@ -23,6 +26,7 @@ interface ConfigItem {
 export default function OperationSettings() {
   const [config, setConfig] = useState<ConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [allowed, setAllowed] = useState<boolean | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -32,11 +36,12 @@ export default function OperationSettings() {
 
   async function loadConfig() {
     setLoading(true);
-    const data = await getPlatformConfig();
-    // For Operations staff, we might want to only show specific keys, 
-    // but the user asked for "same user refer bonus edit option", so showing all is fine.
-    // Hide only the redundant user key we deleted earlier
-    setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
+    const isAllowed = await isStaffSettingsEnabled();
+    setAllowed(isAllowed);
+    if (isAllowed) {
+      const data = await getPlatformConfig();
+      setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings'));
+    }
     setLoading(false);
   }
 
@@ -92,6 +97,23 @@ export default function OperationSettings() {
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
           <RefreshCw className="w-10 h-10 text-primary animate-spin mb-4" />
           <p className="text-gray-400 font-bold animate-pulse">Loading configurations...</p>
+        </div>
+      ) : allowed === false ? (
+        <div className="bg-white p-10 rounded-3xl border border-red-100 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
+          <div className="p-4 bg-red-50 rounded-full text-red-500">
+            <ShieldAlert className="w-12 h-12" />
+          </div>
+          <h2 className="text-xl font-black text-secondary">Settings Access Disabled</h2>
+          <p className="text-sm text-gray-500 max-w-md">
+            Super Admin has currently turned off Settings access for Operations Staff. Please contact the Super Admin if you need access enabled.
+          </p>
+          <Link
+            href="/operation-admin/gyms"
+            className="px-6 py-3 bg-secondary text-white rounded-2xl font-bold text-xs hover:bg-black transition-all flex items-center space-x-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to All Gyms</span>
+          </Link>
         </div>
       ) : (
         <div className="grid gap-6">

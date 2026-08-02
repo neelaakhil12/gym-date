@@ -10,7 +10,10 @@ import {
   Gift,
   Coins,
   ShieldCheck,
-  UserPlus
+  UserPlus,
+  ToggleLeft,
+  ToggleRight,
+  SlidersHorizontal
 } from "lucide-react";
 import { getPlatformConfig, updatePlatformConfig } from "@/actions/adminActions";
 
@@ -33,7 +36,7 @@ export default function AdminSettings() {
   async function loadConfig() {
     setLoading(true);
     const data = await getPlatformConfig();
-    // Hide only the redundant user key we deleted earlier
+    // Hide redundant keys
     setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user'));
     setLoading(false);
   }
@@ -44,12 +47,17 @@ export default function AdminSettings() {
     const res = await updatePlatformConfig(key, value);
     if (res.success) {
       setMessage({ type: 'success', text: `Successfully updated ${key.replace(/_/g, ' ')}` });
-      // Clear message after 3 seconds
       setTimeout(() => setMessage(null), 3000);
     } else {
       setMessage({ type: 'error', text: res.error || "Update failed" });
     }
     setSavingKey(null);
+  };
+
+  const handleToggleStaffSettings = async (currentVal: string) => {
+    const newVal = (currentVal === 'true' || currentVal === '1') ? 'false' : 'true';
+    setConfig(prev => prev.map(item => item.key === 'allow_staff_settings' ? { ...item, value: newVal } : item));
+    await handleSave('allow_staff_settings', newVal);
   };
 
   const handleValueChange = (key: string, newValue: string) => {
@@ -64,6 +72,10 @@ export default function AdminSettings() {
     if (key.includes('wallet')) return <Coins className="w-5 h-5 text-amber-500" />;
     return <SettingsIcon className="w-5 h-5 text-gray-500" />;
   };
+
+  const staffSettingItem = config.find(item => item.key === 'allow_staff_settings');
+  const generalConfigs = config.filter(item => item.key !== 'allow_staff_settings');
+  const isStaffAccessEnabled = staffSettingItem?.value === 'true' || staffSettingItem?.value === '1';
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -93,7 +105,49 @@ export default function AdminSettings() {
         </div>
       ) : (
         <div className="grid gap-6">
-          {config.map((item) => (
+          {/* Staff Settings Access Control Toggle Card */}
+          <div className="bg-gradient-to-br from-white to-gray-50 p-6 rounded-3xl border border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-2xl shrink-0">
+                <SlidersHorizontal className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
+                    Allow Staff Admin Settings Access
+                  </h3>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase ${
+                    isStaffAccessEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {isStaffAccessEnabled ? 'ENABLED' : 'DISABLED'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 font-medium mt-1 leading-relaxed">
+                  When turned <strong className="text-secondary">ON</strong>, Operations Staff Admin will see and can edit the <strong>Settings</strong> tab. When turned <strong className="text-secondary">OFF</strong>, the Settings tab is hidden for staff.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleToggleStaffSettings(staffSettingItem?.value || 'false')}
+                disabled={savingKey === 'allow_staff_settings'}
+                className={`relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  isStaffAccessEnabled ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-8 w-8 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    isStaffAccessEnabled ? 'translate-x-7' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* General Numeric Platform Configurations */}
+          {generalConfigs.map((item) => (
             <div key={item.key} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-gray-50 rounded-2xl flex-shrink-0">

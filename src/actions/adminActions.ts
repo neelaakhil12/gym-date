@@ -703,14 +703,32 @@ export async function getPlatformConfig() {
         "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
         ['platform_commission', '10', 'Global platform commission percentage (fallback for all gyms).']
       );
-      const updated = await query("SELECT * FROM platform_config ORDER BY key ASC");
-      configs = updated.rows;
     }
 
-    return configs;
+    // Ensure allow_staff_settings exists for toggling staff settings access
+    if (!configs.find((c: any) => c.key === 'allow_staff_settings')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['allow_staff_settings', 'false', 'Enable or disable Settings tab visibility for operations staff.']
+      );
+    }
+
+    const updated = await query("SELECT * FROM platform_config ORDER BY key ASC");
+    return updated.rows || [];
   } catch (error) {
     console.error("Error fetching platform config", error);
     return [];
+  }
+}
+
+export async function isStaffSettingsEnabled(): Promise<boolean> {
+  try {
+    const res = await query("SELECT value FROM platform_config WHERE key = 'allow_staff_settings' LIMIT 1");
+    if (!res.rows || res.rows.length === 0) return false;
+    return res.rows[0].value === 'true' || res.rows[0].value === '1';
+  } catch (err) {
+    console.error("Error checking staff settings access:", err);
+    return false;
   }
 }
 
@@ -721,6 +739,8 @@ export async function updatePlatformConfig(key: string, value: string) {
       [key, value]
     );
     revalidatePath("/admin/settings");
+    revalidatePath("/operation-admin");
+    revalidatePath("/operation-admin/settings");
     return { success: true };
   } catch (error: any) {
     console.error("Error updating platform config", error);
