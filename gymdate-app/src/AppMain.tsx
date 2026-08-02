@@ -16,6 +16,8 @@ import { THEME } from './theme';
 // @ts-ignore
 import RootErrorBoundary from './components/shared/ErrorBoundary';
 
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 // Safe Lucide Native Icons
 import { 
   Home, 
@@ -34,6 +36,10 @@ const AppContent: React.FC = () => {
     themeMode,
     setThemeMode
   } = useGymDate();
+
+  const insets = useSafeAreaInsets();
+  const safeBottom = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8);
+  const dynamicNavHeight = 58 + safeBottom;
 
 
   // Screen Switcher routing engine
@@ -96,7 +102,7 @@ const AppContent: React.FC = () => {
 
         {/* Custom React Native styled bottom navigation footer row */}
         {showBottomNav && (
-          <View style={[styles.bottomNav, isLight && { backgroundColor: '#ffffff', borderTopColor: '#e5e7eb' }]}>
+          <View style={[styles.bottomNav, { height: dynamicNavHeight, paddingBottom: safeBottom }, isLight && { backgroundColor: '#ffffff', borderTopColor: '#e5e7eb' }]}>
             <TouchableOpacity 
               onPress={() => setActiveScreen('home')}
               style={styles.navItem}
@@ -158,9 +164,11 @@ const AppContent: React.FC = () => {
 export default function App() {
   return (
     <RootErrorBoundary>
-      <GymDateProvider>
-        <AppContent />
-      </GymDateProvider>
+      <SafeAreaProvider>
+        <GymDateProvider>
+          <AppContent />
+        </GymDateProvider>
+      </SafeAreaProvider>
     </RootErrorBoundary>
   );
 }
@@ -175,12 +183,10 @@ const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: 'row',
-    height: Platform.OS === 'ios' ? 90 : 115,
     backgroundColor: '#0a0b10',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 50,
+    paddingTop: 6,
     alignItems: 'center',
     justifyContent: 'space-around',
     position: 'absolute',
@@ -193,8 +199,7 @@ const styles = StyleSheet.create({
   navItem: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 4,
+    justifyContent: 'center',
     height: '100%',
     cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
