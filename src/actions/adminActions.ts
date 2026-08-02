@@ -775,18 +775,8 @@ export async function toggleStaffSettingsAccess(staffId: string, canAccess: bool
     revalidatePath("/operation-admin/settings");
     return { success: true };
   } catch (error: any) {
-    console.error("Error toggling staff settings access, attempting column creation:", error);
-    try {
-      await query("ALTER TABLE staff_users ADD COLUMN can_access_settings BOOLEAN DEFAULT FALSE");
-      await query("UPDATE staff_users SET can_access_settings = $1 WHERE id::text = $2", [canAccess, String(staffId)]);
-      revalidatePath("/admin/users");
-      revalidatePath("/operation-admin");
-      revalidatePath("/operation-admin/settings");
-      return { success: true };
-    } catch (retryErr: any) {
-      console.error("Retry failed:", retryErr);
-      return { success: false, error: retryErr.message };
-    }
+    console.error("Error toggling staff settings access:", error);
+    return { success: false, error: error.message };
   }
 }
 
