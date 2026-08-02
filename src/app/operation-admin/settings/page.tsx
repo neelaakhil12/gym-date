@@ -15,7 +15,8 @@ import {
   ShieldAlert,
   ArrowLeft
 } from "lucide-react";
-import { getPlatformConfig, updatePlatformConfig, isStaffSettingsEnabled } from "@/actions/adminActions";
+import { useSession } from "next-auth/react";
+import { getPlatformConfig, updatePlatformConfig, checkStaffSettingsAccess } from "@/actions/adminActions";
 
 interface ConfigItem {
   key: string;
@@ -24,6 +25,7 @@ interface ConfigItem {
 }
 
 export default function OperationSettings() {
+  const { data: session, status } = useSession();
   const [config, setConfig] = useState<ConfigItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState<boolean | null>(null);
@@ -31,19 +33,21 @@ export default function OperationSettings() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
-    loadConfig();
-  }, []);
-
-  async function loadConfig() {
-    setLoading(true);
-    const isAllowed = await isStaffSettingsEnabled();
-    setAllowed(isAllowed);
-    if (isAllowed) {
-      const data = await getPlatformConfig();
-      setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings'));
+    async function loadConfig() {
+      setLoading(true);
+      const email = session?.user?.email || undefined;
+      const isAllowed = await checkStaffSettingsAccess(email);
+      setAllowed(isAllowed);
+      if (isAllowed) {
+        const data = await getPlatformConfig();
+        setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings'));
+      }
+      setLoading(false);
     }
-    setLoading(false);
-  }
+    if (status !== 'loading') {
+      loadConfig();
+    }
+  }, [session, status]);
 
   const handleSave = async (key: string, value: string) => {
     setSavingKey(key);

@@ -16,9 +16,10 @@ import {
   Plus,
   X,
   ShieldCheck,
-  Key
+  Key,
+  Settings
 } from "lucide-react";
-import { getAllProfiles, deleteAccount, createOperationAdmin } from "@/actions/adminActions";
+import { getAllProfiles, deleteAccount, createOperationAdmin, toggleStaffSettingsAccess } from "@/actions/adminActions";
 
 type Tab = "users" | "partners" | "admins";
 
@@ -28,6 +29,7 @@ export default function AdminUsers() {
   const [activeTab, setActiveTab] = useState<Tab>("users");
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newAdmin, setNewAdmin] = useState({ email: "", password: "", full_name: "" });
   const [isCreating, setIsCreating] = useState(false);
@@ -41,6 +43,17 @@ export default function AdminUsers() {
     }
     loadProfiles();
   }, []);
+
+  const handleToggleSettingsAccess = async (id: string, newAccess: boolean) => {
+    setTogglingId(id);
+    const res = await toggleStaffSettingsAccess(id, newAccess);
+    if (res.success) {
+      setProfiles(prev => prev.map(p => p.id === id ? { ...p, can_access_settings: newAccess } : p));
+    } else {
+      alert(res.error || "Failed to update staff permission");
+    }
+    setTogglingId(null);
+  };
 
   const handleDelete = async (id: string, role: string) => {
     if (!window.confirm(`Are you sure you want to delete this ${role}? This action is permanent and will delete all associated data.`)) {
@@ -330,15 +343,37 @@ export default function AdminUsers() {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {profile.role_id !== 'super_admin' && (
-                        <button
-                          onClick={() => handleDelete(profile.id, profile.role_id)}
-                          disabled={deletingId === profile.id}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30"
-                        >
-                          {deletingId === profile.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-3">
+                        {profile.role_id === 'operation_admin' && (
+                          <button
+                            onClick={() => handleToggleSettingsAccess(profile.id, !profile.can_access_settings)}
+                            disabled={togglingId === profile.id}
+                            title="Toggle Settings Tab Access for this Staff Member"
+                            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all border ${
+                              profile.can_access_settings
+                                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 shadow-sm'
+                                : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                            }`}
+                          >
+                            {togglingId === profile.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Settings className="w-3.5 h-3.5" />
+                            )}
+                            <span>Settings Access: {profile.can_access_settings ? 'ON' : 'OFF'}</span>
+                          </button>
+                        )}
+                        {profile.role_id !== 'super_admin' && (
+                          <button
+                            onClick={() => handleDelete(profile.id, profile.role_id)}
+                            disabled={deletingId === profile.id}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30"
+                            title="Delete Account"
+                          >
+                            {deletingId === profile.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -126,10 +126,10 @@ export async function getAllProfiles() {
 
     // 2. Fetch Staff (Operation Admins)
     try {
-      const staffRes = await query("SELECT id, email, full_name, 'operation_admin' as role_id FROM staff_users");
+      await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+      const staffRes = await query("SELECT id, email, full_name, 'operation_admin' as role_id, COALESCE(can_access_settings, false) as can_access_settings FROM staff_users");
       if (staffRes.rows) profiles.push(...staffRes.rows);
     } catch (e: any) {
-      // Don't push error if table doesn't exist yet, just log it
       console.error("Staff Fetch Error:", e.message);
     }
 
@@ -732,6 +732,36 @@ export async function isStaffSettingsEnabled(): Promise<boolean> {
   }
 }
 
+export async function checkStaffSettingsAccess(email?: string): Promise<boolean> {
+  if (!email) return false;
+  try {
+    await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+    const res = await query("SELECT can_access_settings FROM staff_users WHERE email = $1 LIMIT 1", [email]);
+    if (res.rows && res.rows.length > 0 && res.rows[0].can_access_settings !== null) {
+      return Boolean(res.rows[0].can_access_settings);
+    }
+    // Fallback to global config key if per-user setting not set
+    return await isStaffSettingsEnabled();
+  } catch (err) {
+    console.error("Error checking staff settings access by email:", err);
+    return false;
+  }
+}
+
+export async function toggleStaffSettingsAccess(staffId: string, canAccess: boolean) {
+  try {
+    await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+    await query("UPDATE staff_users SET can_access_settings = $1 WHERE id = $2", [canAccess, staffId]);
+    revalidatePath("/admin/users");
+    revalidatePath("/operation-admin");
+    revalidatePath("/operation-admin/settings");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error toggling staff settings access:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updatePlatformConfig(key: string, value: string) {
   try {
     await query(
@@ -739,6 +769,7 @@ export async function updatePlatformConfig(key: string, value: string) {
       [key, value]
     );
     revalidatePath("/admin/settings");
+    revalidatePath("/admin/users");
     revalidatePath("/operation-admin");
     revalidatePath("/operation-admin/settings");
     return { success: true };

@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Dumbbell, PlusCircle, LogOut, Menu, X, Settings } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import StaffAuthProvider from "@/components/StaffAuthProvider";
-import { isStaffSettingsEnabled } from "@/actions/adminActions";
+import { checkStaffSettingsAccess } from "@/actions/adminActions";
 
 const staffLinks = [
   { name: "All Gyms", href: "/operation-admin/gyms", icon: Dumbbell },
@@ -25,11 +25,13 @@ function StaffDashboardContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function checkPermission() {
-      const enabled = await isStaffSettingsEnabled();
-      setAllowSettings(enabled);
+      if (session?.user?.email) {
+        const enabled = await checkStaffSettingsAccess(session.user.email);
+        setAllowSettings(enabled);
+      }
     }
     checkPermission();
-  }, [pathname]);
+  }, [session?.user?.email, pathname]);
 
   useEffect(() => {
     if (status === "loading") return;
