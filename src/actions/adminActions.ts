@@ -126,8 +126,19 @@ export async function getAllProfiles() {
 
     // 2. Fetch Staff (Operation Admins)
     try {
-      await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
-      const staffRes = await query("SELECT id, email, full_name, 'operation_admin' as role_id, COALESCE(can_access_settings, false) as can_access_settings FROM staff_users");
+      try {
+        await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+      } catch (alterErr: any) {
+        console.warn("Could not alter staff_users table:", alterErr.message);
+      }
+
+      let staffRes;
+      try {
+        staffRes = await query("SELECT id::text as id, email, full_name, 'operation_admin' as role_id, COALESCE(can_access_settings, false) as can_access_settings FROM staff_users");
+      } catch (selectErr) {
+        staffRes = await query("SELECT id::text as id, email, full_name, 'operation_admin' as role_id, false as can_access_settings FROM staff_users");
+      }
+      
       if (staffRes.rows) profiles.push(...staffRes.rows);
     } catch (e: any) {
       console.error("Staff Fetch Error:", e.message);
@@ -735,8 +746,11 @@ export async function isStaffSettingsEnabled(): Promise<boolean> {
 export async function checkStaffSettingsAccess(email?: string): Promise<boolean> {
   if (!email) return false;
   try {
-    await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
-    const res = await query("SELECT can_access_settings FROM staff_users WHERE email = $1 LIMIT 1", [email]);
+    try {
+      await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+    } catch (e) {}
+
+    const res = await query("SELECT can_access_settings FROM staff_users WHERE LOWER(email) = LOWER($1) LIMIT 1", [email]);
     if (res.rows && res.rows.length > 0 && res.rows[0].can_access_settings !== null) {
       return Boolean(res.rows[0].can_access_settings);
     }
@@ -744,14 +758,17 @@ export async function checkStaffSettingsAccess(email?: string): Promise<boolean>
     return await isStaffSettingsEnabled();
   } catch (err) {
     console.error("Error checking staff settings access by email:", err);
-    return false;
+    return await isStaffSettingsEnabled();
   }
 }
 
 export async function toggleStaffSettingsAccess(staffId: string, canAccess: boolean) {
   try {
-    await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
-    await query("UPDATE staff_users SET can_access_settings = $1 WHERE id = $2", [canAccess, staffId]);
+    try {
+      await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+    } catch (e) {}
+
+    await query("UPDATE staff_users SET can_access_settings = $1 WHERE id::text = $2", [canAccess, String(staffId)]);
     revalidatePath("/admin/users");
     revalidatePath("/operation-admin");
     revalidatePath("/operation-admin/settings");
