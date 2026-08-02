@@ -87,14 +87,6 @@ export default function AdminGyms() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex items-center space-x-2">
-          <select className="block w-full pl-3 pr-10 py-2.5 text-base border border-gray-200 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-xl bg-gray-50 hover:bg-white transition-colors cursor-pointer">
-            <option value="all">All Statuses</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
       </div>
 
       {/* Gyms Table */}
