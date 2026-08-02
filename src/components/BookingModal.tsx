@@ -139,8 +139,8 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-[300] bg-secondary/80 backdrop-blur-xl flex items-center justify-center p-6">
-        <div className="bg-white w-full max-w-md rounded-[40px] p-10 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="fixed inset-0 z-[300] bg-secondary/80 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 overflow-y-auto min-h-[100dvh] safe-pb">
+        <div className="bg-white w-full max-w-md rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[85dvh] sm:max-h-none overflow-y-auto my-auto">
           <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
@@ -164,8 +164,8 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
   }
 
   return (
-    <div className="fixed inset-0 z-[300] bg-secondary/60 backdrop-blur-sm flex items-center justify-center p-6 overflow-y-auto">
-      <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl animate-in fade-in zoom-in-95 duration-300 relative my-auto">
+    <div className="fixed inset-0 z-[300] bg-secondary/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 overflow-y-auto min-h-[100dvh] safe-pb">
+      <div className="bg-white w-full max-w-lg rounded-[32px] sm:rounded-[40px] shadow-2xl animate-in fade-in zoom-in-95 duration-300 relative my-auto max-h-[90dvh] overflow-y-auto">
         {/* Close Button */}
         <button 
           onClick={onClose}

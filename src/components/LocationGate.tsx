@@ -192,8 +192,8 @@ export default function LocationGate({ children }: { children: React.ReactNode }
   return (
     <>
       {showModal && (
-        <div className="fixed inset-0 z-[200] bg-secondary/80 backdrop-blur-xl flex items-center justify-center p-6">
-          <div className="bg-white w-full max-w-lg rounded-[40px] p-10 shadow-2xl animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[200] bg-secondary/80 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 overflow-y-auto min-h-[100dvh] safe-pb">
+          <div className="bg-white w-full max-w-lg rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[85dvh] sm:max-h-none overflow-y-auto my-auto">
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center animate-bounce">
                 <MapPin className="w-10 h-10 text-primary" />
