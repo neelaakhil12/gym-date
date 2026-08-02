@@ -324,7 +324,7 @@ export const NearbyGyms: React.FC = () => {
           </TouchableOpacity>
         ))}
 
-        <View style={{ height: 95 }} />
+        <View style={{ height: 130 }} />
       </ScrollView>
     </View>
   );

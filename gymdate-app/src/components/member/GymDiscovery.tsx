@@ -159,7 +159,7 @@ export const GymDiscovery: React.FC = () => {
       {/* ================= VIEW 1: SEARCH & DISCOVERY LIST ================= */}
       {!selectedGymId && (
         <View style={{ flex: 1 }}>
-          <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 95 }}>
+          <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
             <View style={[styles.headerBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 20 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.titleText, { color: textPrimary }]}>Find Your Gym</Text>
