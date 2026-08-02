@@ -37,6 +37,13 @@ export async function GET() {
       console.warn("Gym columns already exist or permission issue");
     }
 
+    // 3b. Repair/Create staff_users table columns
+    try {
+      await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+    } catch (e) {
+      console.warn("staff_users column error");
+    }
+
     // 4. Create Referral Transactions table
     await query(`
       CREATE TABLE IF NOT EXISTS referral_transactions (
