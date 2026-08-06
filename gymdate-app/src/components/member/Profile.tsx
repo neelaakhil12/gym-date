@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -9,13 +9,14 @@ import {
   Image, 
   Alert,
   Platform,
-  Linking
+  Linking,
+  ActivityIndicator
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
-import { apiService } from '../../services/apiService';
+import { apiService, ApiBooking, ApiWalletData } from '../../services/apiService';
 import { 
   User, 
   Gift, 
@@ -35,7 +36,10 @@ import {
   Compass,
   ArrowRight,
   Menu,
-  ChevronLeft
+  ChevronLeft,
+  QrCode,
+  Calendar,
+  CheckCircle2
 } from 'lucide-react-native';
 
 export const Profile: React.FC = () => {
@@ -64,10 +68,40 @@ export const Profile: React.FC = () => {
   const [isLocating, setIsLocating] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  React.useEffect(() => {
+  // Real API data — wallet/referral and raw bookings
+  const [walletData, setWalletData] = useState<ApiWalletData | null>(null);
+  const [rawBookings, setRawBookings] = useState<ApiBooking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+
+  useEffect(() => {
     setNameVal(userProfile.name);
     setPhoneVal(userProfile.phone);
   }, [userProfile.name, userProfile.phone]);
+
+  // Fetch real wallet data and full API bookings on mount
+  useEffect(() => {
+    const loadAccountData = async () => {
+      if (!userProfile.email) return;
+      setBookingsLoading(true);
+      try {
+        // 1. Fetch raw bookings with all fields (plan_name, amount, start_date, end_date, ticket_code, etc.)
+        const apiBkgs = await apiService.getBookings(userProfile.email);
+        setRawBookings(apiBkgs);
+
+        // 2. Fetch real profile to get userId, then fetch wallet data
+        const profileData = await apiService.getProfile(userProfile.email);
+        if (profileData && (profileData as any).id) {
+          const wData = await apiService.getWalletData((profileData as any).id);
+          if (wData) setWalletData(wData);
+        }
+      } catch (err) {
+        console.warn('[Profile] Failed to load account data:', err);
+      } finally {
+        setBookingsLoading(false);
+      }
+    };
+    loadAccountData();
+  }, [userProfile.email]);
 
   const handleSaveProfile = async () => {
     if (!nameVal.trim()) {
@@ -102,8 +136,8 @@ export const Profile: React.FC = () => {
 
   const initials = getInitials(userProfile.name);
 
-  // Copy referral code mockup
-  const referralLink = `https://gymdate.in/signup?ref=${userProfile.name.toLowerCase().replace(/ /g, '-')}`;
+  // Copy referral link (real from API or fallback)
+  const referralLink = walletData?.referralLink || `https://gymdate.in/login?ref=${userProfile.name.toLowerCase().replace(/ /g, '-')}`;
   const handleCopyReferral = () => {
     setCopied(true);
     Alert.alert('Referral Copied', 'Your custom sharing link was successfully copied to your clipboard!');
@@ -305,11 +339,11 @@ export const Profile: React.FC = () => {
     );
   };
 
-  // Static Mock Payments List
-  const mockPayments = [
-    { id: 'pay-1', date: '2026-05-28', plan: userProfile.membershipType !== 'none' ? userProfile.membershipType : 'Monthly Premium Pass', amount: 399, status: 'Success' },
-    { id: 'pay-2', date: '2026-04-28', plan: 'Daily Workout pass', amount: 99, status: 'Success' },
-  ];
+  // Active subscription bookings (end_date in future)
+  const activeSubscriptions = rawBookings.filter(b => {
+    if (!b.end_date) return false;
+    return new Date(b.end_date) >= new Date() && b.status !== 'cancelled';
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
@@ -505,8 +539,10 @@ export const Profile: React.FC = () => {
                   <Wallet size={12} color="#ffffff" style={{ marginRight: 4 }} />
                   <Text style={styles.metricLabelText}>BALANCE</Text>
                 </View>
-                <Text style={styles.metricBigText}>₹60.00</Text>
-                <Text style={styles.metricSubText}>Auto-applied at checkouts</Text>
+                <Text style={styles.metricBigText}>
+                  ₹{walletData?.walletBalance?.toFixed(2) || '0.00'}
+                </Text>
+                <Text style={styles.metricSubText}>Up to ₹{walletData?.maxWalletPerTxn || 10} usable per renewal</Text>
               </View>
 
               <View style={[styles.walletMetric, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
@@ -514,7 +550,9 @@ export const Profile: React.FC = () => {
                   <TrendingUp size={12} color={THEME.COLORS.secondary} style={{ marginRight: 4 }} />
                   <Text style={[styles.metricLabelText, isLight && { color: '#6B7280' }]}>REFERRALS</Text>
                 </View>
-                <Text style={[styles.metricBigText, isLight && { color: '#111827' }]}>2 friends</Text>
+                <Text style={[styles.metricBigText, isLight && { color: '#111827' }]}>
+                  {walletData?.totalReferrals ?? 0} friends
+                </Text>
                 <Text style={[styles.metricSubText, isLight && { color: '#6B7280' }]}>Joined GYMDATE Network</Text>
               </View>
             </View>
@@ -523,7 +561,7 @@ export const Profile: React.FC = () => {
             <View style={[styles.infoBlock, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
               <Text style={[styles.blockTitleText, isLight && { color: '#111827' }]}>Your Referral Link</Text>
               <Text style={[styles.blockDescText, isLight && { color: '#6B7280' }]}>
-                Share your personal link to earn benefits! When a friend joins and purchases any pass, you automatically earn ₹30 wallet cash!
+                Share your personal link to earn benefits! When a friend joins and purchases any pass, you automatically earn ₹{walletData?.bonusPerReferral ?? 30} wallet cash!
               </Text>
               
               <View style={[styles.copyBox, isLight && { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' }]}>
@@ -543,7 +581,7 @@ export const Profile: React.FC = () => {
                 {[
                   { step: '1', title: 'Send Invitation Link', desc: 'Copy and send code' },
                   { step: '2', title: 'Friend Signs Up', desc: 'Friend joins pass group' },
-                  { step: '3', title: 'Get Wallet Bonus', desc: '₹30 added instantaneously' }
+                  { step: '3', title: `Get ₹${walletData?.bonusPerReferral ?? 30} Bonus`, desc: 'Credited to your wallet' }
                 ].map((s, idx) => (
                   <View key={idx} style={styles.stepRow}>
                     <View style={styles.stepCircle}>
@@ -563,7 +601,12 @@ export const Profile: React.FC = () => {
         {/* ============= SUBSCRIPTIONS TAB ============= */}
         {activeTab === 'subscriptions' && (
           <View style={styles.tabPanel}>
-            {userProfile.membershipType === 'none' ? (
+            {bookingsLoading ? (
+              <View style={[styles.emptyContentCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                <ActivityIndicator color={THEME.COLORS.primary} size="large" />
+                <Text style={[styles.emptySubText, isLight && { color: '#6B7280' }, { marginTop: 12 }]}>Loading subscriptions...</Text>
+              </View>
+            ) : activeSubscriptions.length === 0 ? (
               <View style={[styles.emptyContentCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
                 <Text style={styles.emptyIconStyle}>💳</Text>
                 <Text style={[styles.emptyTitleText, isLight && { color: '#111827' }]}>No Active Subscriptions</Text>
@@ -578,34 +621,48 @@ export const Profile: React.FC = () => {
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={[styles.subCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
-                <View style={styles.subHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.subPlanName, isLight && { color: '#111827' }]}>{userProfile.membershipType}</Text>
-                    <Text style={styles.subNetwork}>GYMDATE PREMIUM NETWORK</Text>
+              activeSubscriptions.map((b) => (
+                <View key={b.id} style={[styles.subCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                  <View style={styles.subHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.subPlanName, isLight && { color: '#111827' }]}>{b.plan_name}</Text>
+                      <Text style={styles.subNetwork}>{b.gyms?.name || 'GYMDATE PREMIUM NETWORK'}</Text>
+                    </View>
+                    <View style={styles.activeTag}>
+                      <Text style={styles.activeTagText}>ACTIVE</Text>
+                    </View>
                   </View>
-                  <View style={styles.activeTag}>
-                    <Text style={styles.activeTagText}>ACTIVE</Text>
+
+                  <View style={[styles.dividerLine, isLight && { backgroundColor: '#E5E7EB' }]} />
+
+                  <View style={styles.subDetails}>
+                    {b.start_date && (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Start Date</Text>
+                        <Text style={[styles.detailValText, isLight && { color: '#1F2937' }]}>
+                          {new Date(b.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                    )}
+                    {b.end_date && (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Expiry Date</Text>
+                        <Text style={[styles.detailValText, isLight && { color: '#1F2937' }]}>
+                          {new Date(b.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.detailRow}>
+                      <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Total Paid</Text>
+                      <Text style={[styles.detailValTextPrimary]}>₹{Number(b.amount || b.total_price || 0).toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Check-In Method</Text>
+                      <Text style={[styles.detailValText, isLight && { color: '#1F2937' }]}>Digital Entry QR Ticket</Text>
+                    </View>
                   </View>
                 </View>
-
-                <View style={[styles.dividerLine, isLight && { backgroundColor: '#E5E7EB' }]} />
-
-                <View style={styles.subDetails}>
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Expiry Date</Text>
-                    <Text style={[styles.detailValText, isLight && { color: '#1F2937' }]}>{userProfile.membershipExpiry || '30 days from purchase'}</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Total Paid</Text>
-                    <Text style={[styles.detailValTextPrimary]}>₹399.00</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, isLight && { color: '#6B7280' }]}>Check-In Method</Text>
-                    <Text style={[styles.detailValText, isLight && { color: '#1F2937' }]}>Digital Entry QR Ticket</Text>
-                  </View>
-                </View>
-              </View>
+              ))
             )}
           </View>
         )}
@@ -613,31 +670,62 @@ export const Profile: React.FC = () => {
         {/* ============= PAYMENTS TAB ============= */}
         {activeTab === 'payments' && (
           <View style={styles.tabPanel}>
-            {mockPayments.map(p => (
-              <View key={p.id} style={[styles.payHistoryCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
-                <View style={styles.payHeader}>
-                  <View>
-                    <Text style={[styles.payPlanText, isLight && { color: '#111827' }]}>{p.plan}</Text>
-                    <Text style={[styles.payDateText, isLight && { color: '#6B7280' }]}>{p.date}</Text>
-                  </View>
-                  <Text style={styles.payAmountText}>₹{p.amount}.00</Text>
-                </View>
-                <View style={[styles.dividerLine, isLight && { backgroundColor: '#E5E7EB' }]} />
-                <View style={styles.payFooter}>
-                  <Text style={styles.txnIdText}>Txn ID: #{p.id.toUpperCase()}</Text>
-                  <TouchableOpacity onPress={() => Alert.alert('Download Invoice', 'Your receipt PDF is being downloaded successfully.')}>
-                    <Text style={styles.invoiceLink}>Receipt PDF</Text>
-                  </TouchableOpacity>
-                </View>
+            {bookingsLoading ? (
+              <View style={[styles.emptyContentCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                <ActivityIndicator color={THEME.COLORS.primary} size="large" />
+                <Text style={[styles.emptySubText, isLight && { color: '#6B7280' }, { marginTop: 12 }]}>Loading payment history...</Text>
               </View>
-            ))}
+            ) : rawBookings.length === 0 ? (
+              <View style={[styles.emptyContentCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                <Text style={styles.emptyIconStyle}>🧾</Text>
+                <Text style={[styles.emptyTitleText, isLight && { color: '#111827' }]}>No Payment Records</Text>
+                <Text style={[styles.emptySubText, isLight && { color: '#6B7280' }]}>
+                  Your purchase history will appear here after booking your first gym pass.
+                </Text>
+              </View>
+            ) : (
+              rawBookings.map((p) => (
+                <View key={p.id} style={[styles.payHistoryCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                  <View style={styles.payHeader}>
+                    <View>
+                      <Text style={[styles.payPlanText, isLight && { color: '#111827' }]}>{p.plan_name}</Text>
+                      <Text style={[styles.payDateText, isLight && { color: '#6B7280' }]}>
+                        {p.gyms?.name ? `${p.gyms.name} · ` : ''}{p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                      </Text>
+                    </View>
+                    <Text style={styles.payAmountText}>₹{Number(p.amount || p.total_price || 0).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={[styles.dividerLine, isLight && { backgroundColor: '#E5E7EB' }]} />
+                  <View style={styles.payFooter}>
+                    <Text style={styles.txnIdText}>
+                      Txn ID: #{p.payment_id ? p.payment_id.slice(-8).toUpperCase() : p.id.slice(0, 8).toUpperCase()}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <View style={{
+                        backgroundColor: p.status === 'completed' || p.status === 'active' ? '#D1FAE5' : '#F3F4F6',
+                        paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8
+                      }}>
+                        <Text style={{ fontSize: 9, fontWeight: '800', textTransform: 'uppercase', color: p.status === 'completed' || p.status === 'active' ? '#059669' : '#6B7280' }}>
+                          {p.status === 'completed' ? 'Success' : p.status}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         )}
 
         {/* ============= QR TICKETS TAB ============= */}
         {activeTab === 'tickets' && (
           <View style={styles.tabPanel}>
-            {bookings.length === 0 ? (
+            {bookingsLoading ? (
+              <View style={[styles.emptyContentCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
+                <ActivityIndicator color={THEME.COLORS.primary} size="large" />
+                <Text style={[styles.emptySubText, isLight && { color: '#6B7280' }, { marginTop: 12 }]}>Loading QR tickets...</Text>
+              </View>
+            ) : rawBookings.length === 0 ? (
               <View style={[styles.emptyContentCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
                 <Text style={styles.emptyIconStyle}>🎫</Text>
                 <Text style={[styles.emptyTitleText, isLight && { color: '#111827' }]}>No Active Entry QR Tickets</Text>
@@ -652,55 +740,61 @@ export const Profile: React.FC = () => {
                 </TouchableOpacity>
               </View>
             ) : (
-              bookings.map((booking) => (
-                <View key={booking.id} style={styles.ticketCardOuter}>
-                  {/* Top Gym Info Bar */}
-                  <View style={styles.ticketHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.ticketGymName} numberOfLines={1}>{booking.gymName}</Text>
-                      <View style={styles.sessionRow}>
-                        <MapPin size={8} color="rgba(255,255,255,0.7)" style={{ marginRight: 3 }} />
-                        <Text style={styles.ticketGymLoc} numberOfLines={1}>Premium Gym Network</Text>
+              rawBookings.map((booking) => {
+                const isActive = booking.end_date ? new Date(booking.end_date) >= new Date() && booking.status !== 'cancelled' : true;
+                const ticketCode = booking.ticket_code || booking.id.substring(0, 8).toUpperCase();
+                const qrValue = booking.ticket_code || booking.id;
+                return (
+                  <View key={booking.id} style={styles.ticketCardOuter}>
+                    {/* Top Gym Info Bar */}
+                    <View style={styles.ticketHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.ticketGymName} numberOfLines={1}>{booking.gyms?.name || 'Partner Gym'}</Text>
+                        <View style={styles.sessionRow}>
+                          <MapPin size={8} color="rgba(255,255,255,0.7)" style={{ marginRight: 3 }} />
+                          <Text style={styles.ticketGymLoc} numberOfLines={1}>{booking.gyms?.location || 'GymDate Premium Network'}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.planBadge}>
+                        <Text style={styles.planBadgeText}>{booking.plan_name}</Text>
                       </View>
                     </View>
-                    <View style={styles.planBadge}>
-                      <Text style={styles.planBadgeText}>
-                        {booking.sessionType === 'trainer' ? 'Coach Slot' : booking.sessionType === 'class' ? 'Class Pass' : 'Entry Ticket'}
-                      </Text>
-                    </View>
-                  </View>
 
-                  {/* QR Entry section */}
-                  <View style={[styles.ticketBody, isLight && { backgroundColor: '#ffffff' }]}>
-                    <View style={styles.qrContainer}>
-                      <Image 
-                        source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(booking.id)}` }}
-                        style={styles.qrImgMock}
-                      />
+                    {/* QR Entry section */}
+                    <View style={[styles.ticketBody, isLight && { backgroundColor: '#ffffff' }]}>
+                      <View style={styles.qrContainer}>
+                        <Image 
+                          source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrValue)}` }}
+                          style={styles.qrImgMock}
+                        />
+                      </View>
+                      <Text style={[styles.ticketIdText, isLight && { color: '#374151' }]}>TICKET PASS: #{ticketCode}</Text>
+                      <Text style={[styles.entryLabelText, isLight && { color: '#6B7280' }]}>SCAN QR AT GYM COUNTER FOR DIGITAL LOG ENTRY</Text>
                     </View>
-                    <Text style={[styles.ticketIdText, isLight && { color: '#374151' }]}>TICKET PASS: #{booking.id.toUpperCase().substring(0, 8)}</Text>
-                    <Text style={[styles.entryLabelText, isLight && { color: '#6B7280' }]}>SCAN QR AT GYM COUNTER FOR DIGITAL LOG ENTRY</Text>
-                  </View>
 
-                  {/* Validity Info */}
-                  <View style={[styles.ticketFooter, isLight && { backgroundColor: '#F9FAFB', borderTopColor: '#E5E7EB' }]}>
-                    <View>
-                      <Text style={[styles.validLabel, isLight && { color: '#6B7280' }]}>VALIDITY DATE</Text>
-                      <Text style={[styles.validValText, isLight && { color: '#1F2937' }]}>
-                        {new Date(booking.dateTime).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </Text>
+                    {/* Validity Info */}
+                    <View style={[styles.ticketFooter, isLight && { backgroundColor: '#F9FAFB', borderTopColor: '#E5E7EB' }]}>
+                      <View>
+                        <Text style={[styles.validLabel, isLight && { color: '#6B7280' }]}>VALIDITY</Text>
+                        <Text style={[styles.validValText, isLight && { color: '#1F2937' }]}>
+                          {booking.start_date ? new Date(booking.start_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : 'N/A'}
+                          {booking.end_date ? ` – ${new Date(booking.end_date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={[styles.validLabel, isLight && { color: '#6B7280' }]}>STATUS</Text>
+                        <Text style={[styles.activeStatusText, !isActive && { color: '#9CA3AF' }]}>
+                          ● {isActive ? 'ACTIVE' : 'EXPIRED'}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={[styles.validLabel, isLight && { color: '#6B7280' }]}>STATUS</Text>
-                      <Text style={styles.activeStatusText}>● ACTIVE</Text>
-                    </View>
-                  </View>
 
-                  {/* Simulated perforations on both sides */}
-                  <View style={styles.perforationLeft} />
-                  <View style={styles.perforationRight} />
-                </View>
-              ))
+                    {/* Simulated perforations on both sides */}
+                    <View style={styles.perforationLeft} />
+                    <View style={styles.perforationRight} />
+                  </View>
+                );
+              })
             )}
           </View>
         )}

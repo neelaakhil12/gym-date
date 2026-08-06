@@ -47,7 +47,8 @@
         {
           "photosPermission": "Allow GymDate to access your photo gallery to upload a profile avatar."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

@@ -147,7 +147,7 @@ export interface GymDateContextType {
   // Auth State
   isLoggedIn: boolean;
   setIsLoggedIn: (val: boolean) => void;
-  loginInput: string; // Email or phone
+  loginInput: string; // User email address
   setLoginInput: (val: string) => void;
   
   // Database States
@@ -293,18 +293,18 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Gym Member Profile state
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: 'NEELA AKHIL KUMAR',
+    name: '',
     phone: '',
-    email: 'neelaakhil12@gmail.com',
+    email: '',
     height: 178,
     weight: 76.5,
     bmi: 24.1,
     goal: 'Build Muscle',
     avatar: '',
-    savedGyms: ['gym-1', 'gym-3'],
+    savedGyms: ['gym-1'],
     membershipType: 'none',
     membershipExpiry: null,
-    qrCodeValue: 'GD-MEMBER-9988-77'
+    qrCodeValue: 'GD-MEMBER-NEW'
   });
 
   // Bookings list state
@@ -461,8 +461,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.log(`[Context] First-time login detected. Registering ${loginInput} in database...`);
         profile = await apiService.syncProfile({
           email: loginInput,
-          name: 'NEELA AKHIL KUMAR',
-          phone: ''
+          name: userProfile.name || 'Gym Member',
+          phone: userProfile.phone || ''
         });
       }
 
@@ -551,15 +551,10 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setActiveScreen('home');
         }
         if (savedLoginInput) {
-          const processedInput = savedLoginInput.includes('akash') ? 'neelaakhil12@gmail.com' : savedLoginInput;
-          setLoginInput(processedInput);
+          setLoginInput(savedLoginInput);
         }
         if (savedProfile) {
           const parsed = JSON.parse(savedProfile);
-          if (parsed && (parsed.name === 'Akash Kumar' || parsed.email?.includes('akash'))) {
-            parsed.name = 'NEELA AKHIL KUMAR';
-            parsed.email = 'neelaakhil12@gmail.com';
-          }
           setUserProfile(parsed);
         }
         if (savedBookings) {

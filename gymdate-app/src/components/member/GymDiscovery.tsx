@@ -15,6 +15,7 @@ import {
 import { useGymDate, Trainer } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
+import { RazorpayCheckout, RazorpayPaymentOptions } from '../RazorpayCheckout';
 import { 
   Search, 
   MapPin, 
@@ -96,6 +97,8 @@ export const GymDiscovery: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number; duration: string } | null>(null);
+  // Real Razorpay payment options state — null = closed
+  const [paymentOptions, setPaymentOptions] = useState<RazorpayPaymentOptions | null>(null);
 
   const facilitiesList = ['Locker Room', 'Steam Room', 'Air Conditioned', 'MMA Cage', 'Group Workouts'];
 
@@ -127,15 +130,32 @@ export const GymDiscovery: React.FC = () => {
 
   const handleConfirmPayment = () => {
     if (!selectedPlan || !activeGym) return;
-    
-    setUserProfile(prev => ({
-      ...prev,
-      membershipType: selectedPlan.name as any,
-      membershipExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
-    }));
-
+    // Launch real Razorpay payment
     setShowCheckoutModal(false);
-    Alert.alert('Payment Successful', `You have unlocked the ${selectedPlan.name} for ${activeGym.name}. Digital QR checkin pass is active!`);
+    setPaymentOptions({
+      gymId: activeGym.id,
+      gymName: activeGym.name,
+      planName: selectedPlan.name,
+      amount: selectedPlan.price,
+      customerEmail: userProfile.email,
+      customerName: userProfile.name,
+      customerPhone: userProfile.phone,
+      startDate: new Date().toISOString(),
+      onSuccess: (bookingId, paymentId) => {
+        Alert.alert(
+          '✅ Payment Successful!',
+          `Your ${selectedPlan.name} for ${activeGym.name} is now active.\nBooking ID: ${bookingId.substring(0, 8).toUpperCase()}\n\nYour QR entry ticket is ready in My Tickets!`,
+          [{ text: 'View My Tickets', onPress: () => setActiveScreen('profile') }]
+        );
+        setSelectedPlan(null);
+      },
+      onFailure: (error) => {
+        Alert.alert('Payment Failed', error || 'Something went wrong. Please try again.');
+      },
+      onDismiss: () => {
+        setPaymentOptions(null);
+      },
+    });
   };
 
   const handleBookTrainerSlot = (trainer: Trainer) => {
@@ -383,13 +403,13 @@ export const GymDiscovery: React.FC = () => {
         </View>
       )}
 
-      {/* ================= MODAL: PAYMENT GATEWAY CHECKOUT ================= */}
+      {/* ================= MODAL: BILL SUMMARY BEFORE PAYMENT ================= */}
       <Modal visible={showCheckoutModal} transparent animationType="slide">
         <View style={[styles.modalBackdrop, { backgroundColor: modalBg }]}>
           <View style={[styles.modalCard, { backgroundColor: modalCardBg }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTag}>Razorpay Secure</Text>
-              <Text style={[styles.modalTitle, { color: textPrimary }]}>Gateway Checkout</Text>
+              <Text style={[styles.modalTitle, { color: textPrimary }]}>Order Summary</Text>
             </View>
 
             {selectedPlan && activeGym && (
@@ -402,6 +422,10 @@ export const GymDiscovery: React.FC = () => {
                   <Text style={[styles.billLabel, { color: textSecondary }]}>Pass Package:</Text>
                   <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.name}</Text>
                 </View>
+                <View style={styles.billRow}>
+                  <Text style={[styles.billLabel, { color: textSecondary }]}>Duration:</Text>
+                  <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.duration}</Text>
+                </View>
                 <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: sectionBorder, paddingTop: 10, marginTop: 6 }]}>
                   <Text style={[styles.billLabel, { fontWeight: '700', color: textPrimary }]}>Total Payment:</Text>
                   <Text style={styles.billPrice}>₹{selectedPlan.price}</Text>
@@ -409,21 +433,13 @@ export const GymDiscovery: React.FC = () => {
               </View>
             )}
 
-            <View style={styles.payMethods}>
-              <Text style={[styles.payMethodsTitle, { color: textSecondary }]}>Choose Mode of Payment</Text>
-              <TouchableOpacity onPress={handleConfirmPayment} style={[styles.payMethodBtn, { backgroundColor: payBtnBg, borderColor: payBtnBorder }]}>
-                <Text style={[styles.payMethodText, { color: textPrimary }]}>📱 Unified UPI (GooglePay/PhonePe)</Text>
-                <ChevronRight size={12} color={textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmPayment} style={[styles.payMethodBtn, { backgroundColor: payBtnBg, borderColor: payBtnBorder }]}>
-                <Text style={[styles.payMethodText, { color: textPrimary }]}>💳 Credit / Debit Card</Text>
-                <ChevronRight size={12} color={textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmPayment} style={[styles.payMethodBtn, { backgroundColor: payBtnBg, borderColor: payBtnBorder }]}>
-                <Text style={[styles.payMethodText, { color: textPrimary }]}>💼 Wallet Netbanking</Text>
-                <ChevronRight size={12} color={textMuted} />
-              </TouchableOpacity>
-            </View>
+            {/* Single real Razorpay button */}
+            <TouchableOpacity
+              onPress={handleConfirmPayment}
+              style={styles.planBuyBtn}
+            >
+              <Text style={styles.planBuyBtnText}>🔒  Pay ₹{selectedPlan?.price} via Razorpay</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setShowCheckoutModal(false)} style={styles.payCancelBtn}>
               <Text style={styles.payCancelBtnText}>Cancel checkout</Text>
@@ -431,6 +447,12 @@ export const GymDiscovery: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* ================= REAL RAZORPAY CHECKOUT (WebView / Script) ================= */}
+      <RazorpayCheckout
+        options={paymentOptions}
+        onClose={() => setPaymentOptions(null)}
+      />
 
     </View>
   );

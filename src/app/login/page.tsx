@@ -98,21 +98,7 @@ export default function LoginPage() {
 
 
   const handleGoogleLogin = async () => {
-    if (!name || !phone || !email) {
-      setMessage({ type: "error", text: "Please fill in all details (Name, Phone, and Email) before continuing." });
-      return;
-    }
-    
-    if (phone.length < 10) {
-      setMessage({ type: "error", text: "Please enter a valid 10-digit phone number." });
-      return;
-    }
-
     try {
-      // Save name and phone to localStorage so we can pick them up after redirect
-      localStorage.setItem('pending_name', name);
-      localStorage.setItem('pending_phone', phone);
-      
       await signIn('google', { callbackUrl: '/account' });
     } catch (err: any) {
       setMessage({ type: "error", text: err.message });
@@ -164,39 +150,6 @@ export default function LoginPage() {
             {step === "email" ? (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name</label>
-                  <div className="relative group">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
-                    <input
-                      required
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-14 pr-5 py-5 rounded-[24px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary"
-                      placeholder="Enter your name"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number</label>
-                  <div className="relative group">
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 flex items-center space-x-2 border-r pr-3 border-gray-200">
-                      <span className="text-xs font-bold text-gray-500">+91</span>
-                    </div>
-                    <input
-                      required
-                      type="tel"
-                      maxLength={10}
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-20 pr-5 py-5 rounded-[24px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary"
-                      placeholder="9876543210"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Email Address</label>
                   <div className="relative group">
                     <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
@@ -230,7 +183,7 @@ export default function LoginPage() {
             )}
 
             <button
-              disabled={loading || !name || !phone || !email}
+              disabled={loading || (step === "email" && !email) || (step === "otp" && !otp)}
               className="w-full py-5 bg-secondary text-white rounded-[24px] font-black text-lg hover:bg-slate-800 transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl shadow-secondary/20 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {loading ? (

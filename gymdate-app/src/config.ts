@@ -21,9 +21,9 @@ export const CONFIG = {
     default: 'http://localhost:3000',
   }),
   
-  // Toggle this to true to force connect to your production KVM website domain
+  // Toggle this to true to force connect to your production website domain
   USE_PRODUCTION: true,
-  PRODUCTION_API_URL: 'https://gymdate.in', // Your website URL
+  PRODUCTION_API_URL: 'https://gym-date-fqml.vercel.app',
 };
 
 export const getApiUrl = () => {

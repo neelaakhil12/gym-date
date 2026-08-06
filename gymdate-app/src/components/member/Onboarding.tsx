@@ -10,8 +10,10 @@ import {
   ImageBackground,
   Dimensions,
   Alert,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
@@ -19,6 +21,7 @@ import { Dumbbell, ArrowRight, ShieldCheck, Mail, Phone, Lock, Sparkles, Goal, C
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
 import { getCurrentLocation, reverseGeocode } from '../../utils/location';
+import { getApiUrl } from '../../config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,12 +40,13 @@ export const Onboarding: React.FC = () => {
 
   const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register'>('intro');
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
-  const [regName, setRegName] = useState('NEELA AKHIL KUMAR');
+  const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regCity, setRegCity] = useState('');
   const [regAddress, setRegAddress] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpCode, setOtpCode] = useState<string[]>(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState<string>('');
 
@@ -81,9 +85,39 @@ export const Onboarding: React.FC = () => {
     setStep('login');
   };
 
-  const handleLoginSubmit = () => {
-    if (!loginInput.trim()) return;
+  const handleLoginSubmit = async () => {
+    const emailTrimmed = loginInput.trim().toLowerCase();
+    if (!emailTrimmed || !emailTrimmed.includes('@') || !emailTrimmed.includes('.')) {
+      showAlert('Invalid Email', 'Please enter a valid email address (e.g. name@example.com).');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const res = await apiService.sendOtp(emailTrimmed);
+      if (res && res.error) {
+        showAlert('OTP Notice', res.error || 'Check inbox or enter demo code 123456.');
+      } else {
+        showAlert('Code Sent! 📬', `A 6-digit OTP verification code was sent to ${emailTrimmed}. Please check your inbox or spam folder.`);
+      }
+    } catch (err: any) {
+      console.warn('[OTP] sendOtp network warn:', err);
+      showAlert('Code Dispatched', `OTP sent to ${emailTrimmed}. (Demo bypass code: 123456)`);
+    } finally {
+      setIsSendingOtp(false);
+    }
     setStep('otp');
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const authUrl = `${getApiUrl()}/login`;
+      console.log('[Google Auth] Opening WebBrowser for Google Sign-In:', authUrl);
+      await WebBrowser.openBrowserAsync(authUrl);
+    } catch (err: any) {
+      console.warn('[Google Auth Error]:', err);
+      showAlert('Google Login', 'Sign in via web browser or enter your email address to receive an OTP code.');
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -100,38 +134,52 @@ export const Onboarding: React.FC = () => {
 
   const handleVerifyOtp = async () => {
     const fullCode = otpCode.join('');
-    if (fullCode === '123456') {
-      try {
-        const existingProfile = await apiService.getProfile(loginInput);
-        if (existingProfile) {
-          if (existingProfile.email) {
-            setLoginInput(existingProfile.email);
-          }
-          setRegName(existingProfile.full_name || 'NEELA AKHIL KUMAR');
-          setRegEmail(existingProfile.email || (loginInput.includes('@') ? loginInput : ''));
-          setRegPhone(existingProfile.phone || (!loginInput.includes('@') ? loginInput : ''));
-          setRegCity(existingProfile.address?.split(', ')[1] || '');
-          setRegAddress(existingProfile.address?.split(', ')[0] || existingProfile.address || '');
-          setStep('register');
-        } else {
-          setRegName('NEELA AKHIL KUMAR');
-          setRegEmail(loginInput.includes('@') ? loginInput : '');
-          setRegPhone(!loginInput.includes('@') ? loginInput : '');
-          setRegCity('');
-          setRegAddress('');
-          setStep('register');
-        }
-      } catch (err) {
+    const emailTrimmed = loginInput.trim().toLowerCase();
+
+    if (!fullCode || fullCode.length < 6) {
+      setOtpError('Please enter full 6-digit OTP code');
+      return;
+    }
+
+    try {
+      const verifyRes = await apiService.verifyOtp(emailTrimmed, fullCode);
+      if (!verifyRes.success && fullCode !== '123456') {
+        setOtpError(verifyRes.error || 'Invalid OTP Code.');
+        setTimeout(() => setOtpError(''), 3000);
+        return;
+      }
+
+      const existingProfile = verifyRes.user || (await apiService.getProfile(emailTrimmed));
+      if (existingProfile && existingProfile.full_name) {
+        setLoginInput(existingProfile.email || emailTrimmed);
+        setUserProfile(prev => ({
+          ...prev,
+          name: existingProfile.full_name,
+          email: existingProfile.email || emailTrimmed,
+          phone: existingProfile.phone || '',
+        }));
+        setIsLoggedIn(true);
+        setActiveScreen('home');
+      } else {
+        setRegName(existingProfile?.full_name || 'NEELA AKHIL KUMAR');
+        setRegEmail(emailTrimmed);
+        setRegPhone(existingProfile?.phone || '');
+        setRegCity(existingProfile?.address?.split(', ')[1] || '');
+        setRegAddress(existingProfile?.address?.split(', ')[0] || existingProfile?.address || '');
+        setStep('register');
+      }
+    } catch (err: any) {
+      if (fullCode === '123456') {
         setRegName('NEELA AKHIL KUMAR');
-        setRegEmail(loginInput.includes('@') ? loginInput : '');
-        setRegPhone(!loginInput.includes('@') ? loginInput : '');
+        setRegEmail(emailTrimmed);
+        setRegPhone('');
         setRegCity('');
         setRegAddress('');
         setStep('register');
+      } else {
+        setOtpError(err.message || 'Invalid OTP Code. Try demo code "123456"!');
+        setTimeout(() => setOtpError(''), 3000);
       }
-    } else {
-      setOtpError('Invalid OTP Code. Use demo code "123456"!');
-      setTimeout(() => setOtpError(''), 3000);
     }
   };
 
@@ -150,10 +198,6 @@ export const Onboarding: React.FC = () => {
     }
     if (!regEmail.trim()) {
       showAlert('Required Field', 'Please enter your Email Address.');
-      return;
-    }
-    if (!regPhone.trim()) {
-      showAlert('Required Field', 'Please enter your Phone Number.');
       return;
     }
 
@@ -306,32 +350,38 @@ export const Onboarding: React.FC = () => {
             <View style={styles.logoBadgeSmall}>
               <Sparkles size={20} color={THEME.COLORS.primary} />
             </View>
-            <Text style={[styles.titleText, isLight && styles.textLight]}>Join the fitness circle</Text>
-            <Text style={[styles.descText, isLight && styles.textMutedLight]}>Access top-tier premium workout environments instantly.</Text>
+            <Text style={[styles.titleText, isLight && styles.textLight]}>Join GymDate</Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>Enter your email address to receive a secure login code.</Text>
 
             <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Enter Phone or Email</Text>
+              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Email Address</Text>
               <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                {loginInput.includes('@') ? (
-                  <Mail size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
-                ) : (
-                  <Phone size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
-                )}
+                <Mail size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
                 <TextInput
                   value={loginInput}
                   onChangeText={setLoginInput}
-                  placeholder="98765 43210 or email@domain.com"
+                  placeholder="name@example.com"
                   placeholderTextColor={THEME.COLORS.textMuted}
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 12 }]}
-                  keyboardType={loginInput.includes('@') ? 'email-address' : 'phone-pad'}
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                  keyboardType="email-address"
                   autoCapitalize="none"
                 />
               </View>
             </View>
 
-            <TouchableOpacity style={styles.btnPrimary} onPress={handleLoginSubmit}>
-              <Text style={styles.btnPrimaryText}>Send Verification Pass</Text>
-              <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
+            <TouchableOpacity 
+              style={[styles.btnPrimary, isSendingOtp && { opacity: 0.75 }]} 
+              onPress={handleLoginSubmit}
+              disabled={isSendingOtp}
+            >
+              {isSendingOtp ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.btnPrimaryText}>Send 6-Digit OTP Code</Text>
+                  <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Social Logins */}
@@ -341,19 +391,15 @@ export const Onboarding: React.FC = () => {
               <View style={[styles.dividerLine, isLight && { backgroundColor: '#e5e7eb' }]} />
             </View>
 
-            <View style={styles.socialGrid}>
-              <TouchableOpacity onPress={() => { setLoginInput('neelaakhil12@gmail.com'); setStep('otp'); }} style={[styles.socialBtn, isLight && styles.socialBtnLight]}>
-                <Text style={[styles.socialBtnText, isLight && styles.textLight]}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setLoginInput('neelaakhil12@icloud.com'); setStep('otp'); }} style={[styles.socialBtn, isLight && styles.socialBtnLight]}>
-                <Text style={[styles.socialBtnText, isLight && styles.textLight]}>Apple</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity onPress={handleGoogleLogin} style={[styles.socialBtn, isLight && styles.socialBtnLight, { flexDirection: 'row', gap: 8 }]}>
+              <Sparkles size={16} color={THEME.COLORS.primary} />
+              <Text style={[styles.socialBtnText, isLight && styles.textLight, { fontSize: 13, fontWeight: '700' }]}>Google Account</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* STEP 4: SMS OTP VERIFICATION CODES */}
+      {/* STEP 4: EMAIL OTP VERIFICATION SCREEN */}
       {step === 'otp' && (
         <View style={styles.contentWrapper}>
           <View style={{ flex: 1, justifyContent: 'center' }}>
@@ -363,8 +409,8 @@ export const Onboarding: React.FC = () => {
             <View style={styles.logoBadgeSmall}>
               <Lock size={20} color={THEME.COLORS.primary} />
             </View>
-            <Text style={[styles.titleText, isLight && styles.textLight]}>Verify dynamic pass</Text>
-            <Text style={[styles.descText, isLight && styles.textMutedLight]}>We sent a verification SMS/email pass to:</Text>
+            <Text style={[styles.titleText, isLight && styles.textLight]}>Verify Email Code</Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>We sent a 6-digit verification code to:</Text>
             <Text style={styles.highlightText}>{loginInput}</Text>
 
             <View style={styles.otpGrid}>
@@ -398,7 +444,7 @@ export const Onboarding: React.FC = () => {
             <View style={[styles.infoBanner, isLight && styles.infoBannerLight]}>
               <ShieldCheck size={16} color={THEME.COLORS.success} style={{ marginRight: 6 }} />
               <Text style={[styles.infoBannerText, { color: '#4B5563' }]}>
-                Demo Bypass Code: Enter <Text style={{ fontWeight: 'bold', color: THEME.COLORS.primary }}>123456</Text> to instantly unlock Home Dashboard!
+                Demo Bypass Code: Enter <Text style={{ fontWeight: 'bold', color: THEME.COLORS.primary }}>123456</Text> to test instant login!
               </Text>
             </View>
 
@@ -408,7 +454,7 @@ export const Onboarding: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.btnSecondary} onPress={() => setStep('login')}>
-              <Text style={styles.btnSecondaryText}>Edit Contact Details</Text>
+              <Text style={styles.btnSecondaryText}>Edit Email Address</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -456,12 +502,12 @@ export const Onboarding: React.FC = () => {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
+              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number (Optional)</Text>
               <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
                 <TextInput
                   value={regPhone}
                   onChangeText={setRegPhone}
-                  placeholder="+91 98765 43210"
+                  placeholder="e.g. +91 98765 43210 (Optional)"
                   placeholderTextColor={THEME.COLORS.textMuted}
                   keyboardType="phone-pad"
                   style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
