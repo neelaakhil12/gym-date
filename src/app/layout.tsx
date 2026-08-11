@@ -67,6 +67,8 @@ export const metadata: Metadata = {
 
 
 
+import AOSInit from "@/components/AosInit";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -76,6 +78,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <NextAuthProvider>
+          <AOSInit />
           <LayoutWrapper>
             {children}
             <Toaster position="top-center" />

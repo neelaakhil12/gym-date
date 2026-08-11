@@ -9,7 +9,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen pt-32 pb-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div className="text-center mb-20" data-aos="fade-up">
           <h1 className="text-4xl md:text-6xl font-black text-secondary mb-6">
             Simple <span className="text-primary">Pricing</span>
           </h1>
@@ -20,12 +20,14 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-24">
           {pricingPlans.map((plan, idx) => (
-            <PricingCard key={idx} plan={plan} />
+            <div key={idx} data-aos="zoom-in-up" data-aos-delay={idx * 150}>
+              <PricingCard plan={plan} />
+            </div>
           ))}
         </div>
 
         {/* Features Comparison / Info Section */}
-        <div className="bg-white rounded-[40px] p-8 md:p-16 border border-gray-100 shadow-sm">
+        <div className="bg-white rounded-[40px] p-8 md:p-16 border border-gray-100 shadow-sm" data-aos="fade-up">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
             {[
               { icon: Shield, title: "Secure Payments", desc: "All transactions are protected with industry-standard encryption." },
@@ -33,7 +35,7 @@ export default function PricingPage() {
               { icon: Clock, title: "Flexible Validity", desc: "Our packs come with generous validity periods to suit your pace." },
               { icon: CreditCard, title: "No Hidden Costs", desc: "What you see is what you pay. No joining or maintenance fees." }
             ].map((feature, idx) => (
-              <div key={idx} className="flex flex-col items-center md:items-start text-center md:text-left">
+              <div key={idx} className="flex flex-col items-center md:items-start text-center md:text-left" data-aos="fade-up" data-aos-delay={idx * 100}>
                 <div className="h-14 w-14 bg-primary/5 rounded-2xl flex items-center justify-center mb-6">
                   <feature.icon className="h-7 w-7 text-primary" />
                 </div>

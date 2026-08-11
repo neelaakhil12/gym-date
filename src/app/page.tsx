@@ -99,11 +99,11 @@ export default function Home() {
 
       {/* Stats Strip - right after hero */}
       {isStatsVisible && (
-        <section className="bg-primary py-10">
+        <section className="bg-primary py-10" data-aos="fade-up" data-aos-duration="600">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {platformStats.length > 0 ? platformStats.map((stat, idx) => (
-                <div key={idx} className="text-white text-center">
+                <div key={idx} className="text-white text-center" data-aos="zoom-in" data-aos-delay={idx * 100}>
                   <div className="text-3xl md:text-4xl font-black mb-1">
                     <AnimatedCounter value={stat.value} />
                   </div>
@@ -115,7 +115,7 @@ export default function Home() {
                 { label: "Members", value: "50k+" },
                 { label: "Bookings", value: "1M+" }
               ].map((stat, idx) => (
-                <div key={idx} className="text-white text-center">
+                <div key={idx} className="text-white text-center" data-aos="zoom-in" data-aos-delay={idx * 100}>
                   <div className="text-3xl md:text-4xl font-black mb-1">
                     <AnimatedCounter value={stat.value} />
                   </div>
@@ -130,7 +130,7 @@ export default function Home() {
       {/* How It Works Section */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16" data-aos="fade-up">
             <h2 className="text-3xl md:text-5xl font-black text-secondary mb-4">
               How It <span className="text-primary">Works</span>
             </h2>
@@ -145,7 +145,7 @@ export default function Home() {
               { icon: Zap, title: "Choose a Pack", desc: "Select a flexible daily, 10-day, or monthly pack that fits your schedule perfectly." },
               { icon: ShieldCheck, title: "Start Training", desc: "Show your QR at the reception and start your workout. It's that simple!" }
             ].map((step, idx) => (
-              <div key={idx} className="flex flex-col items-center text-center group">
+              <div key={idx} className="flex flex-col items-center text-center group" data-aos="fade-up" data-aos-delay={idx * 150}>
                 <div className="h-20 w-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:bg-primary group-hover:rotate-6 group-hover:shadow-xl group-hover:shadow-primary/20">
                   <step.icon className="h-10 w-10 text-primary group-hover:text-white transition-colors" />
                 </div>
@@ -160,7 +160,7 @@ export default function Home() {
       {/* Top Rated Gyms Section */}
       <section className="py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6" data-aos="fade-right">
             <div>
               <h2 className="text-3xl md:text-5xl font-black text-secondary mb-4">
                 Top Rated <span className="text-primary">Gyms</span>
@@ -173,12 +173,14 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {gyms.slice(0, 4).map((gym) => (
-              <GymCard key={gym.id} gym={gym} />
+            {gyms.slice(0, 4).map((gym, idx) => (
+              <div key={gym.id} data-aos="zoom-in-up" data-aos-delay={idx * 100}>
+                <GymCard gym={gym} />
+              </div>
             ))}
           </div>
 
-          <div className="flex justify-center mt-12">
+          <div className="flex justify-center mt-12" data-aos="fade-up">
             <Link 
               href="/explore" 
               className="bg-primary text-white px-8 py-3 md:px-10 md:py-4 rounded-full text-sm md:text-lg font-bold hover:bg-red-700 transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center space-x-2"
@@ -192,9 +194,9 @@ export default function Home() {
 
 
       {/* Featured Cities Section */}
-      <section className="py-24 bg-secondary overflow-hidden">
+      <section className="py-24 bg-secondary overflow-hidden" data-aos="fade-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16" data-aos="zoom-in">
             <h2 className="text-3xl md:text-5xl font-black text-white mb-4">
               Explore <span className="text-primary">Cities</span>
             </h2>
@@ -231,17 +233,19 @@ export default function Home() {
       </section>
 
       {/* Trust/Banner Section */}
-      <section className="py-20 bg-primary">
+      <section className="py-20 bg-primary" data-aos="zoom-in">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-5xl font-black text-white mb-8">
+          <h2 className="text-3xl md:text-5xl font-black text-white mb-8" data-aos="fade-up">
             Are You a Gym Owner?
           </h2>
-          <p className="text-white/80 text-xl mb-12 max-w-3xl mx-auto">
+          <p className="text-white/80 text-xl mb-12 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="100">
             Join the GymDate network and grow your business. Reach thousands of potential members and manage your gym with our smart dashboard.
           </p>
           <Link
             href="/partner"
             className="inline-block bg-secondary text-white px-10 py-5 rounded-full text-xl font-bold hover:bg-black transition-all shadow-2xl"
+            data-aos="zoom-in"
+            data-aos-delay="200"
           >
             Become a Partner
           </Link>
