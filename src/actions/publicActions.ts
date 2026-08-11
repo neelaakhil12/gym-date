@@ -33,7 +33,7 @@ export async function getGyms() {
     }));
   } catch (error) {
     console.error('Error fetching gyms:', error);
-    return mockGyms;
+    return [];
   }
 }
 
@@ -51,18 +51,11 @@ export async function getGymById(id: string) {
       return gym;
     }
     
-    console.log("Gym not found in database, checking mock data...");
-    const mockGym = mockGyms.find(g => g.id === id);
-    if (mockGym) {
-      console.log("Gym found in mock data:", mockGym.name);
-      return mockGym;
-    }
-    
     console.log("Gym not found anywhere for ID:", id);
     return null;
   } catch (error) {
     console.error('Error fetching gym by id:', error);
-    return mockGyms.find(g => g.id === id) || null;
+    return null;
   }
 }
 
