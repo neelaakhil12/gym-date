@@ -3,60 +3,8 @@ import { query } from '@/lib/db';
 
 export async function GET() {
   try {
-    // 1. Roles & Core Tables
+    // 1. Repair/Create partner_requests table
     await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email TEXT UNIQUE NOT NULL,
-        full_name TEXT,
-        phone TEXT,
-        address TEXT,
-        role_id TEXT DEFAULT 'user',
-        wallet_balance DECIMAL(10,2) DEFAULT 0,
-        referral_code TEXT,
-        referred_by TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS gyms (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL,
-        location TEXT NOT NULL,
-        description TEXT,
-        price_per_day DECIMAL(10,2) DEFAULT 199,
-        partner_referral_amount DECIMAL(10,2) DEFAULT 100,
-        has_offer BOOLEAN DEFAULT false,
-        offer_percentage INTEGER DEFAULT 0,
-        partner_id UUID,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS plans (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        gym_id UUID REFERENCES gyms(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        duration TEXT NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS bookings (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id),
-        gym_id UUID REFERENCES gyms(id),
-        customer_name TEXT,
-        customer_email TEXT,
-        plan_name TEXT,
-        amount DECIMAL(10,2),
-        status TEXT DEFAULT 'completed',
-        payment_id TEXT,
-        razorpay_order_id TEXT,
-        ticket_code TEXT,
-        start_date TIMESTAMP WITH TIME ZONE,
-        end_date TIMESTAMP WITH TIME ZONE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
       CREATE TABLE IF NOT EXISTS partner_requests (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         gym_name TEXT NOT NULL,
@@ -68,8 +16,36 @@ export async function GET() {
         status TEXT DEFAULT 'pending',
         referred_by TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+      )
+    `);
 
+    // 2. Repair/Create Users table columns
+    try {
+      await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
+      await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT");
+      await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT");
+    } catch (e) {
+      console.warn("User columns already exist or permission issue");
+    }
+
+    // 3. Repair/Create Gyms table columns
+    try {
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS partner_referral_amount DECIMAL(10,2) DEFAULT 100");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS has_offer BOOLEAN DEFAULT false");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS offer_percentage INTEGER DEFAULT 0");
+    } catch (e) {
+      console.warn("Gym columns already exist or permission issue");
+    }
+
+    // 3b. Repair/Create staff_users table columns
+    try {
+      await query("ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS can_access_settings BOOLEAN DEFAULT FALSE");
+    } catch (e) {
+      console.warn("staff_users column error");
+    }
+
+    // 4. Create Referral Transactions table
+    await query(`
       CREATE TABLE IF NOT EXISTS referral_transactions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         referrer_id UUID REFERENCES users(id),
@@ -78,45 +54,22 @@ export async function GET() {
         amount DECIMAL(10,2),
         status TEXT DEFAULT 'pending',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS platform_config (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS wallet (
-        id TEXT PRIMARY KEY DEFAULT 'platform_wallet',
-        balance DECIMAL(10,2) DEFAULT 0,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
 
-    // 2. Insert Platform Config Defaults if not present
-    await query(`
-      INSERT INTO platform_config (key, value) VALUES 
-        ('refer_a_friend', '50'),
-        ('partner_referral_bonus', '500'),
-        ('max_wallet_per_transaction', '10'),
-        ('signup_bonus', '25')
-      ON CONFLICT (key) DO NOTHING;
+    // 5. Final sync of columns
+    try {
+      await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS referred_by TEXT");
+    } catch (e) {}
 
-      INSERT INTO wallet (id, balance) VALUES ('platform_wallet', 0)
-      ON CONFLICT (id) DO NOTHING;
-    `);
-
-    // 3. Check table stats
     const users = await query("SELECT COUNT(*) FROM users");
-    const gyms = await query("SELECT COUNT(*) FROM gyms");
     const leads = await query("SELECT COUNT(*) FROM partner_requests");
     
     return NextResponse.json({ 
       success: true, 
-      message: "Cloud database schema initialized successfully!",
+      message: "Database schema repaired successfully",
       stats: {
         users: users.rows[0].count,
-        gyms: gyms.rows[0].count,
         leads: leads.rows[0].count
       }
     });
