@@ -56,37 +56,52 @@ export async function createGymAndPartner(formData: FormData) {
       return { error: "Missing required fields." };
     }
 
-    // 1. Hash password and create/update partner in partner_users table
-    console.log("STEP 1: Creating/Updating Partner User in partner_users:", partnerEmail);
+    // 1. Hash password and create/update partner in users table (and partner_users)
+    console.log("STEP 1: Creating/Updating Partner User:", partnerEmail);
     let partnerId: string;
     const hashedPassword = await bcrypt.hash(partnerPassword, 10);
     
     // Ensure partner_users table exists
-    await query(`
-      CREATE TABLE IF NOT EXISTS partner_users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        full_name VARCHAR(255),
-        phone VARCHAR(20),
-        password_hash VARCHAR(255),
-        gym_id UUID,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          email VARCHAR(255) UNIQUE NOT NULL,
+          full_name VARCHAR(255),
+          phone VARCHAR(20),
+          password_hash VARCHAR(255),
+          gym_id UUID,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {}
 
-    const checkPartner = await query("SELECT id FROM partner_users WHERE email = $1", [partnerEmail]);
-    if (checkPartner.rows.length > 0) {
-      partnerId = checkPartner.rows[0].id;
-      console.log("Partner already exists in partner_users, updating password for ID:", partnerId);
-      await query("UPDATE partner_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", [hashedPassword, partnerId]);
+    // First check/insert into users table (required by foreign key constraint gyms_partner_id_fkey)
+    const checkUser = await query("SELECT id FROM users WHERE email = $1", [partnerEmail]);
+    if (checkUser.rows.length > 0) {
+      partnerId = checkUser.rows[0].id;
+      await query("UPDATE users SET role_id = 'partner', full_name = COALESCE(full_name, $1) WHERE id = $2", [gymName, partnerId]);
     } else {
-      console.log("Creating new partner user in partner_users...");
-      const insertPartner = await query(
-        "INSERT INTO partner_users (email, full_name, password_hash) VALUES ($1, $2, $3) RETURNING id",
-        [partnerEmail, gymName, hashedPassword]
+      const insertUser = await query(
+        "INSERT INTO users (email, full_name, role_id) VALUES ($1, $2, 'partner') RETURNING id",
+        [partnerEmail, gymName]
       );
-      partnerId = insertPartner.rows[0].id;
+      partnerId = insertUser.rows[0].id;
+    }
+
+    // Also mirror to partner_users for dedicated partner credentials
+    try {
+      await query(`
+        INSERT INTO partner_users (id, email, full_name, password_hash)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (email) DO UPDATE
+          SET password_hash = EXCLUDED.password_hash,
+              full_name = EXCLUDED.full_name,
+              updated_at = CURRENT_TIMESTAMP
+      `, [partnerId, partnerEmail, gymName, hashedPassword]);
+    } catch (e) {
+      console.warn("partner_users mirror warning:", e);
     }
 
     // 2. Upload Images
