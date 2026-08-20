@@ -69,7 +69,7 @@ export async function sendBookingConfirmationEmail(booking: any) {
             <!-- Middle Section: High-Res Access QR Code -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
               <div style="display: inline-block; padding: 14px; background: #ffffff; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
-                <img src="cid:qrcode" alt="Access QR Code" style="width: 190px; height: 190px; display: block; border-radius: 8px;" />
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(booking.ticket_code || booking.id)}" alt="Access QR Code" style="width: 190px; height: 190px; display: block; border-radius: 8px; margin: 0 auto;" />
               </div>
               
               <div>
@@ -120,15 +120,7 @@ export async function sendBookingConfirmationEmail(booking: any) {
           </div>
 
         </div>
-      `,
-      attachments: [
-        {
-          filename: 'qrcode.png',
-          content: qrDataUrl.split("base64,")[1],
-          encoding: 'base64',
-          cid: 'qrcode' // same as in the img src above
-        }
-      ]
+      `
     };
 
     const info = await transporter.sendMail(mailOptions);
