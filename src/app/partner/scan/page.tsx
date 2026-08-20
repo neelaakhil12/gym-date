@@ -3,21 +3,20 @@
 import GymLogoIcon from "@/components/GymLogoIcon";
 import React, { useState, useEffect } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import { supabase, getPartnerGym } from "@/lib/supabase";
+import { getPartnerGym } from "@/lib/supabase";
 import { verifyTicketAction } from "@/actions/ticketActions";
 import { 
-  X, 
   Camera, 
   User, 
   Calendar, 
   CheckCircle2, 
-  AlertCircle,
-  ArrowLeft,
-  ShieldCheck,
-  CreditCard
+  AlertCircle, 
+  ArrowLeft, 
+  ShieldCheck, 
+  CreditCard,
+  Building2
 } from "lucide-react";
 import Link from "next/link";
-
 import { useSession } from "next-auth/react";
 
 export default function PartnerScanner() {
@@ -26,6 +25,13 @@ export default function PartnerScanner() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [partnerGym, setPartnerGym] = useState<any>(null);
+
+  useEffect(() => {
+    getPartnerGym().then(gym => {
+      if (gym) setPartnerGym(gym);
+    });
+  }, []);
 
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
@@ -38,7 +44,7 @@ export default function PartnerScanner() {
           qrbox: { width: 250, height: 250 },
           aspectRatio: 1.0
         },
-        /* verbose= */ false
+        false
       );
 
       scanner.render(onScanSuccess, onScanFailure);
@@ -46,35 +52,23 @@ export default function PartnerScanner() {
 
     return () => {
       if (scanner) {
-        scanner.clear().catch(error => console.error("Failed to clear scanner", error));
+        scanner.clear().catch(err => console.error("Failed to clear scanner", err));
       }
     };
   }, [isScanning]);
 
-  const [gymName, setGymName] = useState<string>("");
-
-  useEffect(() => {
-    getPartnerGym().then(gym => {
-      if (gym) setGymName(gym.name);
-    });
-  }, []);
-
   async function onScanSuccess(decodedText: string) {
-    // Store raw text for debugging
     if (typeof window !== 'undefined') {
       (window as any).lastScannedText = decodedText;
     }
 
-    // Stop scanning once we have a result
     setIsScanning(false);
     setLoading(true);
     setError(null);
+    setScanResult(null);
 
     try {
-      // 2. Extract booking_id from decodedText (it might be a full URL or just the ID)
       let bookingId = decodedText.trim();
-      
-      // Handle URL formats if present
       if (bookingId.includes('/verify/')) {
         bookingId = bookingId.split('/verify/')[1].split('?')[0];
       } else if (bookingId.includes('://')) {
@@ -82,16 +76,19 @@ export default function PartnerScanner() {
         bookingId = urlParts[urlParts.length - 1].split('?')[0];
       }
 
-      // 3. Call secure server action
       const partnerId = (session?.user as any)?.id;
       const result = await verifyTicketAction(bookingId, partnerId);
 
-      if (result.error && !result.booking) {
+      if (result.error) {
         throw new Error(result.error);
       }
 
-      // Redirect to the public verification page which shows all details correctly
-      window.location.href = `/verify/${bookingId}`;
+      if (result.success && result.booking) {
+        setScanResult({
+          ...result.booking,
+          gym_name: result.gymName || partnerGym?.name || "Subscribed Gym"
+        });
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -99,10 +96,7 @@ export default function PartnerScanner() {
     }
   }
 
-  function onScanFailure(error: any) {
-    // This is called for every frame that doesn't have a QR code
-    // We don't really need to do anything here unless we want to log it
-  }
+  function onScanFailure() {}
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6 pb-24">
@@ -112,7 +106,7 @@ export default function PartnerScanner() {
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <h1 className="text-xl font-black uppercase tracking-tighter">
-          {gymName ? `${gymName} Scanner` : "Entry Scanner"}
+          {partnerGym?.name ? `${partnerGym.name} Scanner` : "Entry Scanner"}
         </h1>
         <div className="w-10"></div>
       </div>
@@ -125,7 +119,7 @@ export default function PartnerScanner() {
             </div>
             <div>
               <h2 className="text-2xl font-black">Scan QR Ticket</h2>
-              <p className="text-slate-400 mt-2">Point your camera at the customer's digital ticket to verify entry.</p>
+              <p className="text-slate-400 mt-2 text-sm">Point your camera at the customer&apos;s digital ticket to verify entry.</p>
             </div>
             <button 
               onClick={() => setIsScanning(true)}
@@ -162,9 +156,9 @@ export default function PartnerScanner() {
             </div>
             <div>
               <h3 className="text-xl font-black text-red-500 uppercase tracking-tight">Access Denied</h3>
-              <p className="text-slate-400 mt-1">{error}</p>
+              <p className="text-slate-200 font-bold mt-2 text-sm leading-relaxed">{error}</p>
               <div className="mt-4 p-3 bg-black/20 rounded-xl">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1">Scanned Data:</p>
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-1">Scanned Code:</p>
                 <p className="text-[10px] font-mono text-slate-300 break-all">{(window as any).lastScannedText || 'Unknown'}</p>
               </div>
             </div>
@@ -178,69 +172,82 @@ export default function PartnerScanner() {
         )}
 
         {scanResult && (
-          <div className="bg-white rounded-[40px] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+          <div className="bg-white rounded-[40px] overflow-hidden shadow-2xl animate-in zoom-in duration-300 text-slate-900">
             {/* Success Header */}
-            <div className="bg-green-500 p-8 flex flex-col items-center">
+            <div className="bg-green-500 p-8 flex flex-col items-center text-white">
               <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mb-4 shadow-xl">
                 <ShieldCheck className="w-12 h-12 text-green-500" />
               </div>
-              <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Access Granted</h3>
-              <p className="text-green-100 text-sm font-bold uppercase tracking-widest mt-1">Verified Entry</p>
+              <h3 className="text-2xl font-black uppercase tracking-tight">Access Granted</h3>
+              <p className="text-white/90 text-xs font-bold uppercase tracking-widest mt-1">Verified Member Entry</p>
             </div>
 
-            {/* User Info */}
-            <div className="p-8 space-y-6 text-left">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden border-2 border-slate-50 shadow-sm">
-                  {scanResult.profiles?.avatar_url ? (
-                    <img src={scanResult.profiles.avatar_url} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <User className="w-8 h-8" />
-                    </div>
-                  )}
+            {/* User & Subscription Info */}
+            <div className="p-8 space-y-5 text-left">
+              {/* Customer Name */}
+              <div className="flex items-center space-x-4 pb-4 border-b border-slate-100">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+                  <User className="w-7 h-7" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Customer Name</p>
-                  <h4 className="text-xl font-black text-slate-900 leading-none">{scanResult.customer_name || 'Anonymous User'}</h4>
+                  <h4 className="text-xl font-black text-slate-900 leading-tight">{scanResult.customer_name || 'Member'}</h4>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Gym Name & Plan Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Subscribed Gym</p>
+                  <div className="text-sm font-black text-slate-900 flex items-center">
+                    <Building2 className="w-3.5 h-3.5 mr-1.5 text-primary shrink-0" />
+                    <span className="truncate">{scanResult.gym_name}</span>
+                  </div>
+                </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Plan</p>
-                  <div className="flex items-center text-slate-900 font-black">
-                    <GymLogoIcon className="w-4 h-4 mr-2 text-primary" />
-                    {scanResult.plan_name}
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Status</p>
-                  <div className="flex items-center text-green-600 font-black">
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Active
+                  <div className="text-sm font-black text-slate-900 flex items-center">
+                    <GymLogoIcon className="w-3.5 h-3.5 mr-1.5 text-primary shrink-0" />
+                    <span className="truncate">{scanResult.plan_name}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-900/5 p-5 rounded-3xl space-y-3 border border-slate-900/5">
+              {/* Status & Validity Dates */}
+              <div className="bg-slate-900/5 p-5 rounded-2xl space-y-3 border border-slate-900/5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 font-bold flex items-center"><Calendar className="w-4 h-4 mr-2" /> Start Date</span>
-                  <span className="text-slate-900 font-black">{new Date(scanResult.start_date).toLocaleDateString()}</span>
+                  <span className="text-slate-500 font-bold flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" /> Status
+                  </span>
+                  <span className="text-green-600 font-black">Active</span>
                 </div>
-                <div className="flex items-center justify-between text-sm pt-3 border-t border-slate-900/10">
-                  <span className="text-slate-500 font-bold flex items-center"><Calendar className="w-4 h-4 mr-2" /> End Date</span>
-                  <span className="text-slate-900 font-black">{new Date(scanResult.end_date).toLocaleDateString()}</span>
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-900/10">
+                  <span className="text-slate-500 font-bold flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-slate-400" /> Start Date
+                  </span>
+                  <span className="text-slate-900 font-black">
+                    {new Date(scanResult.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between text-sm pt-3 border-t border-slate-900/10">
-                  <span className="text-slate-500 font-bold flex items-center"><CreditCard className="w-4 h-4 mr-2" /> Amount Paid</span>
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-900/10">
+                  <span className="text-slate-500 font-bold flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-slate-400" /> End Date
+                  </span>
+                  <span className="text-slate-900 font-black">
+                    {new Date(scanResult.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-900/10">
+                  <span className="text-slate-500 font-bold flex items-center">
+                    <CreditCard className="w-4 h-4 mr-2 text-slate-400" /> Amount
+                  </span>
                   <span className="text-primary font-black">₹{scanResult.amount}</span>
                 </div>
               </div>
 
               <button 
                 onClick={() => { setScanResult(null); setIsScanning(true); }}
-                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-slate-800 transition-all flex items-center justify-center space-x-2"
+                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-slate-800 transition-all flex items-center justify-center space-x-2 shadow-lg"
               >
                 <span>Done & Scan Next</span>
               </button>
