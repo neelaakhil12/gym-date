@@ -177,7 +177,12 @@ export default function AccountPage() {
       : Infinity
   })).sort((a, b) => a.calculatedDistance - b.calculatedDistance);
 
-  const displayName = nextAuthSession?.user?.name || supabaseUser?.full_name || "Gym Lover";
+  // Prioritize real database name over NextAuth session default "User"
+  const displayName = (supabaseUser?.full_name && supabaseUser.full_name !== "User" && supabaseUser.full_name !== "Gym Member") 
+    ? supabaseUser.full_name 
+    : (nextAuthSession?.user?.name && nextAuthSession.user.name !== "User" && nextAuthSession.user.name !== "Gym Member")
+      ? nextAuthSession.user.name
+      : (supabaseUser?.full_name || "Gym Lover");
   const displayEmail = nextAuthSession?.user?.email || supabaseUser?.email;
   const rawPhone = supabaseUser?.phone || "";
   
