@@ -21,8 +21,16 @@ export async function sendBookingConfirmationEmail(booking: any) {
 
     console.log(`[Email] Generating QR Code and sending confirmation to ${targetEmail}...`);
 
-    // 1. Generate QR Code as Data URL
-    const qrDataUrl = await QRCode.toDataURL(booking.ticket_code || booking.id);
+    // 1. Generate QR Code as Buffer and Data URL
+    const ticketValue = String(booking.ticket_code || booking.id || "PASS").trim();
+    const qrBuffer = await QRCode.toBuffer(ticketValue, {
+      width: 280,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
     
     // 2. Prepare Email Content
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
@@ -69,7 +77,7 @@ export async function sendBookingConfirmationEmail(booking: any) {
             <!-- Middle Section: High-Res Access QR Code -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
               <div style="display: inline-block; padding: 14px; background: #ffffff; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(booking.ticket_code || booking.id)}" alt="Access QR Code" style="width: 190px; height: 190px; display: block; border-radius: 8px; margin: 0 auto;" />
+                <img src="cid:passqrcode" alt="Access QR Code" width="190" height="190" style="width: 190px; height: 190px; display: block; border-radius: 8px; margin: 0 auto;" />
               </div>
               
               <div>
@@ -120,7 +128,15 @@ export async function sendBookingConfirmationEmail(booking: any) {
           </div>
 
         </div>
-      `
+      `,
+      attachments: [
+        {
+          filename: 'pass-qrcode.png',
+          content: qrBuffer,
+          contentType: 'image/png',
+          cid: 'passqrcode'
+        }
+      ]
     };
 
     const info = await transporter.sendMail(mailOptions);
