@@ -34,14 +34,27 @@ async function uploadCityImage(file: File): Promise<string | null> {
 
 export async function getAllBookings() {
   try {
+    const colsRes = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'bookings'
+    `);
+    const bookingCols = new Set((colsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+    const customerNameExpr = bookingCols.has("customer_name") 
+      ? `COALESCE(b.customer_name, u.full_name, 'Member')` 
+      : `COALESCE(u.full_name, 'Member')`;
+    const customerEmailExpr = bookingCols.has("customer_email") 
+      ? `COALESCE(b.customer_email, u.email, 'No email')` 
+      : `COALESCE(u.email, 'No email')`;
+
     const result = await query(
       `SELECT 
         b.*, 
-        COALESCE(b.customer_name, u.full_name, 'Member') as customer_name, 
-        COALESCE(b.customer_email, u.email, 'No email') as customer_email,
+        ${customerNameExpr} as customer_name, 
+        ${customerEmailExpr} as customer_email,
         g.name as gym_name
        FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id::text
+       LEFT JOIN users u ON b.user_id::text = u.id::text
        LEFT JOIN gyms g ON b.gym_id::text = g.id::text
        ORDER BY b.created_at DESC`
     );
@@ -123,13 +136,26 @@ export async function getPartnerGym() {
 
 export async function getPartnerBookings(gymId: string) {
   try {
+    const colsRes = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'bookings'
+    `);
+    const bookingCols = new Set((colsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+    const customerNameExpr = bookingCols.has("customer_name") 
+      ? `COALESCE(b.customer_name, u.full_name, 'Member')` 
+      : `COALESCE(u.full_name, 'Member')`;
+    const customerEmailExpr = bookingCols.has("customer_email") 
+      ? `COALESCE(b.customer_email, u.email, 'No email')` 
+      : `COALESCE(u.email, 'No email')`;
+
     const result = await query(
       `SELECT 
         b.*, 
-        COALESCE(b.customer_name, u.full_name, 'Member') as customer_name, 
-        COALESCE(b.customer_email, u.email, 'No email') as customer_email
+        ${customerNameExpr} as customer_name, 
+        ${customerEmailExpr} as customer_email
        FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id::text
+       LEFT JOIN users u ON b.user_id::text = u.id::text
        WHERE b.gym_id::text = $1::text
        ORDER BY b.created_at DESC`,
       [gymId]
@@ -222,16 +248,12 @@ export async function getAdminStats() {
     console.warn("getAdminStats gyms count warning:", e);
   }
 
-  // 3. Users (Count unique customers who have made bookings)
+  // 3. Users (Count unique customers who have made bookings or registered)
   try {
-    const usersCount = await query(`
-      SELECT COUNT(DISTINCT LOWER(customer_email)) as count 
-      FROM bookings 
-      WHERE customer_email IS NOT NULL AND customer_email != ''
-    `);
+    const usersCount = await query(`SELECT COUNT(DISTINCT id) as count FROM users WHERE role_id = 'user' OR role_id IS NULL`);
     totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
   } catch (e) {
-    console.warn("getAdminStats bookings users warning:", e);
+    console.warn("getAdminStats users count warning:", e);
   }
 
   // Fallback: If no bookings, count from users table
