@@ -58,6 +58,11 @@ export default function AccountPage() {
   const [isSearchingLoc, setIsSearchingLoc] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveMsg, setProfileSaveMsg] = useState("");
   const { data: nextAuthSession, status } = useSession();
   const router = useRouter();
 
@@ -100,6 +105,14 @@ export default function AccountPage() {
           const profileResult = await profileRes.json();
           if (profileResult.success && profileResult.profile) {
             setSupabaseUser(profileResult.profile);
+            setEditName(profileResult.profile.full_name || nextAuthSession?.user?.name || "");
+            const rawP = profileResult.profile.phone || "";
+            setEditPhone(rawP.replace(/^\+91/, '').trim());
+
+            // If phone number is missing, prompt user to complete profile
+            if (!profileResult.profile.phone) {
+              setIsEditProfileOpen(true);
+            }
 
             // Apply referral code if stored in localStorage (works for both Google + OTP login)
             const pendingRef = localStorage.getItem('referral_code');
@@ -527,6 +540,20 @@ export default function AccountPage() {
 
               {activeTab === "profile" && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-black text-secondary">Personal Information</h3>
+                      <p className="text-xs text-gray-400 font-bold mt-0.5">Keep your name and phone number updated for bookings and QR passes.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditProfileOpen(true)}
+                      className="px-6 py-2.5 bg-secondary text-white rounded-xl text-xs font-black hover:bg-slate-800 transition-all shadow-md shadow-secondary/10"
+                    >
+                      Edit Profile
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name</label>
@@ -557,7 +584,6 @@ export default function AccountPage() {
                       </div>
                     </div>
                   </div>
-
                 </div>
               )}
 
@@ -906,6 +932,121 @@ export default function AccountPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal (Name & Phone) */}
+      {isEditProfileOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] max-w-md w-full p-8 shadow-2xl relative border border-white animate-in zoom-in-95 duration-200">
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <User className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-black text-secondary">Complete Your Profile</h3>
+              <p className="text-gray-400 text-xs font-medium mt-1">
+                Please provide your full name and 10-digit mobile number for gym entry and booking confirmation.
+              </p>
+            </div>
+
+            {profileSaveMsg && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold text-center border border-red-100">
+                {profileSaveMsg}
+              </div>
+            )}
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editName.trim()) {
+                  setProfileSaveMsg("Full name is required");
+                  return;
+                }
+                const cleanPhone = editPhone.replace(/\D/g, '');
+                if (cleanPhone.length < 10) {
+                  setProfileSaveMsg("Please enter a valid 10-digit phone number");
+                  return;
+                }
+
+                setIsSavingProfile(true);
+                setProfileSaveMsg("");
+
+                try {
+                  const res = await fetch("/api/user/sync-profile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      email: displayEmail,
+                      name: editName.trim(),
+                      phone: cleanPhone
+                    })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    setSupabaseUser(data.user);
+                    setIsEditProfileOpen(false);
+                  } else {
+                    setProfileSaveMsg(data.error || "Failed to update profile");
+                  }
+                } catch (err: any) {
+                  setProfileSaveMsg(err.message || "Something went wrong");
+                } finally {
+                  setIsSavingProfile(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name <span className="text-red-500">*</span></label>
+                <input
+                  required
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-5 py-3.5 rounded-2xl bg-gray-50 border border-gray-100 outline-none focus:border-primary focus:bg-white transition-all font-bold text-secondary text-sm"
+                  placeholder="Your full name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400">+91</span>
+                  <input
+                    required
+                    type="tel"
+                    maxLength={10}
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value.replace(/\D/g, ''))}
+                    className="w-full pl-12 pr-5 py-3.5 rounded-2xl bg-gray-50 border border-gray-100 outline-none focus:border-primary focus:bg-white transition-all font-bold text-secondary text-sm tracking-wide"
+                    placeholder="10-digit mobile number"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSavingProfile || !editName.trim() || editPhone.replace(/\D/g, '').length < 10}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed mt-2 flex items-center justify-center space-x-2"
+              >
+                {isSavingProfile ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <span>Save Profile</span>
+                )}
+              </button>
+
+              {supabaseUser?.phone && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditProfileOpen(false)}
+                  className="w-full py-2 text-xs font-bold text-gray-400 hover:text-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </form>
           </div>
         </div>
       )}

@@ -146,11 +146,42 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={step === "email" ? handleSendOTP : handleVerifyOTP} className="space-y-6">
+          <form onSubmit={step === "email" ? handleSendOTP : handleVerifyOTP} className="space-y-4">
             {step === "email" ? (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Email Address</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+                    <input
+                      required
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm"
+                      placeholder="Your full name"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400 group-focus-within:text-primary transition-colors">+91</span>
+                    <input
+                      required
+                      type="tel"
+                      maxLength={10}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm tracking-wide"
+                      placeholder="10-digit mobile number"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Email Address <span className="text-red-500">*</span></label>
                   <div className="relative group">
                     <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     <input
@@ -158,7 +189,7 @@ export default function LoginPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-14 pr-5 py-5 rounded-[24px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary"
+                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm"
                       placeholder="name@example.com"
                     />
                   </div>
@@ -183,8 +214,8 @@ export default function LoginPage() {
             )}
 
             <button
-              disabled={loading || (step === "email" && !email) || (step === "otp" && !otp)}
-              className="w-full py-5 bg-secondary text-white rounded-[24px] font-black text-lg hover:bg-slate-800 transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl shadow-secondary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+              disabled={loading || (step === "email" && (!email || !name || phone.length < 10)) || (step === "otp" && !otp)}
+              className="w-full py-5 bg-secondary text-white rounded-[24px] font-black text-lg hover:bg-slate-800 transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl shadow-secondary/20 disabled:opacity-30 disabled:cursor-not-allowed mt-4"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
@@ -199,7 +230,7 @@ export default function LoginPage() {
 
           {step === "email" && (
             <>
-              <div className="relative my-10">
+              <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100"></div></div>
                 <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest"><span className="bg-white px-4 text-gray-400">Or continue with</span></div>
               </div>
@@ -207,9 +238,9 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full py-5 bg-white border-2 border-gray-100 text-secondary rounded-[24px] font-black text-lg hover:bg-gray-50 transition-all transform active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-white border-2 border-gray-100 text-secondary rounded-[20px] font-black text-base hover:bg-gray-50 transition-all transform active:scale-95 flex items-center justify-center space-x-3 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <Chrome className="h-6 w-6 text-primary" />
+                <Chrome className="h-5 w-5 text-primary" />
                 <span>Google Account</span>
               </button>
             </>
