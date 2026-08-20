@@ -243,16 +243,36 @@ export async function POST(req: NextRequest) {
     }
 
 
-    // ── 4. Send Confirmation Email ────────────────────────────────────────
+    // ── 4. Send Confirmation Email with QR Code & Gym Location ────────────────────────────────────────
     try {
       const fullBookingRes = await query(
-        `SELECT b.*, json_build_object('name', g.name, 'location', g.location) as gyms
-         FROM bookings b LEFT JOIN gyms g ON b.gym_id = g.id WHERE b.id = $1`,
-        [bookingId]
+        `SELECT b.*, 
+                COALESCE(b.customer_name, $2) as customer_name,
+                COALESCE(b.customer_email, $3) as customer_email,
+                json_build_object(
+                  'name', COALESCE(g.name, 'Gym Partner'), 
+                  'location', COALESCE(g.location, g.address, 'https://maps.google.com'),
+                  'address', COALESCE(g.address, g.location, '')
+                ) as gyms
+         FROM bookings b 
+         LEFT JOIN gyms g ON b.gym_id::text = g.id::text 
+         WHERE b.id::text = $1::text`,
+        [String(bookingId), customerName, customerEmail]
       );
       
       if (fullBookingRes.rows.length > 0) {
-        await sendBookingConfirmationEmail(fullBookingRes.rows[0]);
+        const bookingData = {
+          ...fullBookingRes.rows[0],
+          customer_name: fullBookingRes.rows[0].customer_name || customerName,
+          customer_email: fullBookingRes.rows[0].customer_email || customerEmail,
+          ticket_code: ticketCode,
+          plan_name: planName,
+          amount: amount,
+          start_date: today.toISOString(),
+          end_date: endDate.toISOString()
+        };
+        await sendBookingConfirmationEmail(bookingData);
+        console.log(`[Email] Confirmation email sent successfully to ${customerEmail}`);
       }
     } catch (emailErr) {
       console.error("[Email] confirmation email failed:", emailErr);
