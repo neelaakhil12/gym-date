@@ -36,18 +36,20 @@ export async function GET(req: NextRequest) {
     const queryParams: any[] = [];
 
     if (userId && bookingCols.has("user_id")) {
-      queryParams.push(userId);
-      whereConditions.push(`b.user_id = $${queryParams.length}`);
+      queryParams.push(String(userId));
+      whereConditions.push(`b.user_id::text = $${queryParams.length}::text`);
     }
     if (bookingCols.has("customer_email")) {
-      queryParams.push(email);
-      whereConditions.push(`b.customer_email = $${queryParams.length}`);
-    } else if (bookingCols.has("user_email")) {
-      queryParams.push(email);
-      whereConditions.push(`b.user_email = $${queryParams.length}`);
-    } else if (bookingCols.has("email")) {
-      queryParams.push(email);
-      whereConditions.push(`b.email = $${queryParams.length}`);
+      queryParams.push(email.toLowerCase());
+      whereConditions.push(`LOWER(b.customer_email) = $${queryParams.length}`);
+    } 
+    if (bookingCols.has("user_email")) {
+      queryParams.push(email.toLowerCase());
+      whereConditions.push(`LOWER(b.user_email) = $${queryParams.length}`);
+    } 
+    if (bookingCols.has("email")) {
+      queryParams.push(email.toLowerCase());
+      whereConditions.push(`LOWER(b.email) = $${queryParams.length}`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" OR ")}` : `WHERE 1=0`;
