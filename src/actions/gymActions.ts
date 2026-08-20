@@ -56,23 +56,37 @@ export async function createGymAndPartner(formData: FormData) {
       return { error: "Missing required fields." };
     }
 
-    // 1. Hash password and create user in Postgres
-    console.log("STEP 1: Creating/Updating Partner User:", partnerEmail);
+    // 1. Hash password and create/update partner in partner_users table
+    console.log("STEP 1: Creating/Updating Partner User in partner_users:", partnerEmail);
     let partnerId: string;
     const hashedPassword = await bcrypt.hash(partnerPassword, 10);
     
-    const checkUser = await query("SELECT id FROM users WHERE email = $1", [partnerEmail]);
-    if (checkUser.rows.length > 0) {
-      partnerId = checkUser.rows[0].id;
-      console.log("Partner already exists, updating role and password for ID:", partnerId);
-      await query("UPDATE users SET role_id = 'partner', password_hash = $1 WHERE id = $2", [hashedPassword, partnerId]);
+    // Ensure partner_users table exists
+    await query(`
+      CREATE TABLE IF NOT EXISTS partner_users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        full_name VARCHAR(255),
+        phone VARCHAR(20),
+        password_hash VARCHAR(255),
+        gym_id UUID,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const checkPartner = await query("SELECT id FROM partner_users WHERE email = $1", [partnerEmail]);
+    if (checkPartner.rows.length > 0) {
+      partnerId = checkPartner.rows[0].id;
+      console.log("Partner already exists in partner_users, updating password for ID:", partnerId);
+      await query("UPDATE partner_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", [hashedPassword, partnerId]);
     } else {
-      console.log("Creating new partner user...");
-      const insertUser = await query(
-        "INSERT INTO users (email, role_id, password_hash) VALUES ($1, 'partner', $2) RETURNING id",
-        [partnerEmail, hashedPassword]
+      console.log("Creating new partner user in partner_users...");
+      const insertPartner = await query(
+        "INSERT INTO partner_users (email, full_name, password_hash) VALUES ($1, $2, $3) RETURNING id",
+        [partnerEmail, gymName, hashedPassword]
       );
-      partnerId = insertUser.rows[0].id;
+      partnerId = insertPartner.rows[0].id;
     }
 
     // 2. Upload Images
