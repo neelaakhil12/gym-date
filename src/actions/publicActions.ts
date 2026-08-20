@@ -42,7 +42,30 @@ export async function getGymById(id: string) {
     console.log("Fetching gym by ID:", id);
     const result = await query('SELECT * FROM gyms WHERE id = $1', [id]);
     if (result.rows.length > 0) {
-      const gym = result.rows[0];
+      let gym = result.rows[0];
+
+      // Merge data from gyms_extra if exists
+      try {
+        const extraRes = await query('SELECT * FROM gyms_extra WHERE gym_id = $1', [id]);
+        if (extraRes.rows.length > 0) {
+          const extra = extraRes.rows[0];
+          gym = {
+            ...gym,
+            commission_rate: extra.commission_rate ?? gym.commission_rate,
+            partner_referral_amount: extra.partner_referral_amount ?? gym.partner_referral_amount,
+            lat: extra.lat ?? gym.lat,
+            lng: extra.lng ?? gym.lng,
+            rating: extra.rating ?? gym.rating,
+            reviews: extra.reviews ?? gym.reviews,
+            has_offer: extra.has_offer ?? gym.has_offer,
+            offer_percentage: extra.offer_percentage ?? gym.offer_percentage,
+            gallery: (Array.isArray(extra.gallery) && extra.gallery.length > 0) ? extra.gallery : gym.gallery
+          };
+        }
+      } catch (e) {
+        // gyms_extra might not exist yet
+      }
+
       if (gym.commission_rate === null || gym.commission_rate === undefined) {
         const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
         gym.commission_rate = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;

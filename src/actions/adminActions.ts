@@ -60,10 +60,26 @@ export async function getGyms() {
     const result = await query("SELECT * FROM gyms ORDER BY created_at DESC");
     const gyms = result.rows || [];
 
-    return gyms.map((gym: any) => ({
-      ...gym,
-      commission_rate: (gym.commission_rate === null || gym.commission_rate === undefined) ? platformComm : gym.commission_rate
-    }));
+    let extraMap = new Map<string, any>();
+    try {
+      const extraRes = await query("SELECT * FROM gyms_extra");
+      (extraRes.rows || []).forEach((r: any) => extraMap.set(r.gym_id, r));
+    } catch (e) {}
+
+    return gyms.map((gym: any) => {
+      const extra = extraMap.get(gym.id);
+      const commission = extra?.commission_rate ?? gym.commission_rate;
+      const refAmt = extra?.partner_referral_amount ?? gym.partner_referral_amount ?? 100;
+      return {
+        ...gym,
+        commission_rate: (commission === null || commission === undefined) ? platformComm : commission,
+        partner_referral_amount: refAmt,
+        rating: extra?.rating ?? gym.rating,
+        reviews: extra?.reviews ?? gym.reviews,
+        has_offer: extra?.has_offer ?? gym.has_offer,
+        offer_percentage: extra?.offer_percentage ?? gym.offer_percentage
+      };
+    });
   } catch (error) {
     console.error("Error fetching gyms", error);
     return [];
@@ -77,11 +93,25 @@ export async function getPartnerGym() {
     
     const userId = (session.user as any).id;
     const gymResult = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [userId]);
-    const gym = gymResult.rows[0] || null;
+    let gym = gymResult.rows[0] || null;
 
-    if (gym && (gym.commission_rate === null || gym.commission_rate === undefined)) {
-      const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
-      gym.commission_rate = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
+    if (gym) {
+      try {
+        const extraRes = await query("SELECT * FROM gyms_extra WHERE gym_id = $1", [gym.id]);
+        if (extraRes.rows.length > 0) {
+          const extra = extraRes.rows[0];
+          gym = {
+            ...gym,
+            commission_rate: extra.commission_rate ?? gym.commission_rate,
+            partner_referral_amount: extra.partner_referral_amount ?? gym.partner_referral_amount
+          };
+        }
+      } catch (e) {}
+
+      if (gym.commission_rate === null || gym.commission_rate === undefined) {
+        const configRes = await query("SELECT value FROM platform_config WHERE key = 'platform_commission' LIMIT 1");
+        gym.commission_rate = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
+      }
     }
 
     return gym;

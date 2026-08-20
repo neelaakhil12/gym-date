@@ -419,6 +419,42 @@ export async function updateGym(gymId: string, formData: FormData) {
     const sql = `UPDATE gyms SET ${updateFields.join(", ")} WHERE id = $${updateValues.length}`;
     await query(sql, updateValues);
 
+    // Also persist in gyms_extra to guarantee storage of custom commission_rate and referral_amount
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS gyms_extra (
+          gym_id UUID PRIMARY KEY,
+          commission_rate NUMERIC DEFAULT 10,
+          partner_referral_amount DECIMAL(10,2) DEFAULT 100,
+          lat DOUBLE PRECISION,
+          lng DOUBLE PRECISION,
+          rating NUMERIC DEFAULT 0,
+          reviews INTEGER DEFAULT 0,
+          has_offer BOOLEAN DEFAULT FALSE,
+          offer_percentage INTEGER DEFAULT 0,
+          gallery TEXT[] DEFAULT '{}',
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await query(`
+        INSERT INTO gyms_extra (gym_id, commission_rate, partner_referral_amount, lat, lng, rating, reviews, has_offer, offer_percentage, gallery, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+        ON CONFLICT (gym_id) DO UPDATE SET
+          commission_rate = EXCLUDED.commission_rate,
+          partner_referral_amount = EXCLUDED.partner_referral_amount,
+          lat = EXCLUDED.lat,
+          lng = EXCLUDED.lng,
+          rating = EXCLUDED.rating,
+          reviews = EXCLUDED.reviews,
+          has_offer = EXCLUDED.has_offer,
+          offer_percentage = EXCLUDED.offer_percentage,
+          gallery = EXCLUDED.gallery,
+          updated_at = CURRENT_TIMESTAMP
+      `, [gymId, commissionRate, partnerReferralAmount, lat, lng, rating, reviews, hasOffer, offerPercentage, finalGalleryUrls]);
+    } catch (extraErr) {
+      console.warn("gyms_extra save warning:", extraErr);
+    }
+
     await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
 
     for (let idx = 0; idx < planNames.length; idx++) {
