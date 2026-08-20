@@ -449,21 +449,43 @@ export async function deleteGym(gymId: string) {
     
     const partnerId = gymResult.rows[0].partner_id;
 
-    // 1. Delete dependent records first to avoid foreign key constraints
+    // 1. Delete dependent records safely
     console.log(`Cleaning up dependent records for gym: ${gymId}`);
     
-    await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
-    await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
-    await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
+    try {
+      await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
+    } catch (e) {
+      console.warn("pricing_plans delete skipped:", e);
+    }
+
+    try {
+      await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
+    } catch (e) {
+      console.warn("payout_requests delete skipped or table absent:", e);
+    }
+
+    try {
+      await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
+    } catch (e) {
+      console.warn("bookings delete skipped or table absent:", e);
+    }
 
     // 2. Delete the gym
     await query("DELETE FROM gyms WHERE id = $1", [gymId]);
 
-    // 3. Delete the partner account if it exists
+    // 3. Delete the partner account from both tables if it exists
     if (partnerId) {
-      await query("DELETE FROM users WHERE id = $1", [partnerId]);
+      try {
+        await query("DELETE FROM partner_users WHERE id = $1", [partnerId]);
+      } catch (e) {}
+
+      try {
+        await query("DELETE FROM users WHERE id = $1", [partnerId]);
+      } catch (e) {}
     }
     
+    revalidatePath("/superadmin/gyms");
+    revalidatePath("/operation-admin/gyms");
     revalidatePath("/admin/gyms");
     revalidatePath("/explore");
     revalidatePath("/");
