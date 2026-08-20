@@ -148,7 +148,7 @@ export async function getAllProfiles() {
 
     // 1. Fetch Admin Users
     try {
-      const adminRes = await query("SELECT id, email, full_name, 'super_admin' as role_id FROM admin_users");
+      const adminRes = await query("SELECT id::text as id, email, full_name, 'super_admin' as role_id FROM admin_users");
       if (adminRes.rows) profiles.push(...adminRes.rows);
     } catch (e: any) {
       profiles.push({ id: 'err1', full_name: 'Admin Fetch Error', email: e.message, role_id: 'super_admin' });
