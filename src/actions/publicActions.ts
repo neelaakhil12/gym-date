@@ -23,7 +23,31 @@ export async function getGyms() {
     const platformComm = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
 
     const result = await query('SELECT * FROM gyms ORDER BY created_at DESC');
-    const gyms = result.rows || [];
+    let gyms = result.rows || [];
+
+    // Merge gyms_extra
+    try {
+      const extraRes = await query('SELECT * FROM gyms_extra');
+      const extraMap = new Map((extraRes.rows || []).map((e: any) => [e.gym_id, e]));
+      gyms = gyms.map((gym: any) => {
+        const extra = extraMap.get(gym.id);
+        if (extra) {
+          return {
+            ...gym,
+            commission_rate: extra.commission_rate ?? gym.commission_rate,
+            partner_referral_amount: extra.partner_referral_amount ?? gym.partner_referral_amount,
+            lat: extra.lat ?? gym.lat,
+            lng: extra.lng ?? gym.lng,
+            rating: extra.rating ?? gym.rating,
+            reviews: extra.reviews ?? gym.reviews,
+            has_offer: extra.has_offer ?? gym.has_offer,
+            offer_percentage: extra.offer_percentage ?? gym.offer_percentage,
+            gallery: (extra.gallery && extra.gallery.length > 0) ? extra.gallery : gym.gallery
+          };
+        }
+        return gym;
+      });
+    } catch (e) {}
 
     return gyms.map((gym: any) => ({
       ...gym,

@@ -55,9 +55,18 @@ const GymCard: React.FC<GymCardProps> = ({ gym, onBuyNow }) => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-1 text-gray-500 mb-4">
-              <MapPin className="h-4 w-4" />
-              <span className="text-xs truncate">{gym.location}</span>
+            <div className="flex items-center justify-between text-gray-500 mb-4 text-xs">
+              <div className="flex items-center space-x-1 min-w-0 pr-2">
+                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate">{gym.location}</span>
+              </div>
+              {gym.calculatedDistance !== null && gym.calculatedDistance !== undefined && !isNaN(gym.calculatedDistance) && gym.calculatedDistance !== Infinity && (
+                <span className="bg-primary/10 text-primary font-black px-2 py-0.5 rounded-lg text-[10px] shrink-0">
+                  {gym.calculatedDistance < 1 
+                    ? `${(gym.calculatedDistance * 1000).toFixed(0)}m away` 
+                    : `${gym.calculatedDistance.toFixed(1)} km away`}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2 mb-6">

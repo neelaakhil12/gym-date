@@ -25,15 +25,42 @@ export async function GET(req: NextRequest) {
     const userId = userResult.rows[0]?.id;
     console.log(`[GetBookings] Fetching by userId: ${userId} and email: ${email}`);
 
+    // Check available columns in bookings table
+    const bookingColsRes = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'bookings'
+    `);
+    const bookingCols = new Set((bookingColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+    const whereConditions: string[] = [];
+    const queryParams: any[] = [];
+
+    if (userId && bookingCols.has("user_id")) {
+      queryParams.push(userId);
+      whereConditions.push(`b.user_id = $${queryParams.length}`);
+    }
+    if (bookingCols.has("customer_email")) {
+      queryParams.push(email);
+      whereConditions.push(`b.customer_email = $${queryParams.length}`);
+    } else if (bookingCols.has("user_email")) {
+      queryParams.push(email);
+      whereConditions.push(`b.user_email = $${queryParams.length}`);
+    } else if (bookingCols.has("email")) {
+      queryParams.push(email);
+      whereConditions.push(`b.email = $${queryParams.length}`);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" OR ")}` : `WHERE 1=0`;
+
     // Fetch bookings with gym details
     const bookingsResult = await query(
       `SELECT b.*, 
        json_build_object('name', g.name, 'location', g.location) as gyms
        FROM bookings b
-       LEFT JOIN gyms g ON b.gym_id = g.id::text
-       WHERE b.user_id = $1 OR b.customer_email = $2
+       LEFT JOIN gyms g ON b.gym_id::text = g.id::text
+       ${whereClause}
        ORDER BY b.created_at DESC`,
-       [userId || 'NON_EXISTENT_ID', email]
+       queryParams
      );
 
     console.log(`[GetBookings] Found ${bookingsResult.rows.length} bookings for ${email}`);

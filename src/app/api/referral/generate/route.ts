@@ -10,13 +10,40 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type'); // 'user' or 'partner'
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
-    // Check if user already has a referral code
-    const existing = await query('SELECT referral_code, wallet_balance, role_id FROM users WHERE id = $1', [userId]);
+    // Inspect available columns in users table
+    const userColsRes = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'users'
+    `);
+    const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+    // Check if user already exists
+    const existing = await query('SELECT * FROM users WHERE id = $1', [userId]);
     if (existing.rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const user = existing.rows[0];
     let code = user.referral_code;
-    const walletBalance = user.wallet_balance || 0;
+    let walletBalance = user.wallet_balance || 0;
+
+    // Check users_extra for referral code or wallet balance fallback
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS users_extra (
+          user_id UUID PRIMARY KEY,
+          referral_code VARCHAR(50),
+          wallet_balance DECIMAL(10,2) DEFAULT 0,
+          address TEXT,
+          latitude DOUBLE PRECISION,
+          longitude DOUBLE PRECISION,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      const extraRes = await query('SELECT referral_code, wallet_balance FROM users_extra WHERE user_id = $1', [userId]);
+      if (extraRes.rows.length > 0) {
+        if (!code) code = extraRes.rows[0].referral_code;
+        if (!walletBalance) walletBalance = extraRes.rows[0].wallet_balance;
+      }
+    } catch (e) {}
     
     // Determine role context: use 'type' param if provided, otherwise fallback to database role
     const isPartnerContext = type ? (type === 'partner') : (user.role_id === 'partner');
@@ -24,7 +51,18 @@ export async function GET(req: NextRequest) {
     // Generate a new unique code if not set
     if (!code) {
       code = crypto.randomBytes(4).toString('hex').toUpperCase(); // e.g. "A3F92C1B"
-      await query('UPDATE users SET referral_code = $1 WHERE id = $2', [code, userId]);
+      if (userCols.has("referral_code")) {
+        try {
+          await query('UPDATE users SET referral_code = $1 WHERE id = $2', [code, userId]);
+        } catch (err) {}
+      }
+      try {
+        await query(`
+          INSERT INTO users_extra (user_id, referral_code, updated_at)
+          VALUES ($1, $2, CURRENT_TIMESTAMP)
+          ON CONFLICT (user_id) DO UPDATE SET referral_code = EXCLUDED.referral_code, updated_at = CURRENT_TIMESTAMP
+        `, [userId, code]);
+      } catch (err) {}
     }
 
     // Get referral stats
