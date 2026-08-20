@@ -21,17 +21,10 @@ export async function sendBookingConfirmationEmail(booking: any) {
 
     console.log(`[Email] Generating QR Code and sending confirmation to ${targetEmail}...`);
 
-    // 1. Generate QR Code as Data URI (Base64 PNG) & Buffer
-    const ticketValue = String(booking.id || booking.ticket_code || "PASS").trim();
-    const qrDataUrl = await QRCode.toDataURL(ticketValue, {
-      width: 320,
-      margin: 1,
-      color: {
-        dark: '#000000',
-        light: '#ffffff'
-      }
-    });
-    
+    // 1. Uniform Ticket ID (Match exactly with Account Dashboard: #72D2DE53)
+    const shortId = (booking.id ? String(booking.id).slice(0, 8) : "PASS").toUpperCase();
+    const qrValue = booking.id ? String(booking.id) : shortId;
+
     // 2. Prepare Email Content
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
       ? booking.gyms.location 
@@ -39,7 +32,6 @@ export async function sendBookingConfirmationEmail(booking: any) {
 
     const formattedStart = new Date(booking.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     const formattedEnd = new Date(booking.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const ticketIdDisplay = booking.ticket_code || booking.id.substring(0, 8).toUpperCase();
 
     const mailOptions = {
       from: process.env.SMTP_FROM || `"GymDate" <${process.env.SMTP_USER}>`,
@@ -76,17 +68,17 @@ export async function sendBookingConfirmationEmail(booking: any) {
 
             <!-- Middle Section: High-Res Access QR Code -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
-              <div style="display: inline-block; padding: 14px; background: #ffffff; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
-                <img src="${qrDataUrl}" alt="Access QR Code" width="190" height="190" style="width: 190px; height: 190px; display: block; border-radius: 8px; margin: 0 auto; border: none;" />
+              <div style="display: inline-block; padding: 16px; background: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrValue)}&size=240&margin=1&ecLevel=H" alt="Access QR Code" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; border: none;" />
               </div>
               
               <div>
                 <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin: 0 0 2px 0;">Ticket ID</p>
-                <p style="font-size: 18px; font-weight: 900; color: #0f172a; font-family: monospace; letter-spacing: 1px; margin: 0 0 12px 0;">${ticketIdDisplay}</p>
+                <p style="font-size: 18px; font-weight: 900; color: #0f172a; font-family: monospace; letter-spacing: 1px; margin: 0 0 12px 0;">${shortId}</p>
               </div>
 
               <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 16px; display: inline-block;">
-                <p style="font-size: 11px; font-weight: 700; color: #475569; margin: 0;">Scan Code at Entry</p>
+                <p style="font-size: 11px; font-weight: 700; color: #475569; margin: 0;">#${shortId}</p>
               </div>
             </div>
 
