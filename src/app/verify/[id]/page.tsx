@@ -19,10 +19,14 @@ export default async function VerifyBookingPage({ params }: Props) {
        g.name as gym_name,
        g.location as gym_location
        FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id::text
+       LEFT JOIN users u ON b.user_id::text = u.id::text
        LEFT JOIN gyms g ON b.gym_id::text = g.id::text
-       WHERE b.id::text = $1 OR b.ticket_code ILIKE $1`,
-      [id]
+       WHERE b.id::text ILIKE $1 
+          OR b.ticket_code ILIKE $1 
+          OR b.id::text ILIKE $2 
+          OR b.ticket_code ILIKE $2
+       ORDER BY b.created_at DESC LIMIT 1`,
+      [id.trim(), `${id.trim()}%`]
     );
     booking = result.rows[0];
   } catch (err) {
