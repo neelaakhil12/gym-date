@@ -24,8 +24,16 @@ export async function sendBookingConfirmationEmail(booking: any) {
     // 1. Uniform Ticket ID (Match exactly with Account Dashboard: #E94FD64E)
     const shortId = (booking.id ? String(booking.id).slice(0, 8) : "PASS").toUpperCase();
     const qrValue = booking.id ? String(booking.id) : shortId;
-    const baseUrl = process.env.NEXTAUTH_URL || "https://gymdate.in";
-    const qrImageUrl = `${baseUrl}/api/qr?code=${encodeURIComponent(qrValue)}`;
+
+    // Generate PNG Buffer directly
+    const qrBuffer = await QRCode.toBuffer(qrValue, {
+      width: 300,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
 
     // 2. Prepare Email Content
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
@@ -68,10 +76,10 @@ export async function sendBookingConfirmationEmail(booking: any) {
               </table>
             </div>
 
-            <!-- Middle Section: High-Res Access QR Code Hosted on Domain -->
+            <!-- Middle Section: High-Res Access QR Code -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
               <div style="display: inline-block; padding: 16px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
-                <img src="${qrImageUrl}" alt="Access QR Code" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
+                <img src="cid:gymdatepassqr" alt="Access QR Code" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
               </div>
               
               <div>
@@ -122,7 +130,15 @@ export async function sendBookingConfirmationEmail(booking: any) {
           </div>
 
         </div>
-      `
+      `,
+      attachments: [
+        {
+          filename: `ticket-${shortId}.png`,
+          content: qrBuffer,
+          contentType: 'image/png',
+          cid: 'gymdatepassqr'
+        }
+      ]
     };
 
     const info = await transporter.sendMail(mailOptions);
