@@ -16,7 +16,32 @@ export async function GET(req: Request) {
       [email]
     );
 
-    const profile = result.rows[0];
+    let profile = result.rows[0] || null;
+
+    if (profile) {
+      try {
+        const extraRes = await query('SELECT * FROM users_extra WHERE user_id = $1', [profile.id]);
+        if (extraRes.rows.length > 0) {
+          const extra = extraRes.rows[0];
+          profile = {
+            ...profile,
+            address: extra.address || profile.address || profile.location,
+            latitude: extra.latitude ?? profile.latitude ?? profile.lat,
+            longitude: extra.longitude ?? profile.longitude ?? profile.lng
+          };
+        }
+      } catch (e) {}
+
+      if (!profile.address && profile.location) {
+        profile.address = profile.location;
+      }
+      if (!profile.latitude && profile.lat) {
+        profile.latitude = profile.lat;
+      }
+      if (!profile.longitude && profile.lng) {
+        profile.longitude = profile.lng;
+      }
+    }
 
     return NextResponse.json({ 
       success: true, 
