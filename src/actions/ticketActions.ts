@@ -79,8 +79,18 @@ export async function verifyTicketAction(ticketCode: string, providedPartnerId?:
       }
     }
 
-    // 5. Ensure name is populated
-    const displayName = bookingData.customer_name || "Member";
+    // 5. Ensure customer name is retrieved from users table if not on booking
+    let displayName = bookingData.customer_name;
+    if (!displayName || displayName === "Member") {
+      if (bookingData.user_id) {
+        const userRes = await query("SELECT full_name, email FROM users WHERE id::text = $1::text", [String(bookingData.user_id)]);
+        if (userRes.rows.length > 0 && userRes.rows[0].full_name) {
+          displayName = userRes.rows[0].full_name;
+        }
+      }
+    }
+    displayName = displayName || "Member";
+
     const finalBooking = {
       ...bookingData,
       customer_name: displayName

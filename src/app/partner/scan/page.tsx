@@ -195,20 +195,25 @@ export default function PartnerScanner() {
                 </div>
               </div>
 
-              {/* Gym Name & Plan Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Subscribed Gym</p>
-                  <div className="text-sm font-black text-slate-900 flex items-center">
-                    <Building2 className="w-3.5 h-3.5 mr-1.5 text-primary shrink-0" />
-                    <span className="truncate">{scanResult.gym_name}</span>
+              {/* Subscribed Gym & Plan Information Cards */}
+              <div className="space-y-3">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-start space-x-3">
+                  <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0 mt-0.5">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subscribed Gym</p>
+                    <p className="text-base font-black text-slate-900 leading-snug break-words">{scanResult.gym_name}</p>
                   </div>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Plan</p>
-                  <div className="text-sm font-black text-slate-900 flex items-center">
-                    <GymLogoIcon className="w-3.5 h-3.5 mr-1.5 text-primary shrink-0" />
-                    <span className="truncate">{scanResult.plan_name}</span>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-start space-x-3">
+                  <div className="p-2.5 bg-primary/10 rounded-xl text-primary shrink-0 mt-0.5">
+                    <GymLogoIcon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Membership Plan</p>
+                    <p className="text-base font-black text-slate-900 leading-snug break-words">{scanResult.plan_name}</p>
                   </div>
                 </div>
               </div>
