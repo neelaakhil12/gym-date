@@ -13,18 +13,31 @@ export default async function VerifyBookingPage({ params }: Props) {
 
   let booking = null;
   try {
+    const colsRes = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'bookings'
+    `);
+    const bookingCols = new Set((colsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+    const customerNameExpr = bookingCols.has("customer_name") 
+      ? `COALESCE(b.customer_name, u.full_name, 'Member')` 
+      : `COALESCE(u.full_name, 'Member')`;
+
+    const whereParts = [`b.id::text ILIKE $1`, `b.id::text ILIKE $2`];
+    if (bookingCols.has("ticket_code")) {
+      whereParts.push(`b.ticket_code ILIKE $1`);
+      whereParts.push(`b.ticket_code ILIKE $2`);
+    }
+
     const result = await query(
       `SELECT b.*, 
-       COALESCE(b.customer_name, u.full_name, 'Member') as display_name,
+       ${customerNameExpr} as display_name,
        g.name as gym_name,
        g.location as gym_location
        FROM bookings b
        LEFT JOIN users u ON b.user_id::text = u.id::text
        LEFT JOIN gyms g ON b.gym_id::text = g.id::text
-       WHERE b.id::text ILIKE $1 
-          OR b.ticket_code ILIKE $1 
-          OR b.id::text ILIKE $2 
-          OR b.ticket_code ILIKE $2
+       WHERE ${whereParts.join(" OR ")}
        ORDER BY b.created_at DESC LIMIT 1`,
       [id.trim(), `${id.trim()}%`]
     );

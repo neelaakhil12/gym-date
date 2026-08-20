@@ -13,14 +13,23 @@ export async function verifyTicketAction(ticketCode: string, providedPartnerId?:
 
     let partnerId = providedPartnerId;
 
-    // 1. Fetch the booking by ticket_code, full ID, or ID prefix
+    // 1. Fetch available columns from bookings table
+    const colsRes = await query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'bookings'
+    `);
+    const bookingCols = new Set((colsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
     let bookingData = null;
+    const whereParts = [`id::text ILIKE $1`, `id::text ILIKE $2`];
+    if (bookingCols.has("ticket_code")) {
+      whereParts.push(`ticket_code ILIKE $1`);
+      whereParts.push(`ticket_code ILIKE $2`);
+    }
+
     const codeResult = await query(
       `SELECT * FROM bookings 
-       WHERE ticket_code ILIKE $1 
-          OR id::text ILIKE $1 
-          OR id::text ILIKE $2
-          OR ticket_code ILIKE $2
+       WHERE ${whereParts.join(" OR ")}
        ORDER BY created_at DESC LIMIT 1`,
       [rawCode, `${rawCode}%`]
     );
