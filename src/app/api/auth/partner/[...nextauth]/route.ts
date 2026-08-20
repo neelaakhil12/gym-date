@@ -19,12 +19,28 @@ export const partnerAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const userResult = await query("SELECT * FROM users WHERE email = $1 AND role_id = 'partner'", [
-          credentials.email,
-        ]);
-        if (userResult.rows.length === 0) throw new Error("No partner account found with this email.");
+        // 1. Check partner_users table first (dedicated partner credentials table)
+        let user: any = null;
+        try {
+          const partnerResult = await query("SELECT * FROM partner_users WHERE email = $1", [credentials.email]);
+          if (partnerResult.rows.length > 0) {
+            user = partnerResult.rows[0];
+          }
+        } catch (e) {
+          console.warn("partner_users table query issue:", e);
+        }
 
-        const user = userResult.rows[0];
+        // 2. Fallback to users table if not in partner_users
+        if (!user) {
+          const userResult = await query("SELECT * FROM users WHERE email = $1 AND role_id = 'partner'", [
+            credentials.email,
+          ]);
+          if (userResult.rows.length > 0) {
+            user = userResult.rows[0];
+          }
+        }
+
+        if (!user) throw new Error("No partner account found with this email.");
 
         if (!user.password_hash)
           throw new Error("No password set. Use forgot password.");
