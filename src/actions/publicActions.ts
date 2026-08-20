@@ -48,7 +48,11 @@ export async function getGymById(id: string) {
         gym.commission_rate = configRes.rows[0] ? parseFloat(configRes.rows[0].value) : 10;
       }
       console.log("Gym found in database:", gym.name);
-      return gym;
+      return {
+        ...gym,
+        image: toAbsoluteUrl(gym.image),
+        gallery: Array.isArray(gym.gallery) ? gym.gallery.map(toAbsoluteUrl) : []
+      };
     }
     
     console.log("Gym not found anywhere for ID:", id);
