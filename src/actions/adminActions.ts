@@ -707,9 +707,22 @@ export async function createOperationAdmin(data: { email: string; password: stri
   try {
     const { email, password, full_name } = data;
     
-    // Check if user exists
-    const checkUser = await query("SELECT id FROM users WHERE email = $1", [email]);
-    if (checkUser.rows.length > 0) return { error: "User with this email already exists" };
+    // Ensure staff_users table exists
+    await query(`
+      CREATE TABLE IF NOT EXISTS staff_users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        full_name VARCHAR(255),
+        password_hash VARCHAR(255),
+        can_access_settings BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Check if user exists in staff_users
+    const checkStaff = await query("SELECT id FROM staff_users WHERE email = $1", [email]);
+    if (checkStaff.rows.length > 0) return { error: "Staff user with this email already exists" };
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -720,6 +733,7 @@ export async function createOperationAdmin(data: { email: string; password: stri
       [email, hashedPassword, full_name]
     );
 
+    revalidatePath("/superadmin/users");
     revalidatePath("/admin/users");
     return { success: true };
   } catch (error: any) {
