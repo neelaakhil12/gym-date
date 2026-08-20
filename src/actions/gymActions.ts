@@ -348,13 +348,71 @@ export async function updateGym(gymId: string, formData: FormData) {
     const partnerReferralAmount = parseFloat(formData.get("partnerReferralAmount") as string) || 100;
     const commissionRate = parseFloat(formData.get("commissionRate") as string) || 10;
 
-    await query(
-      "UPDATE gyms SET name = $1, location = $2, price_per_day = $3, description = $4, amenities = $5, image = $6, gallery = $7, lat = $8, lng = $9, rating = $10, reviews = $11, has_offer = $12, offer_percentage = $13, partner_referral_amount = $14, commission_rate = $15 WHERE id = $16",
-      [
-        gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, finalPrimaryImageUrl, finalGalleryUrls, lat, lng, rating, reviews, hasOffer, offerPercentage, partnerReferralAmount, commissionRate, gymId
-      ]
-    );
+    // Check available columns in gyms table
+    const columnsRes = await query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'gyms'
+    `);
+    const availableCols = new Set((columnsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+    const updateFields: string[] = [
+      "name = $1",
+      "location = $2",
+      "price_per_day = $3",
+      "description = $4",
+      "amenities = $5::text[]",
+      "image = $6"
+    ];
+    const updateValues: any[] = [
+      gymName,
+      location,
+      planPrices[0] ? parseFloat(planPrices[0]) : 99,
+      description,
+      amenities,
+      finalPrimaryImageUrl
+    ];
+
+    if (availableCols.has("gallery")) {
+      updateValues.push(finalGalleryUrls);
+      updateFields.push(`gallery = $${updateValues.length}::text[]`);
+    }
+    if (availableCols.has("lat")) {
+      updateValues.push(lat);
+      updateFields.push(`lat = $${updateValues.length}`);
+    }
+    if (availableCols.has("lng")) {
+      updateValues.push(lng);
+      updateFields.push(`lng = $${updateValues.length}`);
+    }
+    if (availableCols.has("rating")) {
+      updateValues.push(rating);
+      updateFields.push(`rating = $${updateValues.length}`);
+    }
+    if (availableCols.has("reviews")) {
+      updateValues.push(reviews);
+      updateFields.push(`reviews = $${updateValues.length}`);
+    }
+    if (availableCols.has("has_offer")) {
+      updateValues.push(hasOffer);
+      updateFields.push(`has_offer = $${updateValues.length}`);
+    }
+    if (availableCols.has("offer_percentage")) {
+      updateValues.push(offerPercentage);
+      updateFields.push(`offer_percentage = $${updateValues.length}`);
+    }
+    if (availableCols.has("partner_referral_amount")) {
+      updateValues.push(partnerReferralAmount);
+      updateFields.push(`partner_referral_amount = $${updateValues.length}`);
+    }
+    if (availableCols.has("commission_rate")) {
+      updateValues.push(commissionRate);
+      updateFields.push(`commission_rate = $${updateValues.length}`);
+    }
+
+    updateValues.push(gymId);
+    const sql = `UPDATE gyms SET ${updateFields.join(", ")} WHERE id = $${updateValues.length}`;
+    await query(sql, updateValues);
 
     await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
 
