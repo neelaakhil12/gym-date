@@ -135,20 +135,73 @@ export async function createGymAndPartner(formData: FormData) {
     const hasOffer = formData.get("hasOffer") === "true";
     const offerPercentage = parseInt(formData.get("offerPercentage") as string) || 0;
 
-    // 3. Create the gym
-    console.log("STEP 3: Inserting Gym into Database...");
+    // 3. Create the gym dynamically based on columns that exist in the gyms table
+    console.log("STEP 3: Checking columns & inserting gym into Database...");
     const finalGallery = galleryUrls.length > 0 ? galleryUrls : [primaryImageUrl || "https://images.unsplash.com/photo-1534438327276"];
-    const gymInsert = await query(
-      `INSERT INTO gyms 
-       (partner_id, name, location, price_per_day, description, amenities, image, gallery, status, rating, reviews, lat, lng, has_offer, offer_percentage, partner_referral_amount, commission_rate) 
-       VALUES ($1, $2, $3, $4, $5, $6::text[], $7, $8::text[], 'Open', $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`,
-      [
-        partnerId, gymName, location, planPrices[0] ? parseFloat(planPrices[0]) : 99,
-        description, amenities, primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
-        finalGallery,
-        rating, reviews, lat, lng, hasOffer, offerPercentage, partnerReferralAmount, parseFloat(commissionRate) || 10
-      ]
-    );
+    
+    // Check available columns in gyms table
+    const columnsRes = await query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' AND table_name = 'gyms'
+    `);
+    const availableCols = new Set((columnsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+    console.log("Available gyms columns:", Array.from(availableCols).join(", "));
+
+    const colNames: string[] = ["partner_id", "name", "location", "price_per_day", "description", "amenities", "image", "status"];
+    const values: any[] = [
+      partnerId,
+      gymName,
+      location,
+      planPrices[0] ? parseFloat(planPrices[0]) : 99,
+      description,
+      amenities,
+      primaryImageUrl || "https://images.unsplash.com/photo-1534438327276-14e5300c3a48",
+      'Open'
+    ];
+
+    if (availableCols.has("gallery")) {
+      colNames.push("gallery");
+      values.push(finalGallery);
+    }
+    if (availableCols.has("lat")) {
+      colNames.push("lat");
+      values.push(lat);
+    }
+    if (availableCols.has("lng")) {
+      colNames.push("lng");
+      values.push(lng);
+    }
+    if (availableCols.has("rating")) {
+      colNames.push("rating");
+      values.push(rating);
+    }
+    if (availableCols.has("reviews")) {
+      colNames.push("reviews");
+      values.push(reviews);
+    }
+    if (availableCols.has("has_offer")) {
+      colNames.push("has_offer");
+      values.push(hasOffer);
+    }
+    if (availableCols.has("offer_percentage")) {
+      colNames.push("offer_percentage");
+      values.push(offerPercentage);
+    }
+    if (availableCols.has("partner_referral_amount")) {
+      colNames.push("partner_referral_amount");
+      values.push(partnerReferralAmount);
+    }
+    if (availableCols.has("commission_rate")) {
+      colNames.push("commission_rate");
+      values.push(parseFloat(commissionRate) || 10);
+    }
+
+    const placeholders = colNames.map((col, idx) => col === "amenities" || col === "gallery" ? `$${idx + 1}::text[]` : `$${idx + 1}`).join(", ");
+    const insertQuery = `INSERT INTO gyms (${colNames.join(", ")}) VALUES (${placeholders}) RETURNING id`;
+    
+    console.log("Executing insertQuery:", insertQuery);
+    const gymInsert = await query(insertQuery, values);
 
     const gymId = gymInsert.rows[0].id;
     console.log("Gym created successfully with ID:", gymId);
