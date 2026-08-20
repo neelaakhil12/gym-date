@@ -12,6 +12,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Hide Navbar and Footer on admin and partner sub-pages (login, dashboard, etc.)
   // But show it on the main landing page /partner
   const isAuthPage = 
+    pathname?.startsWith("/superadmin") ||
     pathname?.startsWith("/admin") || 
     pathname?.startsWith("/operation-admin") ||
     (pathname?.startsWith("/partner") && pathname !== "/partner");
