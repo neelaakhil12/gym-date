@@ -178,23 +178,6 @@ export default function ExplorePage() {
                 )}
               </div>
 
-              <div>
-                <label className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4 block">Amenities</label>
-                <div className="flex flex-wrap gap-2">
-                  {filters.amenities.map((a) => (
-                    <button
-                      key={a}
-                      onClick={() => toggleAmenity(a)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                        activeAmenities.includes(a)
-                          ? "bg-secondary text-white border-secondary"
-                          : "bg-white border-gray-100 text-gray-600 hover:border-gray-300"
-                      }`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Find Nearby Gyms Button */}
