@@ -134,7 +134,8 @@ export async function sendBookingConfirmationEmail(booking: any) {
           filename: 'pass-qrcode.png',
           content: qrBuffer,
           contentType: 'image/png',
-          cid: 'passqrcode'
+          cid: 'passqrcode',
+          contentDisposition: 'inline'
         }
       ]
     };
