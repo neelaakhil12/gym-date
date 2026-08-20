@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
        ${customerNameExpr} as customer_name,
        ${customerEmailExpr} as customer_email,
        COALESCE(u.phone, 'N/A') as customer_phone,
-       json_build_object('name', g.name, 'location', g.location, 'address', g.address) as gyms
+       json_build_object('name', g.name, 'location', g.location) as gyms
        FROM bookings b
        LEFT JOIN gyms g ON b.gym_id::text = g.id::text
        LEFT JOIN users u ON b.user_id::text = u.id::text OR LOWER(u.email) = LOWER($1)
