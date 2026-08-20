@@ -91,22 +91,32 @@ export const authOptions = {
           let userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
           
           if (userResult.rows.length === 0) {
-            // Get signup bonus from config
-            const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
-            const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+            const userColsRes = await query(`
+              SELECT column_name FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = 'users'
+            `);
+            const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
 
-            userResult = await query(
-              "INSERT INTO users (email, full_name, phone, role_id, wallet_balance) VALUES ($1, $2, $3, 'user', $4) RETURNING *",
-              [email, name || "User", phoneFormatted, signupBonus]
-            );
+            const insertCols = ["email", "full_name", "role_id"];
+            const insertVals: any[] = [email, name || "User", "user"];
 
-            if (signupBonus > 0) {
-              await query(
-                "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'signup_bonus', $3, 'credited')",
-                [userResult.rows[0].id, email, signupBonus]
-              );
-              console.log(`[Auth] Credited ₹${signupBonus} signup bonus to new user ${email}`);
+            if (phoneFormatted && userCols.has("phone")) {
+              insertVals.push(phoneFormatted);
+              insertCols.push("phone");
             }
+
+            if (userCols.has("wallet_balance")) {
+              const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
+              const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+              insertVals.push(signupBonus);
+              insertCols.push("wallet_balance");
+            }
+
+            const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(", ");
+            userResult = await query(
+              `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
+              insertVals
+            );
           } else {
              if (name || phoneFormatted) {
                  await query(
@@ -138,22 +148,27 @@ export const authOptions = {
           const userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
           
           if (userResult.rows.length === 0) {
-            // Get signup bonus from config
-            const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
-            const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+            const userColsRes = await query(`
+              SELECT column_name FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = 'users'
+            `);
+            const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
 
-            // Create new user
-            const newUserRes = await query(
-              "INSERT INTO users (email, full_name, role_id, wallet_balance) VALUES ($1, $2, 'user', $3) RETURNING id",
-              [email, name || "User", signupBonus]
-            );
+            const insertCols = ["email", "full_name", "role_id"];
+            const insertVals: any[] = [email, name || "User", "user"];
 
-            if (signupBonus > 0) {
-              await query(
-                "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'signup_bonus', $3, 'credited')",
-                [newUserRes.rows[0].id, email, signupBonus]
-              );
+            if (userCols.has("wallet_balance")) {
+              const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
+              const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+              insertVals.push(signupBonus);
+              insertCols.push("wallet_balance");
             }
+
+            const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(", ");
+            await query(
+              `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders})`,
+              insertVals
+            );
           } else {
             // Update existing user to ensure sync
             await query(

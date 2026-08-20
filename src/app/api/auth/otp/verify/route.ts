@@ -32,20 +32,33 @@ export async function POST(req: Request) {
     let userResult = await query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
 
     if (userResult.rows.length === 0) {
-      const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
-      const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+      // Dynamically check columns on users table
+      const userColsRes = await query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'users'
+      `);
+      const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
 
-      userResult = await query(
-        "INSERT INTO users (email, full_name, phone, role_id, wallet_balance) VALUES ($1, $2, $3, 'user', $4) RETURNING *",
-        [cleanEmail, name || "Gym Member", phone || null, signupBonus]
-      );
+      const insertCols = ["email", "full_name", "role_id"];
+      const insertVals: any[] = [cleanEmail, name || "Gym Member", "user"];
 
-      if (signupBonus > 0) {
-        await query(
-          "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'signup_bonus', $3, 'credited')",
-          [userResult.rows[0].id, cleanEmail, signupBonus]
-        );
+      if (phone && userCols.has("phone")) {
+        insertVals.push(phone);
+        insertCols.push("phone");
       }
+
+      if (userCols.has("wallet_balance")) {
+        const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
+        const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+        insertVals.push(signupBonus);
+        insertCols.push("wallet_balance");
+      }
+
+      const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(", ");
+      userResult = await query(
+        `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
+        insertVals
+      );
     } else {
       if (name || phone) {
         await query(
