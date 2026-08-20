@@ -172,38 +172,53 @@ export async function getAllProfiles() {
 }
 
 export async function getAdminStats() {
+  let walletBalance = 0;
+  let totalGyms = 0;
+  let totalUsers = 0;
+
+  // 1. Balance
   try {
-    // 1. Balance
     const balanceRes = await query("SELECT COALESCE(SUM(amount::numeric), 0) as total FROM bookings");
-    const walletBalance = parseFloat(balanceRes.rows[0]?.total) || 0;
+    walletBalance = parseFloat(balanceRes.rows[0]?.total) || 0;
+  } catch (e) {
+    console.warn("getAdminStats bookings balance warning:", e);
+  }
 
-    // 2. Gyms
+  // 2. Gyms
+  try {
     const gymsCount = await query("SELECT COUNT(*) FROM gyms");
-    const totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
+    totalGyms = parseInt(gymsCount.rows[0]?.count) || 0;
+  } catch (e) {
+    console.warn("getAdminStats gyms count warning:", e);
+  }
 
-    // 3. Users (Count unique customers who have made bookings)
+  // 3. Users (Count unique customers who have made bookings)
+  try {
     const usersCount = await query(`
       SELECT COUNT(DISTINCT LOWER(customer_email)) as count 
       FROM bookings 
       WHERE customer_email IS NOT NULL AND customer_email != ''
     `);
-    let totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+    totalUsers = parseInt(usersCount.rows[0]?.count) || 0;
+  } catch (e) {
+    console.warn("getAdminStats bookings users warning:", e);
+  }
 
-    // Fallback: If no bookings, count from users table
-    if (totalUsers === 0) {
+  // Fallback: If no bookings, count from users table
+  if (totalUsers === 0) {
+    try {
       const fallbackCount = await query(`
         SELECT COUNT(*) FROM users 
         WHERE role_id NOT IN ('partner', 'super_admin') 
         OR role_id IS NULL
       `);
       totalUsers = parseInt(fallbackCount.rows[0]?.count) || 0;
+    } catch (e) {
+      console.warn("getAdminStats users fallback warning:", e);
     }
-
-    return { walletBalance, totalGyms, totalUsers };
-  } catch (error) {
-    console.error("Error fetching admin stats", error);
-    return { walletBalance: 0, totalGyms: 0, totalUsers: 0 };
   }
+
+  return { walletBalance, totalGyms, totalUsers };
 }
 
 export async function deleteUser(id: string) {
