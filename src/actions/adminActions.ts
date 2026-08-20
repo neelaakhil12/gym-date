@@ -299,10 +299,24 @@ export async function getPartnerRequests() {
 
 export async function updatePartnerRequestStatus(id: string, status: string) {
   try {
+    // Ensure column exists
+    try {
+      await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'");
+    } catch (e) {
+      console.warn("Could not alter partner_requests table:", e);
+    }
+
     // 1. Get current status to prevent double-approval
-    const checkRes = await query("SELECT status FROM partner_requests WHERE id = $1", [id]);
-    if (checkRes.rows.length === 0) throw new Error("Lead not found.");
-    if (checkRes.rows[0].status === "approved" && status === "approved") {
+    let currentStatus = "pending";
+    try {
+      const checkRes = await query("SELECT status FROM partner_requests WHERE id = $1", [id]);
+      if (checkRes.rows.length === 0) throw new Error("Lead not found.");
+      currentStatus = checkRes.rows[0]?.status;
+    } catch (checkErr) {
+      console.warn("Status check issue:", checkErr);
+    }
+
+    if (currentStatus === "approved" && status === "approved") {
       console.warn(`[AdminActions] Lead ${id} already approved, skipping credit.`);
       return { success: true, message: "Already approved" };
     }
@@ -313,7 +327,7 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
       [status, id]
     );
 
-    const lead = updateRes.rows[0];
+    const lead = updateRes.rows[0] || {};
 
     // 2. If it's approved or rejected, send the professional email
     if (status === "approved" || status === "rejected") {
