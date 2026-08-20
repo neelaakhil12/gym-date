@@ -299,35 +299,43 @@ export async function getPartnerRequests() {
 
 export async function updatePartnerRequestStatus(id: string, status: string) {
   try {
-    // Ensure column exists
+    // 1. Check existing columns in partner_requests
+    let availableCols = new Set<string>();
     try {
-      await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'");
+      const colRes = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'partner_requests'
+      `);
+      availableCols = new Set((colRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
     } catch (e) {
-      console.warn("Could not alter partner_requests table:", e);
+      console.warn("Columns check issue:", e);
     }
 
-    // 1. Get current status to prevent double-approval
-    let currentStatus = "pending";
-    try {
-      const checkRes = await query("SELECT status FROM partner_requests WHERE id = $1", [id]);
-      if (checkRes.rows.length === 0) throw new Error("Lead not found.");
-      currentStatus = checkRes.rows[0]?.status;
-    } catch (checkErr) {
-      console.warn("Status check issue:", checkErr);
+    // Attempt to add column if missing
+    if (!availableCols.has("status")) {
+      try {
+        await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'");
+        availableCols.add("status");
+      } catch (alterErr) {
+        console.warn("Could not alter partner_requests table:", alterErr);
+      }
     }
 
-    if (currentStatus === "approved" && status === "approved") {
-      console.warn(`[AdminActions] Lead ${id} already approved, skipping credit.`);
-      return { success: true, message: "Already approved" };
+    // 2. Get current record
+    let lead: any = {};
+    const leadRes = await query("SELECT * FROM partner_requests WHERE id::text = $1::text", [id]);
+    if (leadRes.rows.length === 0) throw new Error("Lead not found.");
+    lead = leadRes.rows[0];
+
+    // If status column exists, update it
+    if (availableCols.has("status")) {
+      const updateRes = await query(
+        "UPDATE partner_requests SET status = $1 WHERE id::text = $2::text RETURNING *",
+        [status, id]
+      );
+      if (updateRes.rows.length > 0) lead = updateRes.rows[0];
     }
-
-    // 2. Update the status in the database
-    const updateRes = await query(
-      "UPDATE partner_requests SET status = $1 WHERE id = $2 RETURNING *",
-      [status, id]
-    );
-
-    const lead = updateRes.rows[0] || {};
 
     // 2. If it's approved or rejected, send the professional email
     if (status === "approved" || status === "rejected") {
