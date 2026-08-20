@@ -1,6 +1,6 @@
 "use client";
 
-import AdminGymsPage from "@/app/admin/gyms/page";
+import AdminGymsPage from "@/app/superadmin/gyms/page";
 
 export default function StaffGymsPage() {
   return <AdminGymsPage />;
