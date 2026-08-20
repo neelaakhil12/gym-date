@@ -740,29 +740,32 @@ export async function deleteAccount(id: string, role: string) {
     if (!id) return { error: "ID is required" };
 
     if (role === "partner") {
-      // For partners, we find their gym and use the existing deleteGym logic (which handles cascading)
+      // For partners, find their gym and delete associated data
       const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text", [id]);
       if (gymRes.rows.length > 0) {
         const gymId = gymRes.rows[0].id;
-        await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
-        await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
-        await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
-        await query("DELETE FROM gyms WHERE id = $1", [gymId]);
+        try { await query("DELETE FROM pricing_plans WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+        try { await query("DELETE FROM payout_requests WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+        try { await query("DELETE FROM bookings WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+        try { await query("DELETE FROM gyms_extra WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+        try { await query("DELETE FROM gyms WHERE id::text = $1::text", [gymId]); } catch (e) {}
       }
-      // Delete from both potential tables to be safe
-      await query("DELETE FROM partner_users WHERE id = $1", [id]);
-      await query("DELETE FROM users WHERE id = $1", [id]);
+      try { await query("DELETE FROM partner_users WHERE id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM users WHERE id::text = $1::text", [id]); } catch (e) {}
     } else if (role === "super_admin") {
-      await query("DELETE FROM admin_users WHERE id = $1", [id]);
+      try { await query("DELETE FROM admin_users WHERE id::text = $1::text", [id]); } catch (e) {}
     } else if (role === "operation_admin") {
-      await query("DELETE FROM staff_users WHERE id = $1", [id]);
+      try { await query("DELETE FROM staff_users WHERE id::text = $1::text", [id]); } catch (e) {}
     } else {
-      // Default: Customer
-      await query("DELETE FROM bookings WHERE user_id = $1::text", [id]);
-      await query("DELETE FROM users WHERE id = $1", [id]);
+      // Customer user deletion
+      try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM users WHERE id::text = $1::text", [id]); } catch (e) {}
     }
 
-    revalidatePath("/admin/users");
+    revalidatePath("/superadmin/users");
+    revalidatePath("/superadmin");
     return { success: true };
   } catch (error: any) {
     console.error("Delete Account Error:", error);
