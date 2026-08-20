@@ -61,32 +61,54 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 4. Insert booking into Postgres ───────────────────────────────────
+    // ── 4. Insert booking into Postgres dynamically based on columns ───────────────────────────────────
     let bookingId;
     try {
       console.log("[Postgres] Attempting to insert booking:", {
         finalUserId, gymId, planName, amount, razorpay_payment_id, razorpay_order_id, today, endDate
       });
-      
-      const bookingRes = await query(
-        `INSERT INTO bookings (
-          user_id, gym_id, customer_name, customer_email, plan_name, amount, 
-          status, payment_id, razorpay_order_id, ticket_code, start_date, end_date
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'completed', $7, $8, $9, $10, $11) RETURNING id`,
-        [
-          finalUserId || null, 
-          gymId,
-          customerName,
-          customerEmail,
-          planName, 
-          Number(amount), 
-          razorpay_payment_id, 
-          razorpay_order_id,
-          ticketCode,
-          today.toISOString(), 
-          endDate.toISOString()
-        ]
-      );
+
+      // Inspect available columns in bookings table
+      const colsRes = await query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'bookings'
+      `);
+      const bookingCols = new Set((colsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+
+      const insertFields: string[] = [];
+      const insertValues: any[] = [];
+      const placeholders: string[] = [];
+
+      const addField = (col: string, val: any) => {
+        if (bookingCols.has(col.toLowerCase())) {
+          insertFields.push(col);
+          insertValues.push(val);
+          placeholders.push(`$${insertValues.length}`);
+        }
+      };
+
+      addField('user_id', finalUserId || null);
+      addField('gym_id', gymId);
+      addField('customer_name', customerName);
+      addField('customer_email', customerEmail);
+      addField('user_email', customerEmail);
+      addField('email', customerEmail);
+      addField('plan_name', planName);
+      addField('amount', Number(amount));
+      addField('status', 'completed');
+      addField('payment_id', razorpay_payment_id);
+      addField('razorpay_order_id', razorpay_order_id);
+      addField('ticket_code', ticketCode);
+      addField('start_date', today.toISOString());
+      addField('end_date', endDate.toISOString());
+
+      const insertQuery = `
+        INSERT INTO bookings (${insertFields.join(', ')})
+        VALUES (${placeholders.join(', ')})
+        RETURNING id
+      `;
+
+      const bookingRes = await query(insertQuery, insertValues);
       bookingId = bookingRes.rows[0].id;
       console.log("[Postgres] Booking created successfully ID:", bookingId);
     } catch (error: any) {
