@@ -237,7 +237,12 @@ export async function createGymAndPartner(formData: FormData) {
       );
     }
 
-    revalidatePath("/admin/gyms");
+    revalidatePath("/superadmin/gyms");
+    revalidatePath("/superadmin/dashboard");
+    revalidatePath("/operation-admin/gyms");
+    revalidatePath("/operation-admin/dashboard");
+    revalidatePath("/explore");
+    revalidatePath("/");
 
     // 5. Send welcome email to partner (non-blocking)
     console.log("STEP 5: Sending welcome email to:", partnerEmail);
@@ -428,10 +433,16 @@ export async function updateGym(gymId: string, formData: FormData) {
       );
     }
 
-    revalidatePath("/admin/gyms");
-    revalidatePath(`/admin/gyms/${gymId}/edit`);
+    revalidatePath("/superadmin/gyms");
+    revalidatePath(`/superadmin/gyms/${gymId}/edit`);
+    revalidatePath(`/superadmin/gyms/${gymId}/dashboard`);
+    revalidatePath("/operation-admin/gyms");
+    revalidatePath(`/operation-admin/gyms/${gymId}/edit`);
     revalidatePath("/partner/gym/edit");
+    revalidatePath("/partner/dashboard");
     revalidatePath(`/gym/${gymId}`);
+    revalidatePath("/explore");
+    revalidatePath("/");
     return { success: true };
     
   } catch (err: any) {
