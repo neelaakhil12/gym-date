@@ -57,6 +57,17 @@ export async function GET() {
       )
     `);
 
+    // 4b. Create dedicated QR Codes table to store generated passes
+    await query(`
+      CREATE TABLE IF NOT EXISTS qr_codes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        booking_id TEXT NOT NULL,
+        ticket_code TEXT,
+        qr_data TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // 5. Final sync of columns
     try {
       await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS referred_by TEXT");

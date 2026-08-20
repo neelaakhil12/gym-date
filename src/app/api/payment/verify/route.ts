@@ -270,6 +270,18 @@ export async function POST(req: NextRequest) {
         gyms: gymData
       };
       
+      // Store in database qr_codes table
+      try {
+        await query(
+          `INSERT INTO qr_codes (booking_id, ticket_code, qr_data)
+           VALUES ($1, $2, $3)`,
+          [String(bookingId), String(ticketCode), String(bookingId)]
+        );
+        console.log(`[Database] Stored QR code entry for booking ${bookingId}`);
+      } catch (dbQrErr) {
+        console.warn("[Database] QR codes table insert warning:", dbQrErr);
+      }
+
       console.log(`[Email] Triggering confirmation email for ${customerEmail}...`);
       await sendBookingConfirmationEmail(bookingData);
       console.log(`[Email] Confirmation email sent successfully to ${customerEmail}`);
