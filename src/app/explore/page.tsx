@@ -178,8 +178,6 @@ export default function ExplorePage() {
                 )}
               </div>
 
-              </div>
-
               {/* Find Nearby Gyms Button */}
               <div className="mt-6 pt-6 border-t border-gray-100">
                 <button
