@@ -437,7 +437,7 @@ export async function deleteCity(id: string) {
 
 export async function getPlatformStats() {
   try {
-    const result = await query("SELECT * FROM platform_stats ORDER BY display_order ASC");
+    const result = await query("SELECT * FROM platform_stats WHERE label != 'Visibility' ORDER BY display_order ASC");
     return result.rows || [];
   } catch (error) {
     return [];
