@@ -692,7 +692,12 @@ export default function AccountPage() {
                               </td>
                               <td className="py-5 px-4 text-right">
                                 <button
-                                  onClick={() => generateInvoicePDF(booking)}
+                                  onClick={() => generateInvoicePDF({
+                                    ...booking,
+                                    customer_name: booking.customer_name || displayName || "Member",
+                                    customer_email: booking.customer_email || displayEmail,
+                                    customer_phone: booking.customer_phone || displayPhone
+                                  })}
                                   className="text-primary font-black text-xs hover:underline"
                                 >
                                   Download PDF

@@ -54,12 +54,16 @@ export async function GET(req: NextRequest) {
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" OR ")}` : `WHERE 1=0`;
 
-    // Fetch bookings with gym details
+    // Fetch bookings with gym and user details
     const bookingsResult = await query(
       `SELECT b.*, 
-       json_build_object('name', g.name, 'location', g.location) as gyms
+       COALESCE(b.customer_name, u.full_name, 'Member') as customer_name,
+       COALESCE(b.customer_email, u.email, $1) as customer_email,
+       COALESCE(u.phone, 'N/A') as customer_phone,
+       json_build_object('name', g.name, 'location', g.location, 'address', g.address) as gyms
        FROM bookings b
        LEFT JOIN gyms g ON b.gym_id::text = g.id::text
+       LEFT JOIN users u ON b.user_id::text = u.id::text OR LOWER(u.email) = LOWER($1)
        ${whereClause}
        ORDER BY b.created_at DESC`,
        queryParams
