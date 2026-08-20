@@ -29,81 +29,96 @@ export async function sendBookingConfirmationEmail(booking: any) {
       ? booking.gyms.location 
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((booking.gyms?.name || "Gym") + " " + (booking.gyms?.address || ""))}`;
 
+    const formattedStart = new Date(booking.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const formattedEnd = new Date(booking.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const ticketIdDisplay = (booking.ticket_code || booking.id.substring(0, 8)).toUpperCase();
+
     const mailOptions = {
       from: process.env.SMTP_FROM || `"GymDate" <${process.env.SMTP_USER}>`,
       to: targetEmail,
-      subject: `🎉 Booking Confirmed: ${booking.gyms?.name || "Gym"} — GymDate Pass`,
+      subject: `🎟️ Your Entry Pass: ${booking.gyms?.name || "Gym"} — GymDate`,
       html: `
-        <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #f0f0f0; padding: 40px 30px; border-radius: 24px; color: #1a1a1a; background-color: #ffffff; line-height: 1.6;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto; background-color: #f8fafc; padding: 24px 16px;">
           
-          <!-- Header -->
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #e50914; margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.5px;">GYMDATE</h1>
-            <p style="color: #888; font-size: 12px; margin-top: 4px; text-transform: uppercase; font-weight: 700; letter-spacing: 2px;">Official Membership Pass</p>
+          <!-- Brand Header -->
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #e50914; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">GymDate</h1>
+            <p style="color: #64748b; font-size: 11px; margin: 2px 0 0 0; text-transform: uppercase; font-weight: 700; letter-spacing: 2px;">Official Membership Pass</p>
           </div>
 
-          <div style="background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%); border: 1px solid #fee2e2; border-radius: 18px; padding: 24px; text-align: center; margin-bottom: 30px;">
-            <span style="background: #e50914; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">Payment Successful</span>
-            <h2 style="color: #111827; font-size: 22px; font-weight: 800; margin: 12px 0 6px 0;">You're Ready to Workout!</h2>
-            <p style="color: #4b5563; font-size: 14px; margin: 0;">Hi <strong>${booking.customer_name}</strong>, your pass for <strong>${booking.gyms?.name}</strong> is now active.</p>
-          </div>
-          
-          <!-- Subscription Details Box -->
-          <div style="background: #f9fafb; border: 1px solid #f3f4f6; padding: 20px 24px; border-radius: 16px; margin: 24px 0;">
-            <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: 0.5px;">Membership Summary</h3>
-            <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 6px 0; color: #6b7280; font-weight: 600;">Gym:</td>
-                <td style="padding: 6px 0; color: #111827; font-weight: 700; text-align: right;">${booking.gyms?.name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #6b7280; font-weight: 600;">Plan:</td>
-                <td style="padding: 6px 0; color: #111827; font-weight: 700; text-align: right;">${booking.plan_name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #6b7280; font-weight: 600;">Amount Paid:</td>
-                <td style="padding: 6px 0; color: #16a34a; font-weight: 800; text-align: right;">₹${booking.amount}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #6b7280; font-weight: 600;">Valid From:</td>
-                <td style="padding: 6px 0; color: #111827; font-weight: 700; text-align: right;">${new Date(booking.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #6b7280; font-weight: 600;">Valid Until:</td>
-                <td style="padding: 6px 0; color: #111827; font-weight: 700; text-align: right;">${new Date(booking.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #6b7280; font-weight: 600;">Ticket Code:</td>
-                <td style="padding: 6px 0; color: #e50914; font-weight: 800; text-align: right; font-family: monospace; font-size: 15px;">${booking.ticket_code || booking.id}</td>
-              </tr>
-            </table>
-          </div>
+          <!-- Digital Pass Ticket Card -->
+          <div style="background-color: #ffffff; border-radius: 28px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04); border: 1px solid #f1f5f9;">
+            
+            <!-- Dark Top Section: Gym Info & Plan Badge -->
+            <div style="background-color: #0f172a; padding: 24px 22px; color: #ffffff;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="vertical-align: top;">
+                    <h2 style="font-size: 20px; font-weight: 900; margin: 0 0 4px 0; color: #ffffff; letter-spacing: -0.3px;">${booking.gyms?.name || "Partner Gym"}</h2>
+                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">📍 ${booking.gyms?.location || "Partner Location"}</p>
+                  </td>
+                  <td style="vertical-align: top; text-align: right; white-space: nowrap;">
+                    <span style="background-color: #e50914; color: #ffffff; font-size: 11px; font-weight: 900; padding: 5px 12px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;">
+                      ${booking.plan_name || "Subscription"}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </div>
 
-          <!-- QR Code Section -->
-          <div style="text-align: center; margin: 35px 0; background: #ffffff; border: 2px dashed #e5e7eb; border-radius: 20px; padding: 30px 20px;">
-            <p style="font-weight: 800; font-size: 15px; color: #111827; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Entry Access QR Code</p>
-            <p style="font-size: 12px; color: #6b7280; margin: 0 0 20px 0;">Show this QR Code at the gym desk for staff to scan and admit you.</p>
-            <img src="cid:qrcode" alt="Access QR Code" style="width: 220px; height: 220px; border: 4px solid #111827; padding: 12px; border-radius: 16px; display: inline-block; background: #fff;" />
-          </div>
+            <!-- Middle Section: High-Res Access QR Code -->
+            <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
+              <div style="display: inline-block; padding: 14px; background: #ffffff; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                <img src="cid:qrcode" alt="Access QR Code" style="width: 190px; height: 190px; display: block; border-radius: 8px;" />
+              </div>
+              
+              <div>
+                <p style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin: 0 0 2px 0;">Ticket ID</p>
+                <p style="font-size: 16px; font-weight: 900; color: #0f172a; font-family: monospace; letter-spacing: 1px; margin: 0 0 12px 0;">${ticketIdDisplay}</p>
+              </div>
 
-          <!-- Gym Location / Directions -->
-          <div style="text-align: center; margin: 30px 0; background: #fdf2f2; border-radius: 16px; padding: 24px;">
-            <p style="font-weight: 800; font-size: 15px; color: #111827; margin: 0 0 6px 0;">📍 Gym Location & Directions</p>
-            ${booking.gyms?.address ? `<p style="font-size: 13px; color: #4b5563; margin: 0 0 16px 0;">${booking.gyms.address}</p>` : `<p style="font-size: 13px; color: #4b5563; margin: 0 0 16px 0;">Get real-time driving directions directly to ${booking.gyms?.name}</p>`}
-            <a href="${gymLocationUrl}" target="_blank" rel="noopener noreferrer" style="background: #e50914; color: #ffffff; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(229, 9, 20, 0.25);">
-              Open in Google Maps ➔
-            </a>
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 16px; display: inline-block;">
+                <p style="font-size: 11px; font-weight: 700; color: #475569; margin: 0;">Show this QR code to the gym staff for check-in</p>
+              </div>
+            </div>
+
+            <!-- Validity & Member Details -->
+            <div style="padding: 20px 24px; background-color: #fafafa;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Member Name:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">${booking.customer_name || "Member"}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Validity Period:</td>
+                  <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">${formattedStart} – ${formattedEnd}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Amount Paid:</td>
+                  <td style="padding: 6px 0; color: #16a34a; font-weight: 900; text-align: right; font-size: 14px;">₹${booking.amount}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Status:</td>
+                  <td style="padding: 6px 0; color: #16a34a; font-weight: 900; text-align: right; text-transform: uppercase;">● ACTIVE</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Google Maps 1-Click Button -->
+            <div style="padding: 20px 24px 28px 24px; text-align: center; background-color: #ffffff;">
+              <a href="${gymLocationUrl}" target="_blank" rel="noopener noreferrer" style="background-color: #e50914; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 28px; border-radius: 16px; display: block; box-shadow: 0 4px 12px rgba(229, 9, 20, 0.25); letter-spacing: 0.2px;">
+                📍 Open Gym in Google Maps ➔
+              </a>
+            </div>
+
           </div>
 
           <!-- Footer -->
-          <div style="border-top: 1px solid #f3f4f6; margin-top: 35px; padding-top: 25px; text-align: center;">
-            <p style="font-size: 12px; color: #9ca3af; margin: 0 0 6px 0;">
-              This is an automated confirmation for your GymDate subscription.
-            </p>
-            <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-              Need help? Reach us anytime at <a href="mailto:support@gymdate.in" style="color: #e50914; text-decoration: none; font-weight: bold;">support@gymdate.in</a> or visit <a href="https://gymdate.in" style="color: #e50914; text-decoration: none; font-weight: bold;">gymdate.in</a>.
-            </p>
+          <div style="margin-top: 24px; text-align: center;">
+            <p style="font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;">This digital pass is securely linked to your account on <a href="https://gymdate.in" style="color: #e50914; text-decoration: none; font-weight: bold;">gymdate.in</a>.</p>
+            <p style="font-size: 11px; color: #cbd5e1; margin: 0;">GymDate Technologies • All rights reserved</p>
           </div>
+
         </div>
       `,
       attachments: [
