@@ -143,7 +143,7 @@ export default function AdminGymDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
           <button 
-            onClick={() => router.push('/admin/dashboard')}
+            onClick={() => router.push('/superadmin/gyms')}
             className="p-2.5 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-secondary hover:shadow-sm transition-all"
           >
             <ArrowLeft className="w-5 h-5" />

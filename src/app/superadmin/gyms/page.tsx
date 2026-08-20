@@ -24,7 +24,7 @@ export default function AdminGyms() {
   const { data: session } = useSession();
   const isOpAdmin = (session?.user as any)?.role === "operation_admin";
   const baseUrl = isOpAdmin ? "/operation-admin/gyms" : "/superadmin/gyms";
-  const createUrl = isOpAdmin ? "/operation-admin/gyms/create" : "/admin/gyms/create";
+  const createUrl = isOpAdmin ? "/operation-admin/gyms/create" : "/superadmin/gyms/create";
   const [gyms, setGyms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
