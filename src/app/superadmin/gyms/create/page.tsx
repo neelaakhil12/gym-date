@@ -12,7 +12,7 @@ export default function CreateGymPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const isOpAdmin = (session?.user as any)?.role === "operation_admin";
-  const backUrl = isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms";
+  const backUrl = isOpAdmin ? "/operation-admin/gyms" : "/superadmin/gyms";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reviews, setReviews] = useState("0");
@@ -191,7 +191,7 @@ export default function CreateGymPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      router.push(isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms");
+      router.push(isOpAdmin ? "/operation-admin/gyms" : "/superadmin/gyms");
     }
   };
 

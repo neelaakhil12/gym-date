@@ -326,7 +326,7 @@ export default function AdminDashboard() {
               </h3>
             </div>
             <Link 
-              href="/admin/gyms"
+              href="/superadmin/gyms"
               className="mt-6 w-full flex items-center justify-center space-x-2 bg-gray-50 text-secondary py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
             >
               <ArrowUpRight className="w-4 h-4" />
@@ -498,7 +498,7 @@ export default function AdminDashboard() {
                 {breakdown.map((item) => (
                   <Link 
                     key={item.id} 
-                    href={`/admin/gyms/${item.id}/dashboard`}
+                    href={`/superadmin/gyms/${item.id}/dashboard`}
                     onClick={() => {
                       console.log("Navigating to gym dashboard:", item.id);
                       setShowModal(null);
@@ -753,7 +753,7 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-secondary">Recent Gym Partners</h2>
-          <Link href="/admin/gyms" className="text-sm font-semibold text-primary hover:text-primary-dark flex items-center">
+          <Link href="/superadmin/gyms" className="text-sm font-semibold text-primary hover:text-primary-dark flex items-center">
             View All <ArrowUpRight className="w-4 h-4 ml-1" />
           </Link>
         </div>
@@ -781,7 +781,7 @@ export default function AdminDashboard() {
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer" 
                     onClick={() => {
                       console.log("Navigating from table to gym dashboard:", gym.id);
-                      router.push(`/admin/gyms/${gym.id}/dashboard`);
+                      router.push(`/superadmin/gyms/${gym.id}/dashboard`);
                     }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">

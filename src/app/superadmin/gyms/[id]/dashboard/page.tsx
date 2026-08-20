@@ -258,7 +258,7 @@ export default function AdminGymDashboard() {
                 <h3 className="font-black text-slate-900 mb-6">Partner Controls</h3>
                 <div className="space-y-3">
                   <Link 
-                    href={`/admin/gyms/${gymId}/edit`}
+                    href={`/superadmin/gyms/${gymId}/edit`}
                     className="w-full flex items-center justify-center space-x-2 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
                   >
                     <FileText className="w-4 h-4" />

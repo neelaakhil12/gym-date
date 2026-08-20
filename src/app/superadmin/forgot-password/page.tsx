@@ -20,7 +20,7 @@ export default function AdminForgotPassword() {
     try {
       // 1. Verify it's an admin email (Optional but good for security)
       // For now, we use the standard Supabase reset
-      const result = await sendPasswordResetEmail(email, "/admin/reset-password");
+      const result = await sendPasswordResetEmail(email, "/superadmin/reset-password");
 
       if (result.error) throw new Error(result.error);
 
@@ -98,7 +98,7 @@ export default function AdminForgotPassword() {
           )}
           
           <div className="mt-6 text-center">
-             <Link href="/admin" className="text-sm font-medium text-gray-500 hover:text-secondary flex items-center justify-center">
+             <Link href="/superadmin" className="text-sm font-medium text-gray-500 hover:text-secondary flex items-center justify-center">
                <ArrowLeft className="w-4 h-4 mr-1" /> Back to admin login
              </Link>
           </div>

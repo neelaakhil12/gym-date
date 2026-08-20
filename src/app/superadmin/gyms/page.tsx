@@ -23,7 +23,7 @@ import { useSession } from "next-auth/react";
 export default function AdminGyms() {
   const { data: session } = useSession();
   const isOpAdmin = (session?.user as any)?.role === "operation_admin";
-  const baseUrl = isOpAdmin ? "/operation-admin/gyms" : "/admin/gyms";
+  const baseUrl = isOpAdmin ? "/operation-admin/gyms" : "/superadmin/gyms";
   const createUrl = isOpAdmin ? "/operation-admin/gyms/create" : "/admin/gyms/create";
   const [gyms, setGyms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,7 +188,7 @@ export default function AdminGyms() {
                         <div className="flex items-center justify-end space-x-2">
                           {!isOpAdmin && (
                             <Link 
-                              href={`/admin/gyms/${gym.id}/dashboard`}
+                              href={`/superadmin/gyms/${gym.id}/dashboard`}
                               className="text-gray-400 hover:text-secondary transition-colors p-2 rounded-lg hover:bg-gray-100"
                               title="View Dashboard"
                             >

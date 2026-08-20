@@ -18,7 +18,7 @@ export default function AdminLogin() {
   useEffect(() => {
     const allowedRoles = ["super_admin", "operation_admin"];
     if (status === "authenticated" && allowedRoles.includes((session?.user as any)?.role)) {
-      router.push("/admin/dashboard");
+      router.push("/superadmin/dashboard");
     }
   }, [session, status, router]);
 
@@ -40,7 +40,7 @@ export default function AdminLogin() {
       }
 
       // 2. Success -> Force redirect to Admin Dashboard
-      window.location.href = "/admin/dashboard";
+      window.location.href = "/superadmin/dashboard";
     } catch (err: any) {
       console.error(err);
       setError(err.message || "An unexpected error occurred during login.");
@@ -69,7 +69,7 @@ export default function AdminLogin() {
               {error.includes("forgot password") ? (
                 <>
                   {error.split("forgot password")[0]}
-                  <Link href="/admin/forgot-password" title="Go to forgot password" className="underline hover:text-red-800">
+                  <Link href="/superadmin/forgot-password" title="Go to forgot password" className="underline hover:text-red-800">
                     forgot password
                   </Link>
                   {error.split("forgot password")[1]}
@@ -104,7 +104,7 @@ export default function AdminLogin() {
               </div>
               <div className="flex justify-end mt-2">
                 <Link 
-                  href="/admin/forgot-password" 
+                  href="/superadmin/forgot-password" 
                   className="text-sm font-semibold text-primary hover:text-red-700 transition-colors cursor-pointer"
                 >
                   Forgot password?

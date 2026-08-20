@@ -18,13 +18,13 @@ import { useSession, signOut } from "next-auth/react";
 import AdminAuthProvider from "@/components/AdminAuthProvider";
 
 const adminLinks = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { name: "Gyms", href: "/admin/gyms", icon: GymLogoIcon },
-  { name: "Partner Leads", href: "/admin/partner-requests", icon: ClipboardList },
-  { name: "Accounts", href: "/admin/users", icon: Users },
-  { name: "Revenue", href: "/admin/revenue", icon: Wallet },
-  { name: "Payouts", href: "/admin/payouts", icon: Banknote },
-  { name: "Settings", href: "/admin/settings", icon: ClipboardList },
+  { name: "Dashboard", href: "/superadmin/dashboard", icon: LayoutDashboard },
+  { name: "Gyms", href: "/superadmin/gyms", icon: GymLogoIcon },
+  { name: "Partner Leads", href: "/superadmin/partner-requests", icon: ClipboardList },
+  { name: "Accounts", href: "/superadmin/users", icon: Users },
+  { name: "Revenue", href: "/superadmin/revenue", icon: Wallet },
+  { name: "Payouts", href: "/superadmin/payouts", icon: Banknote },
+  { name: "Settings", href: "/superadmin/settings", icon: ClipboardList },
 ];
 
 export default function AdminLayout({
@@ -38,29 +38,29 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const publicAdminPaths = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
+    const publicAdminPaths = ["/superadmin", "/superadmin/forgot-password", "/superadmin/reset-password"];
     
     if (status === "loading") return;
 
     if (!session) {
       if (!publicAdminPaths.includes(pathname)) {
-        router.push("/admin");
+        router.push("/superadmin");
       }
       return;
     }
 
     // Role check (Super Admin only)
     if (session?.user && (session?.user as any)?.role !== "super_admin" && !publicAdminPaths.includes(pathname)) {
-      signOut({ callbackUrl: "/admin" });
+      signOut({ callbackUrl: "/superadmin" });
     }
   }, [session, status, pathname, router]);
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/admin" });
+    await signOut({ callbackUrl: "/superadmin" });
   };
 
   // If we are on a public admin page, don't show the dashboard sidebar
-  const publicAdminPaths = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
+  const publicAdminPaths = ["/superadmin", "/superadmin/forgot-password", "/superadmin/reset-password"];
   if (publicAdminPaths.includes(pathname)) {
     return <AdminAuthProvider>{children}</AdminAuthProvider>;
   }
@@ -88,7 +88,7 @@ export default function AdminLayout({
         <div className="h-full flex flex-col">
           {/* Sidebar Header */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
-            <Link href="/admin/dashboard" className="flex items-center">
+            <Link href="/superadmin/dashboard" className="flex items-center">
               <span className="text-xl font-black text-white tracking-tighter">
                 GYMDATE <span className="text-primary">SUPER ADMIN</span>
               </span>

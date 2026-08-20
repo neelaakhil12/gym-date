@@ -52,7 +52,7 @@ export const authOptions = {
     },
   },
   pages: {
-    signIn: "/admin",
+    signIn: "/superadmin",
   },
   // Dedicated cookie for Super Admin
   cookies: {

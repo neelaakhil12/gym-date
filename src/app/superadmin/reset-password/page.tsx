@@ -54,7 +54,7 @@ function AdminResetPasswordForm() {
       setSuccess(true);
       // Wait a bit and redirect to admin login
       setTimeout(() => {
-        router.push("/admin");
+        router.push("/superadmin");
       }, 3000);
     } catch (err: any) {
       setError("Failed to update admin password. Please try again.");
@@ -90,7 +90,7 @@ function AdminResetPasswordForm() {
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-gray-900 mb-2">Password Updated!</h3>
               <p className="text-sm text-gray-500 mb-6">The admin password has been successfully reset. Redirecting you to login...</p>
-              <Link href="/admin" className="text-secondary font-bold hover:underline">
+              <Link href="/superadmin" className="text-secondary font-bold hover:underline">
                 Go to login now
               </Link>
             </div>
