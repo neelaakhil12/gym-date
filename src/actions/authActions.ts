@@ -19,19 +19,24 @@ export async function resetPasswordWithToken(email: string, token: string, newPa
     // 2. Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 3. Update user password across users, admin_users, and staff_users
-    await query(
-      "UPDATE users SET password_hash = $1 WHERE email = $2",
-      [hashedPassword, email]
-    );
-    await query(
-      "UPDATE admin_users SET password_hash = $1 WHERE email = $2",
-      [hashedPassword, email]
-    );
-    await query(
-      "UPDATE staff_users SET password_hash = $1 WHERE email = $2",
-      [hashedPassword, email]
-    );
+    // 3. Update password in the relevant separated tables
+    try {
+      await query("UPDATE admin_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2", [hashedPassword, email]);
+    } catch (e) {
+      console.warn("admin_users update skipped or table absent:", e);
+    }
+
+    try {
+      await query("UPDATE partner_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2", [hashedPassword, email]);
+    } catch (e) {
+      console.warn("partner_users update skipped or table absent:", e);
+    }
+
+    try {
+      await query("UPDATE staff_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2", [hashedPassword, email]);
+    } catch (e) {
+      console.warn("staff_users update skipped or table absent:", e);
+    }
 
     // 4. Delete the used token
     await query(
