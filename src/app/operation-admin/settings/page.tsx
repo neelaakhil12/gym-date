@@ -40,7 +40,7 @@ export default function OperationSettings() {
       setAllowed(isAllowed);
       if (isAllowed) {
         const data = await getPlatformConfig();
-        setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings'));
+        setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings' && item.key !== 'signup_bonus'));
       }
       setLoading(false);
     }
