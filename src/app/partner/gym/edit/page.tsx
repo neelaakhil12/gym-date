@@ -663,45 +663,21 @@ export default function PartnerEditGymPage() {
               <div>
                 <h3 className="text-sm font-bold text-gray-700">Amenities</h3>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {/* Hidden input to ensure amenities are sent as an array correctly */}
-                <input 
-                  type="hidden" 
-                  name="amenities_json" 
-                  value={JSON.stringify([...checkedDefaultAmenities, ...customAmenities])} 
-                />
-                {defaultAmenitiesList.map((amenity) => (
-                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors group has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
-                      <input 
-                        type="checkbox" 
-                        name="amenities" 
-                        value={amenity}
-                        checked={checkedDefaultAmenities.includes(amenity)}
-                        onChange={() => toggleDefaultAmenity(amenity)}
-                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                      />
-                      <span className="text-sm font-medium text-gray-700 group-has-[:checked]:text-primary">{amenity}</span>
-                    </label>
-                  </div>
-                ))}
+              {/* Hidden input to ensure amenities are sent as an array correctly */}
+              <input 
+                type="hidden" 
+                name="amenities_json" 
+                value={JSON.stringify(customAmenities)} 
+              />
+
+              <div className="flex flex-wrap gap-2">
                 {customAmenities.map((amenity) => (
-                  <div key={amenity} className="flex items-center justify-between p-3 rounded-xl border border-primary/20 bg-primary/5 transition-colors group">
-                    <label className="flex items-center space-x-3 cursor-pointer flex-grow">
-                      <input 
-                        type="checkbox" 
-                        name="amenities" 
-                        value={amenity}
-                        checked={true}
-                        readOnly
-                        className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-                      />
-                      <span className="text-sm font-medium text-primary">{amenity}</span>
-                    </label>
+                  <div key={amenity} className="flex items-center space-x-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg">
+                    <span className="text-sm font-bold">{amenity}</span>
                     <button
                       type="button"
                       onClick={(e) => handleRemoveCustomAmenity(amenity, e)}
-                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-50"
+                      className="text-primary/60 hover:text-primary transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
