@@ -247,33 +247,32 @@ export async function POST(req: NextRequest) {
     try {
       const fullBookingRes = await query(
         `SELECT b.*, 
-                COALESCE(b.customer_name, $2) as customer_name,
-                COALESCE(b.customer_email, $3) as customer_email,
                 json_build_object(
                   'name', COALESCE(g.name, 'Gym Partner'), 
-                  'location', COALESCE(g.location, g.address, 'https://maps.google.com'),
-                  'address', COALESCE(g.address, g.location, '')
+                  'location', COALESCE(g.location, 'https://maps.google.com')
                 ) as gyms
          FROM bookings b 
          LEFT JOIN gyms g ON b.gym_id::text = g.id::text 
          WHERE b.id::text = $1::text`,
-        [String(bookingId), customerName, customerEmail]
+        [String(bookingId)]
       );
       
-      if (fullBookingRes.rows.length > 0) {
-        const bookingData = {
-          ...fullBookingRes.rows[0],
-          customer_name: fullBookingRes.rows[0].customer_name || customerName,
-          customer_email: fullBookingRes.rows[0].customer_email || customerEmail,
-          ticket_code: ticketCode,
-          plan_name: planName,
-          amount: amount,
-          start_date: today.toISOString(),
-          end_date: endDate.toISOString()
-        };
-        await sendBookingConfirmationEmail(bookingData);
-        console.log(`[Email] Confirmation email sent successfully to ${customerEmail}`);
-      }
+      const gymData = fullBookingRes.rows[0]?.gyms || { name: 'Gym Partner', location: 'https://maps.google.com' };
+      const bookingData = {
+        id: bookingId,
+        ticket_code: ticketCode,
+        customer_name: customerName || 'Member',
+        customer_email: customerEmail,
+        plan_name: planName,
+        amount: amount,
+        start_date: today.toISOString(),
+        end_date: endDate.toISOString(),
+        gyms: gymData
+      };
+      
+      console.log(`[Email] Triggering confirmation email for ${customerEmail}...`);
+      await sendBookingConfirmationEmail(bookingData);
+      console.log(`[Email] Confirmation email sent successfully to ${customerEmail}`);
     } catch (emailErr) {
       console.error("[Email] confirmation email failed:", emailErr);
     }
