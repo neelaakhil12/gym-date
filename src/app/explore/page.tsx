@@ -152,9 +152,9 @@ export default function ExplorePage() {
               </div>
 
               <div className="mb-8">
-                <label className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4 block">Distance</label>
+                <label className="text-xs font-black uppercase tracking-widest text-gray-400 mb-4 block">Distance Filter</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {["1km", "3km", "5km", "10km"].map((dist) => (
+                  {["1km", "3km", "5km", "10km", "25km", "50km"].map((dist) => (
                     <button 
                       key={dist}
                       onClick={() => setActiveDistance(activeDistance === dist ? "all" : dist)}
@@ -164,10 +164,18 @@ export default function ExplorePage() {
                         : "bg-white text-gray-400 border-gray-100 hover:border-primary/30"
                       }`}
                     >
-                      {dist}
+                      Within {dist}
                     </button>
                   ))}
                 </div>
+                {activeDistance !== "all" && (
+                  <button 
+                    onClick={() => setActiveDistance("all")}
+                    className="text-[10px] font-black text-primary hover:underline mt-2 block"
+                  >
+                    Clear Distance Filter
+                  </button>
+                )}
               </div>
 
               <div>
@@ -197,7 +205,7 @@ export default function ExplorePage() {
                       navigator.geolocation.getCurrentPosition(
                         (pos) => {
                           setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-                          setActiveDistance("20km"); // show all gyms within 20km
+                          setActiveDistance("all"); // Sort all gyms by distance from closest to farthest
                         },
                         () => alert("Location access denied. Please allow location access to find nearby gyms.")
                       );
@@ -205,14 +213,15 @@ export default function ExplorePage() {
                       alert("Geolocation is not supported by your browser.");
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-secondary text-white rounded-2xl font-black text-xs hover:bg-primary transition-all shadow-lg shadow-secondary/10"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-secondary text-white rounded-2xl font-black text-xs hover:bg-primary transition-all shadow-lg shadow-secondary/10"
                 >
                   <Navigation className="w-4 h-4" />
-                  Find Nearby Gyms
+                  <span>Find Closest Gyms</span>
                 </button>
                 {userLocation && (
-                  <p className="text-[10px] text-green-600 font-bold text-center mt-2">
-                    ✓ Showing gyms within 20km, sorted by distance
+                  <p className="text-[10px] text-green-600 font-bold text-center mt-2 flex items-center justify-center gap-1">
+                    <span>✓</span>
+                    <span>Sorted by distance from your location</span>
                   </p>
                 )}
               </div>

@@ -169,27 +169,29 @@ export default function GymDetailsPage() {
           <div className="lg:col-span-2">
             {/* Gallery */}
             <div className="mb-10">
-              <div className="relative h-[300px] md:h-[500px] rounded-[32px] overflow-hidden mb-4 shadow-sm border border-gray-100">
+              <div className="relative h-[320px] md:h-[480px] rounded-[32px] overflow-hidden mb-4 shadow-sm border border-gray-100 bg-gray-100 flex items-center justify-center">
                 <img
-                  src={galleryImages[selectedImage]}
+                  src={galleryImages[selectedImage] || defaultImage}
                   alt={gym.name}
-                  className="w-full h-full object-cover transition-opacity duration-300"
+                  className="w-full h-full object-cover transition-all duration-300"
                 />
               </div>
-              <div className="flex gap-4 overflow-x-auto pb-2">
-                {galleryImages.map((img: string, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={
-                      "relative w-24 h-16 md:w-32 md:h-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all " +
-                      (selectedImage === idx ? "border-primary" : "border-transparent opacity-60 hover:opacity-100")
-                    }
-                  >
-                    <img src={img} alt={"Thumbnail " + idx} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+              {galleryImages.length > 1 && (
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {galleryImages.map((img: string, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedImage(idx)}
+                      className={
+                        "relative w-20 h-16 md:w-28 md:h-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all shadow-sm " +
+                        (selectedImage === idx ? "border-primary ring-2 ring-primary/20 scale-105" : "border-transparent opacity-70 hover:opacity-100")
+                      }
+                    >
+                      <img src={img} alt={"Thumbnail " + idx} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Title & Meta */}
