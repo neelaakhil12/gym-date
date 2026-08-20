@@ -229,20 +229,45 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
-    // Basic query to ensure all leads are fetched
-    const result = await query(`
-      SELECT 
-        pr.*,
-        g.name as referrer_gym_name,
-        u.full_name as referrer_owner_name
-      FROM partner_requests pr
-      LEFT JOIN users u ON TRIM(UPPER(pr.referred_by)) = TRIM(UPPER(u.referral_code))
-      LEFT JOIN gyms g ON u.id::text = g.partner_id::text
-      ORDER BY pr.created_at DESC
-    `);
+    // Ensure table & columns exist
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_requests (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          gym_name TEXT NOT NULL,
+          owner_name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          city TEXT,
+          address TEXT,
+          status TEXT DEFAULT 'pending',
+          referred_by TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS referred_by TEXT");
+    } catch (e) {
+      console.warn("Table verification note:", e);
+    }
+
+    let result;
+    try {
+      result = await query(`
+        SELECT 
+          pr.*,
+          g.name as referrer_gym_name,
+          u.full_name as referrer_owner_name
+        FROM partner_requests pr
+        LEFT JOIN users u ON TRIM(UPPER(COALESCE(pr.referred_by, ''))) = TRIM(UPPER(COALESCE(u.referral_code, '')))
+        LEFT JOIN gyms g ON u.id::text = g.partner_id::text
+        ORDER BY pr.created_at DESC
+      `);
+    } catch (joinErr) {
+      console.warn("Falling back to simple partner_requests select:", joinErr);
+      result = await query(`SELECT * FROM partner_requests ORDER BY created_at DESC`);
+    }
     
-    // Attempt to enrich with referrer info, but don't fail if it doesn't work
-    const enriched = [...(result.rows || [])];
+    const enriched = [...(result?.rows || [])];
     
     return { 
       requests: enriched, 
@@ -251,7 +276,7 @@ export async function getPartnerRequests() {
   } catch (error: any) {
     console.error("Critical error fetching partner requests", error);
     return { 
-      requests: [{ id: 'err', gym_name: 'ERROR LOADING LEADS', owner_name: error.message, status: 'error' }], 
+      requests: [], 
       error: error.message 
     };
   }
