@@ -858,16 +858,21 @@ async function ensureStaffSettingsColumn() {
 }
 
 export async function checkStaffSettingsAccess(email?: string): Promise<boolean> {
-  if (!email) return false;
   try {
-    await ensureStaffSettingsColumn();
-    const res = await query("SELECT can_access_settings FROM staff_users WHERE LOWER(email) = LOWER($1) LIMIT 1", [email]);
-    if (res.rows && res.rows.length > 0 && res.rows[0].can_access_settings !== null) {
-      return Boolean(res.rows[0].can_access_settings);
+    // 1. Check global platform switch first
+    const globalEnabled = await isStaffSettingsEnabled();
+    if (globalEnabled) return true;
+
+    // 2. Check individual staff override
+    if (email) {
+      const res = await query("SELECT can_access_settings FROM staff_users WHERE LOWER(email) = LOWER($1) LIMIT 1", [email]);
+      if (res.rows && res.rows.length > 0 && res.rows[0].can_access_settings !== null) {
+        return Boolean(res.rows[0].can_access_settings);
+      }
     }
-    return await isStaffSettingsEnabled();
+    return false;
   } catch (err) {
-    console.error("Error checking staff settings access by email:", err);
+    console.error("Error checking staff settings access:", err);
     return await isStaffSettingsEnabled();
   }
 }
