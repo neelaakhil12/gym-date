@@ -515,7 +515,7 @@ export default function PartnerEditGymPage() {
                           value={plan.name}
                           onChange={(e) => handlePlanChange(idx, 'name', e.target.value)}
                           placeholder="e.g. Monthly Pass"
-                          className="w-full px-0 bg-transparent border-none text-sm font-bold text-secondary focus:ring-0 placeholder:text-gray-300"
+                          className="w-full px-0 bg-transparent border-none outline-none text-sm font-bold text-secondary focus:ring-0 focus:outline-none placeholder:text-gray-300 shadow-none ring-0"
                         />
                       </div>
                       <div className="space-y-1">
@@ -530,7 +530,7 @@ export default function PartnerEditGymPage() {
                             value={plan.price}
                             onChange={(e) => handlePlanChange(idx, 'price', e.target.value)}
                             placeholder="0"
-                            className="w-full bg-transparent border-none p-0 focus:ring-0 placeholder:text-gray-300"
+                            className="w-full bg-transparent border-none outline-none p-0 focus:ring-0 focus:outline-none placeholder:text-gray-300 shadow-none ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
                       </div>
