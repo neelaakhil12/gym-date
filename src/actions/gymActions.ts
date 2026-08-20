@@ -108,6 +108,21 @@ export async function createGymAndPartner(formData: FormData) {
       }
     }
 
+    // 2.5 Ensure gyms table has all required columns
+    try {
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS rating NUMERIC DEFAULT 0");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS reviews INTEGER DEFAULT 0");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS has_offer BOOLEAN DEFAULT FALSE");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS offer_percentage INTEGER DEFAULT 0");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS partner_referral_amount DECIMAL(10,2) DEFAULT 100");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS commission_rate NUMERIC DEFAULT 10");
+      await query("ALTER TABLE gyms ADD COLUMN IF NOT EXISTS gallery TEXT[] DEFAULT '{}'");
+    } catch (e) {
+      console.warn("Gym columns migration warning:", e);
+    }
+
     const latStr = formData.get("lat") as string;
     const lngStr = formData.get("lng") as string;
     const lat = latStr && !isNaN(parseFloat(latStr)) ? parseFloat(latStr) : null;
