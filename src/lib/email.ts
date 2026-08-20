@@ -24,19 +24,10 @@ export async function sendBookingConfirmationEmail(booking: any) {
     // 1. Uniform Ticket ID (Match exactly with Account Dashboard: #E94FD64E)
     const shortId = (booking.id ? String(booking.id).slice(0, 8) : "PASS").toUpperCase();
     const qrValue = booking.id ? String(booking.id) : shortId;
+    const baseUrl = process.env.NEXTAUTH_URL || "https://gymdate.in";
+    const qrImageUrl = `${baseUrl}/api/qr?code=${encodeURIComponent(qrValue)}`;
 
-    // 2. Generate pure SVG QR Code for 100% email client compatibility
-    const qrSvgString = await QRCode.toString(qrValue, {
-      type: 'svg',
-      width: 180,
-      margin: 1,
-      color: {
-        dark: '#000000',
-        light: '#ffffff'
-      }
-    });
-
-    // 3. Prepare Email Content
+    // 2. Prepare Email Content
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
       ? booking.gyms.location 
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((booking.gyms?.name || "Gym") + " " + (booking.gyms?.address || ""))}`;
@@ -77,10 +68,10 @@ export async function sendBookingConfirmationEmail(booking: any) {
               </table>
             </div>
 
-            <!-- Middle Section: Guaranteed Inlined SVG QR Code (Zero Broken Images) -->
+            <!-- Middle Section: High-Res Access QR Code Hosted on Domain -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
-              <div style="display: inline-block; padding: 16px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px; line-height: 0;">
-                ${qrSvgString}
+              <div style="display: inline-block; padding: 16px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
+                <img src="${qrImageUrl}" alt="Access QR Code" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
               </div>
               
               <div>
