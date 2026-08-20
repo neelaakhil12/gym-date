@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import QRCode from "qrcode";
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
   port: parseInt(process.env.SMTP_PORT || "587"),
   secure: false, 
   auth: {
@@ -13,18 +13,26 @@ const transporter = nodemailer.createTransport({
 
 export async function sendBookingConfirmationEmail(booking: any) {
   try {
+    const targetEmail = booking.customer_email || booking.email || booking.user_email;
+    if (!targetEmail) {
+      console.warn("[Email] No recipient email found for booking confirmation:", booking);
+      return false;
+    }
+
+    console.log(`[Email] Generating QR Code and sending confirmation to ${targetEmail}...`);
+
     // 1. Generate QR Code as Data URL
     const qrDataUrl = await QRCode.toDataURL(booking.ticket_code || booking.id);
     
     // 2. Prepare Email Content
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
       ? booking.gyms.location 
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.gyms?.name + " " + (booking.gyms?.address || ""))}`;
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((booking.gyms?.name || "Gym") + " " + (booking.gyms?.address || ""))}`;
 
     const mailOptions = {
-      from: `"GymDate" <${process.env.SMTP_USER}>`,
-      to: booking.customer_email,
-      subject: `🎉 Booking Confirmed: ${booking.gyms?.name} — GymDate Pass`,
+      from: process.env.SMTP_FROM || `"GymDate" <${process.env.SMTP_USER}>`,
+      to: targetEmail,
+      subject: `🎉 Booking Confirmed: ${booking.gyms?.name || "Gym"} — GymDate Pass`,
       html: `
         <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #f0f0f0; padding: 40px 30px; border-radius: 24px; color: #1a1a1a; background-color: #ffffff; line-height: 1.6;">
           
