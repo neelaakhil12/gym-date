@@ -54,11 +54,18 @@ export async function GET(req: NextRequest) {
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" OR ")}` : `WHERE 1=0`;
 
+    const customerNameExpr = bookingCols.has("customer_name") 
+      ? `COALESCE(b.customer_name, u.full_name, 'Member')` 
+      : `COALESCE(u.full_name, 'Member')`;
+    const customerEmailExpr = bookingCols.has("customer_email") 
+      ? `COALESCE(b.customer_email, u.email, $1)` 
+      : `COALESCE(u.email, $1)`;
+
     // Fetch bookings with gym and user details
     const bookingsResult = await query(
       `SELECT b.*, 
-       COALESCE(b.customer_name, u.full_name, 'Member') as customer_name,
-       COALESCE(b.customer_email, u.email, $1) as customer_email,
+       ${customerNameExpr} as customer_name,
+       ${customerEmailExpr} as customer_email,
        COALESCE(u.phone, 'N/A') as customer_phone,
        json_build_object('name', g.name, 'location', g.location, 'address', g.address) as gyms
        FROM bookings b
