@@ -41,12 +41,44 @@ export default function AdminLayout({
 
   const loadBadges = async () => {
     try {
-      const counts = await getSuperAdminBadgeCounts();
-      setBadgeCounts(counts);
+      if (typeof window === "undefined") return;
+
+      const isViewingLeads = pathname?.startsWith("/superadmin/partner-requests");
+      const isViewingPayouts = pathname?.startsWith("/superadmin/payouts");
+
+      if (isViewingLeads) {
+        localStorage.setItem("gymdate_last_viewed_leads", new Date().toISOString());
+      }
+      if (isViewingPayouts) {
+        localStorage.setItem("gymdate_last_viewed_payouts", new Date().toISOString());
+      }
+
+      const lastLeads = localStorage.getItem("gymdate_last_viewed_leads") || undefined;
+      const lastPayouts = localStorage.getItem("gymdate_last_viewed_payouts") || undefined;
+
+      const counts = await getSuperAdminBadgeCounts(lastLeads, lastPayouts);
+      
+      setBadgeCounts({
+        pendingLeads: isViewingLeads ? 0 : (counts.pendingLeads || 0),
+        pendingPayouts: isViewingPayouts ? 0 : (counts.pendingPayouts || 0)
+      });
     } catch (e) {}
   };
 
   useEffect(() => {
+    if (pathname?.startsWith("/superadmin/partner-requests")) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("gymdate_last_viewed_leads", new Date().toISOString());
+      }
+      setBadgeCounts(prev => ({ ...prev, pendingLeads: 0 }));
+    }
+    if (pathname?.startsWith("/superadmin/payouts")) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("gymdate_last_viewed_payouts", new Date().toISOString());
+      }
+      setBadgeCounts(prev => ({ ...prev, pendingPayouts: 0 }));
+    }
+
     loadBadges();
     const interval = setInterval(loadBadges, 15000);
     return () => clearInterval(interval);

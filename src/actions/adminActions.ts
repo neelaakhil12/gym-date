@@ -700,24 +700,33 @@ export async function getPayoutRequests() {
   }
 }
 
-export async function getSuperAdminBadgeCounts() {
+export async function getSuperAdminBadgeCounts(lastViewedLeads?: string, lastViewedPayouts?: string) {
   try {
     let pendingLeads = 0;
     try {
-      const leadsRes = await query(`
+      let sql = `
         SELECT COUNT(*) FROM partner_requests pr 
         LEFT JOIN partner_requests_extra pre ON pr.id::text = pre.request_id::text 
         WHERE COALESCE(pre.status, 'pending') = 'pending'
-      `);
+      `;
+      const params: any[] = [];
+      if (lastViewedLeads) {
+        sql += ` AND pr.created_at > $1`;
+        params.push(lastViewedLeads);
+      }
+      const leadsRes = await query(sql, params);
       pendingLeads = parseInt(leadsRes.rows[0]?.count || '0');
     } catch (e) {}
 
     let pendingPayouts = 0;
     try {
-      const payoutsRes = await query(`
-        SELECT COUNT(*) FROM payout_requests 
-        WHERE status = 'pending'
-      `);
+      let sql = `SELECT COUNT(*) FROM payout_requests WHERE status = 'pending'`;
+      const params: any[] = [];
+      if (lastViewedPayouts) {
+        sql += ` AND created_at > $1`;
+        params.push(lastViewedPayouts);
+      }
+      const payoutsRes = await query(sql, params);
       pendingPayouts = parseInt(payoutsRes.rows[0]?.count || '0');
     } catch (e) {}
 
