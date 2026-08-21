@@ -792,7 +792,7 @@ export async function updatePayoutStatus(id: string, newStatus: string) {
 
 export async function createPayoutRequest(payload: any) {
   try {
-    // Ensure table exists on local postgres
+    // Ensure table and columns exist on postgres
     await query(`
       CREATE TABLE IF NOT EXISTS payout_requests (
         id VARCHAR(50) PRIMARY KEY,
@@ -808,7 +808,8 @@ export async function createPayoutRequest(payload: any) {
         mobile_number VARCHAR(20),
         qr_code_url TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+      );
+      ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS payout_type VARCHAR(50) DEFAULT 'revenue';
     `);
 
     // Use crypto.randomUUID or a simple random string for ID
