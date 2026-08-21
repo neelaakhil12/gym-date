@@ -152,11 +152,11 @@ export async function POST(req: NextRequest) {
             [amountToDeduct, finalUserId]
           );
 
-          // Record the transaction
+          // Record the wallet debit transaction
           await query(
             `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
-             VALUES ($1, $2, 'user', $3, 'debited')`,
-            [finalUserId, customerEmail, amountToDeduct]
+             VALUES ($1, $2, 'debit', $3, 'debited')`,
+            [finalUserId, `Wallet Used for ${planName || 'Subscription'}`, amountToDeduct]
           );
           
           console.log(`[Wallet] Deducted ₹${amountToDeduct} from user ${finalUserId} for booking ${bookingId}`);

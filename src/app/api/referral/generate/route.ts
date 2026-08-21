@@ -79,9 +79,11 @@ export async function GET(req: NextRequest) {
       `);
     } catch (e) {}
 
-    // 6. Get referral stats from referral_transactions
+    // 6. Get referral stats from referral_transactions (count and sum only genuine earned credits)
     const stats = await query(
-      `SELECT COUNT(*) as total, COALESCE(SUM(amount), 0) as total_earned
+      `SELECT 
+         COUNT(CASE WHEN status = 'credited' AND type != 'debit' THEN 1 END) as total, 
+         COALESCE(SUM(CASE WHEN status = 'credited' AND type != 'debit' THEN amount ELSE 0 END), 0) as total_earned
        FROM referral_transactions WHERE referrer_id::text = $1::text`,
       [userId]
     );
@@ -121,14 +123,25 @@ export async function GET(req: NextRequest) {
       ? `${siteUrl}/partner?ref=${code}`
       : `${siteUrl}/login?ref=${code}`;
 
-    // Get recent transactions (earnings)
+    // Get recent transactions (both credits & wallet debits)
     let history: any[] = [];
     try {
       const transactions = await query(
-        `SELECT amount, created_at, referred_user_email as detail, 'credit' as type 
+        `SELECT 
+           amount, 
+           created_at, 
+           CASE 
+             WHEN status = 'debited' OR type = 'debit' THEN 'Wallet Used for Subscription'
+             ELSE referred_user_email 
+           END as detail, 
+           CASE 
+             WHEN status = 'debited' OR type = 'debit' THEN 'debit'
+             ELSE 'credit' 
+           END as type,
+           status
          FROM referral_transactions 
          WHERE referrer_id::text = $1::text 
-         ORDER BY created_at DESC LIMIT 10`,
+         ORDER BY created_at DESC LIMIT 20`,
         [userId]
       );
       history = [...(transactions.rows || [])];
@@ -136,14 +149,14 @@ export async function GET(req: NextRequest) {
       console.error("Error fetching referral transactions:", e);
     }
 
-    // Get recent payouts (withdrawals)
+    // Get recent payouts (withdrawals for partners)
     try {
       const payouts = await query(
-        `SELECT p.amount, p.created_at, p.status as detail, 'debit' as type 
+        `SELECT p.amount, p.created_at, p.status as detail, 'debit' as type, 'debited' as status 
          FROM payout_requests p
          JOIN gyms g ON p.gym_id = g.id
          WHERE g.partner_id::text = $1::text AND p.payout_type = 'referral'
-         ORDER BY p.created_at DESC LIMIT 10`,
+         ORDER BY p.created_at DESC LIMIT 20`,
         [userId]
       );
       history = [...history, ...(payouts.rows || [])];

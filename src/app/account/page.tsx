@@ -552,37 +552,51 @@ export default function AccountPage() {
                     <h4 className="font-black text-secondary mb-4 flex items-center justify-between gap-2">
                       <span className="flex items-center text-sm sm:text-base truncate">
                         <TrendingUp className="w-4 h-4 mr-2 text-green-500 shrink-0" />
-                        Referral Activity & Earnings
+                        Referral Activity & Wallet Transactions
                       </span>
                       <span className="text-xs text-gray-400 font-bold shrink-0">
-                        {walletData?.history?.length || 0} credited
+                        {walletData?.history?.length || 0} activities
                       </span>
                     </h4>
 
                     {(!walletData?.history || walletData.history.length === 0) ? (
                       <div className="text-center py-6 text-gray-400 text-xs font-bold">
-                        No referral activity yet. Share your link to start earning!
+                        No wallet activity yet. Share your link to start earning!
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-100">
-                        {walletData.history.map((item: any, idx: number) => (
-                          <div key={idx} className="py-3 sm:py-3.5 flex items-center justify-between gap-2.5 sm:gap-4">
-                            <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
-                              <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-black text-xs shrink-0">
-                                ₹
+                        {walletData.history.map((item: any, idx: number) => {
+                          const isDebit = item.type === 'debit' || item.status === 'debited' || parseFloat(item.amount) < 0;
+                          const absAmount = Math.abs(parseFloat(item.amount || 10)).toFixed(2);
+                          return (
+                            <div key={idx} className="py-3 sm:py-3.5 flex items-center justify-between gap-2.5 sm:gap-4">
+                              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                                  isDebit 
+                                    ? "bg-red-50 text-red-600 border border-red-100" 
+                                    : "bg-green-50 text-green-600 border border-green-100"
+                                }`}>
+                                  {isDebit ? "↓" : "₹"}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-secondary truncate">
+                                    {isDebit ? (item.detail?.startsWith('Used') || item.detail?.startsWith('Wallet') ? item.detail : "Wallet Discount Applied") : (item.detail || "Friend Sign Up")}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400 font-semibold truncate">
+                                    {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold text-secondary truncate">{item.detail || "Friend Sign Up"}</p>
-                                <p className="text-[10px] text-gray-400 font-semibold truncate">
-                                  {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
-                                </p>
-                              </div>
+                              <span className={`text-xs font-black px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap ${
+                                isDebit 
+                                  ? "text-red-600 bg-red-50 border border-red-100" 
+                                  : "text-green-600 bg-green-50 border border-green-100"
+                              }`}>
+                                {isDebit ? `-₹${absAmount}` : `+₹${absAmount}`}
+                              </span>
                             </div>
-                            <span className="text-xs font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
-                              +₹{parseFloat(item.amount || 10).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
