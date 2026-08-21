@@ -543,6 +543,8 @@ export default function AccountPage() {
                       When you renew a subscription, up to <strong>₹{walletData?.maxWalletPerTxn || 10}</strong> from your wallet 
                       will automatically be deducted from your payment. The remaining amount is charged via Razorpay.
                     </p>
+                  </div>
+
                   {/* Referral History / Breakdown */}
                   <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm">
                     <h4 className="font-black text-secondary mb-4 flex items-center justify-between">
