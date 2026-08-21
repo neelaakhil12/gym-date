@@ -440,15 +440,15 @@ export default function AccountPage() {
 
           {/* Content Area */}
           <main className="flex-1 w-full overflow-hidden">
-            <div className="bg-white rounded-[32px] lg:rounded-[40px] p-6 lg:p-10 min-h-[500px] lg:min-h-[700px] shadow-sm border border-gray-100">
+            <div className="bg-white rounded-[24px] sm:rounded-[32px] lg:rounded-[40px] p-4 sm:p-6 lg:p-10 min-h-[500px] lg:min-h-[700px] shadow-sm border border-gray-100">
               
               {/* Header inside content */}
-              <div className="flex justify-between items-center mb-10 pb-8 border-b border-gray-50">
+              <div className="flex justify-between items-center mb-6 sm:mb-10 pb-6 sm:pb-8 border-b border-gray-50">
                 <div>
-                  <h2 className="text-3xl font-black text-secondary tracking-tighter">
+                  <h2 className="text-2xl sm:text-3xl font-black text-secondary tracking-tighter">
                     {tabs.find(t => t.id === activeTab)?.label}
                   </h2>
-                  <p className="text-gray-400 text-sm mt-1">Manage your {activeTab} information and preferences.</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mt-1">Manage your {activeTab} information and preferences.</p>
                 </div>
               </div>
 
@@ -456,19 +456,19 @@ export default function AccountPage() {
               {activeTab === "wallet" && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   {/* Wallet Balance Card */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gradient-to-br from-primary to-red-700 rounded-[28px] p-6 text-white md:col-span-1">
-                      <div className="flex items-center space-x-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-primary to-red-700 rounded-[24px] sm:rounded-[28px] p-5 sm:p-6 text-white sm:col-span-1">
+                      <div className="flex items-center space-x-3 mb-3 sm:mb-4">
                         <div className="p-2 bg-white/20 rounded-xl">
                           <Wallet className="w-5 h-5" />
                         </div>
                         <span className="text-xs font-black uppercase tracking-widest opacity-80">Wallet Balance</span>
                       </div>
-                      <p className="text-4xl font-black mb-1">₹{walletData?.walletBalance?.toFixed(2) || "0.00"}</p>
+                      <p className="text-3xl sm:text-4xl font-black mb-1">₹{walletData?.walletBalance?.toFixed(2) || "0.00"}</p>
                       <p className="text-xs opacity-70">Up to ₹{walletData?.maxWalletPerTxn || 10} usable per renewal</p>
                     </div>
 
-                    <div className="bg-white rounded-[28px] border border-gray-100 p-6 shadow-sm">
+                    <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-gray-100 p-5 sm:p-6 shadow-sm">
                       <div className="flex items-center space-x-2 mb-3">
                         <TrendingUp className="w-4 h-4 text-green-500" />
                         <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total Referrals</span>
@@ -477,82 +477,84 @@ export default function AccountPage() {
                       <p className="text-xs text-gray-400 mt-1">Friends joined via your link</p>
                     </div>
 
-                    <div className="bg-white rounded-[28px] border border-gray-100 p-6 shadow-sm">
+                    <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-gray-100 p-5 sm:p-6 shadow-sm">
                       <div className="flex items-center space-x-2 mb-3">
                         <Gift className="w-4 h-4 text-purple-500" />
                         <span className="text-xs font-black uppercase tracking-widest text-gray-400">Total Earned</span>
                       </div>
                       <p className="text-3xl font-black text-secondary">₹{walletData?.totalEarned?.toFixed(0) || 0}</p>
-                      <p className="text-xs text-gray-400 mt-1">Get ₹{walletData?.bonusPerReferral || 30} per referral</p>
+                      <p className="text-xs text-gray-400 mt-1">Get ₹{walletData?.bonusPerReferral || 10} per referral</p>
                     </div>
                   </div>
 
                   {/* Referral Link */}
-                  <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm p-6 space-y-4">
+                  <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-gray-100 shadow-sm p-5 sm:p-6 space-y-4">
                     <div>
-                      <h3 className="font-black text-secondary text-lg">Your Referral Link</h3>
-                      <p className="text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and takes a subscription using your link, you earn ₹{walletData?.bonusPerReferral || 30} in your wallet!</p>
+                      <h3 className="font-black text-secondary text-base sm:text-lg">Your Referral Link</h3>
+                      <p className="text-xs sm:text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and takes a subscription using your link, you earn ₹{walletData?.bonusPerReferral || 10} in your wallet!</p>
                     </div>
 
                     {walletData?.referralLink ? (
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono text-sm text-gray-600 truncate">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 font-mono text-xs sm:text-sm text-gray-600 truncate select-all">
                           {walletData.referralLink}
                         </div>
                         <button
                           onClick={handleCopyReferral}
-                          className={`flex-shrink-0 flex items-center space-x-2 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
+                          className={`shrink-0 flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all ${
                             copied
                               ? "bg-green-500 text-white"
-                              : "bg-primary text-white hover:bg-red-700"
+                              : "bg-primary text-white hover:bg-red-700 shadow-md shadow-primary/10"
                           }`}
                         >
                           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          <span>{copied ? "Copied!" : "Copy"}</span>
+                          <span>{copied ? "Copied!" : "Copy Link"}</span>
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-4">
                         <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                        <span className="text-sm text-gray-400">Generating your referral link...</span>
+                        <span className="text-xs sm:text-sm text-gray-400">Generating your referral link...</span>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-3 gap-3 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-2">
                       {[
-                        { step: "1", label: "Share your link", desc: "Send to friends" },
-                        { step: "2", label: "Friend subscribes", desc: "Takes a gym plan" },
-                        { step: "3", label: `You earn ₹${walletData?.bonusPerReferral || 30}`, desc: "Instant wallet credit" },
+                        { step: "1", label: "Share your link", desc: "Send link to friends" },
+                        { step: "2", label: "Friend subscribes", desc: "Purchases a gym plan" },
+                        { step: "3", label: `You earn ₹${walletData?.bonusPerReferral || 10}`, desc: "Instant wallet credit" },
                       ].map(({ step, label, desc }) => (
-                        <div key={step} className="text-center p-4 bg-gray-50 rounded-2xl">
-                          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm mx-auto mb-2">{step}</div>
-                          <p className="font-bold text-secondary text-xs">{label}</p>
-                          <p className="text-gray-400 text-[10px] mt-1">{desc}</p>
+                        <div key={step} className="flex sm:flex-col items-center sm:text-center p-3.5 sm:p-4 bg-gray-50 rounded-2xl gap-3 sm:gap-0">
+                          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-black text-sm shrink-0 sm:mx-auto sm:mb-2">{step}</div>
+                          <div className="text-left sm:text-center min-w-0 flex-1">
+                            <p className="font-bold text-secondary text-xs truncate">{label}</p>
+                            <p className="text-gray-400 text-[10px] mt-0.5 sm:mt-1 truncate">{desc}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Wallet Usage Info */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-[28px] p-6">
-                    <h4 className="font-black text-secondary mb-2 flex items-center">
-                      <Wallet className="w-4 h-4 mr-2 text-blue-500" />
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-[24px] sm:rounded-[28px] p-5 sm:p-6">
+                    <h4 className="font-black text-secondary text-sm sm:text-base mb-2 flex items-center">
+                      <Wallet className="w-4 h-4 mr-2 text-blue-500 shrink-0" />
                       How to use your wallet
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                       When you renew a subscription, up to <strong>₹{walletData?.maxWalletPerTxn || 10}</strong> from your wallet 
                       will automatically be deducted from your payment. The remaining amount is charged via Razorpay.
                     </p>
                   </div>
 
                   {/* Referral History / Breakdown */}
-                  <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm">
-                    <h4 className="font-black text-secondary mb-4 flex items-center justify-between">
-                      <span className="flex items-center">
-                        <TrendingUp className="w-4 h-4 mr-2 text-green-500" />
+                  <div className="bg-white border border-gray-100 rounded-[24px] sm:rounded-[28px] p-5 sm:p-6 shadow-sm overflow-hidden">
+                    <h4 className="font-black text-secondary mb-4 flex items-center justify-between gap-2">
+                      <span className="flex items-center text-sm sm:text-base truncate">
+                        <TrendingUp className="w-4 h-4 mr-2 text-green-500 shrink-0" />
                         Referral Activity & Earnings
                       </span>
-                      <span className="text-xs text-gray-400 font-bold">
+                      <span className="text-xs text-gray-400 font-bold shrink-0">
                         {walletData?.history?.length || 0} credited
                       </span>
                     </h4>
@@ -564,20 +566,20 @@ export default function AccountPage() {
                     ) : (
                       <div className="divide-y divide-gray-100">
                         {walletData.history.map((item: any, idx: number) => (
-                          <div key={idx} className="py-3.5 flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-black text-xs">
+                          <div key={idx} className="py-3 sm:py-3.5 flex items-center justify-between gap-2.5 sm:gap-4">
+                            <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0 flex-1">
+                              <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-black text-xs shrink-0">
                                 ₹
                               </div>
-                              <div>
-                                <p className="text-xs font-bold text-secondary">{item.detail || "Friend Sign Up"}</p>
-                                <p className="text-[10px] text-gray-400 font-semibold">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-secondary truncate">{item.detail || "Friend Sign Up"}</p>
+                                <p className="text-[10px] text-gray-400 font-semibold truncate">
                                   {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-xs font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-lg">
-                              +₹{parseFloat(item.amount || 30).toFixed(2)}
+                            <span className="text-xs font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-lg shrink-0 whitespace-nowrap">
+                              +₹{parseFloat(item.amount || 10).toFixed(2)}
                             </span>
                           </div>
                         ))}
