@@ -74,16 +74,17 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
               setWalletBalance(Number(data.profile.wallet_balance || 0));
             }
           });
-        
-        // Fetch max wallet per txn config
-        fetch('/api/referral/generate?userId=config')
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              setMaxWalletPerTxn(data.maxWalletPerTxn || 10);
-            }
-          });
       }
+      
+      // Fetch max wallet per txn config
+      fetch('/api/admin/referral-config')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.config?.max_wallet_per_txn) {
+            setMaxWalletPerTxn(parseFloat(data.config.max_wallet_per_txn));
+          }
+        })
+        .catch(() => {});
     }
   }, [isOpen, gym, session]);
 
@@ -109,8 +110,9 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
     }
 
     // Apply wallet discount
-    if (useWallet && walletBalance >= maxWalletPerTxn) {
-      finalAmount = (parseFloat(finalAmount) - maxWalletPerTxn).toString();
+    const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn) : 0;
+    if (usableWallet > 0) {
+      finalAmount = Math.max(1, parseFloat(finalAmount) - usableWallet).toString();
     }
 
     setLoading(true);
@@ -285,7 +287,7 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
           </div>
 
           {/* Wallet Discount Option */}
-          {walletBalance >= maxWalletPerTxn && formData.planId && (
+          {walletBalance > 0 && formData.planId && (
             <div className="p-4 bg-green-50 border border-green-100 rounded-2xl">
               <label className="flex items-center justify-between cursor-pointer group">
                 <div className="flex items-center space-x-3">
@@ -294,7 +296,7 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
                   </div>
                   <div>
                     <p className="text-xs font-black text-secondary uppercase tracking-tight">Wallet Discount</p>
-                    <p className="text-[10px] text-green-600 font-bold">Use ₹{maxWalletPerTxn} from balance</p>
+                    <p className="text-[10px] text-green-600 font-bold">Use ₹{Math.min(walletBalance, maxWalletPerTxn)} from wallet (Balance: ₹{walletBalance.toFixed(2)})</p>
                   </div>
                 </div>
                 <input
@@ -310,11 +312,47 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
               {useWallet && (
                 <div className="mt-3 pt-3 border-t border-green-100 flex justify-between text-[10px] font-black uppercase tracking-widest text-green-700">
                   <span>Discount Applied</span>
-                  <span>-₹{maxWalletPerTxn}</span>
+                  <span>-₹{Math.min(walletBalance, maxWalletPerTxn)}</span>
                 </div>
               )}
             </div>
           )}
+
+          {/* Price Summary Breakdown */}
+          {formData.planId && (() => {
+            const sel = plans.find(p => p.id === formData.planId);
+            if (!sel) return null;
+            const raw = parseFloat(sel.price.toString().replace(/[^0-9.]/g, '')) || 0;
+            const offerDiscount = gym.has_offer && gym.offer_percentage ? Math.floor((raw * gym.offer_percentage) / 100) : 0;
+            const priceAfterOffer = raw - offerDiscount;
+            const usableW = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn) : 0;
+            const finalPayable = Math.max(1, priceAfterOffer - usableW);
+
+            return (
+              <div className="bg-gray-50 rounded-2xl p-4 space-y-1.5 text-xs">
+                <div className="flex justify-between text-gray-500 font-medium">
+                  <span>Plan Price:</span>
+                  <span>₹{raw}</span>
+                </div>
+                {offerDiscount > 0 && (
+                  <div className="flex justify-between text-primary font-bold">
+                    <span>Gym Offer ({gym.offer_percentage}% OFF):</span>
+                    <span>-₹{offerDiscount}</span>
+                  </div>
+                )}
+                {usableW > 0 && (
+                  <div className="flex justify-between text-green-600 font-bold">
+                    <span>Wallet Balance Applied:</span>
+                    <span>-₹{usableW}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-secondary font-black text-sm pt-2 border-t border-gray-200">
+                  <span>Remaining Amount to Pay:</span>
+                  <span className="text-primary font-black text-base">₹{finalPayable}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {error && <p className="text-red-500 text-xs font-bold text-center bg-red-50 py-3 rounded-xl">{error}</p>}
 

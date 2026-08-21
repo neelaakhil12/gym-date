@@ -136,24 +136,31 @@ export async function POST(req: NextRequest) {
       if (body.useWallet && finalUserId) {
         // Get wallet config for max usable
         const configRes = await query(
-          `SELECT value FROM platform_config WHERE key = 'max_wallet_per_transaction'`
+          `SELECT value FROM platform_config WHERE key IN ('max_wallet_per_txn', 'max_wallet_per_transaction')`
         );
-        const maxUsable = parseFloat(configRes.rows[0]?.value || '10');
+        const maxAllowed = parseFloat(configRes.rows[0]?.value || '10');
 
-        // Deduct from user wallet in users_extra
-        await query(
-          'UPDATE users_extra SET wallet_balance = GREATEST(0, COALESCE(wallet_balance, 0) - $1), updated_at = CURRENT_TIMESTAMP WHERE user_id::text = $2::text',
-          [maxUsable, finalUserId]
-        );
+        // Fetch user's current wallet balance
+        const userWalletRes = await query('SELECT wallet_balance FROM users_extra WHERE user_id::text = $1::text', [finalUserId]);
+        const currentBalance = parseFloat(userWalletRes.rows[0]?.wallet_balance || '0');
+        const amountToDeduct = Math.min(currentBalance, maxAllowed);
 
-        // Record the transaction
-        await query(
-          `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
-           VALUES ($1, $2, 'user', $3, 'debited')`,
-          [finalUserId, customerEmail, maxUsable]
-        );
-        
-        console.log(`[Wallet] Deducted ₹${maxUsable} from user ${finalUserId} for booking ${bookingId}`);
+        if (amountToDeduct > 0) {
+          // Deduct from user wallet in users_extra
+          await query(
+            'UPDATE users_extra SET wallet_balance = GREATEST(0, COALESCE(wallet_balance, 0) - $1), updated_at = CURRENT_TIMESTAMP WHERE user_id::text = $2::text',
+            [amountToDeduct, finalUserId]
+          );
+
+          // Record the transaction
+          await query(
+            `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
+             VALUES ($1, $2, 'user', $3, 'debited')`,
+            [finalUserId, customerEmail, amountToDeduct]
+          );
+          
+          console.log(`[Wallet] Deducted ₹${amountToDeduct} from user ${finalUserId} for booking ${bookingId}`);
+        }
       }
     } catch (e) {
       console.error("Wallet update error", e);
