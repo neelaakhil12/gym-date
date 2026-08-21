@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload, Clock, CheckCircle2 } from "lucide-react";
+import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload, Clock, CheckCircle2, Eye } from "lucide-react";
 import { getPartnerGym, getPartnerBookings, createPayoutRequest, getPartnerPayoutRequests, uploadPayoutQrCode } from "@/actions/adminActions";
 import { supabase } from "@/lib/supabase";
 
@@ -15,6 +15,7 @@ export default function PartnerWallet() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [activeTab, setActiveTab] = useState<"bank" | "upi">("bank");
   const [payouts, setPayouts] = useState<any[]>([]);
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -241,7 +242,16 @@ export default function PartnerWallet() {
                     </p>
                   </div>
                 </div>
-                <div>
+                <div className="flex items-center space-x-3">
+                  {payout.payment_proof_url && (
+                    <button
+                      onClick={() => setSelectedProofUrl(payout.payment_proof_url)}
+                      className="px-3 py-1.5 text-[11px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center space-x-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Receipt</span>
+                    </button>
+                  )}
                   <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg border ${
                     payout.status === 'completed' 
                       ? 'bg-green-50 text-green-700 border-green-200' 
@@ -262,6 +272,32 @@ export default function PartnerWallet() {
           </div>
         )}
       </div>
+
+      {/* Proof Preview Modal */}
+      {selectedProofUrl && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-black text-secondary">Payment Proof / Receipt</h3>
+              </div>
+              <button onClick={() => setSelectedProofUrl(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="flex justify-center p-2 bg-gray-50 rounded-2xl border border-gray-100">
+              <img src={selectedProofUrl} alt="Payment Proof" className="max-h-[60vh] object-contain rounded-xl" />
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <span className="text-xs text-gray-400 font-medium">Uploaded by Super Admin</span>
+              <a href={selectedProofUrl} target="_blank" rel="noreferrer" className="text-xs font-black text-primary hover:underline">
+                Open Full Image
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Withdrawal Form Modal */}
       {showWithdrawForm && (

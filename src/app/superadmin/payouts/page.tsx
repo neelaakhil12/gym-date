@@ -1,14 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Banknote, CheckCircle2, Clock, MapPin, Building2, User, CreditCard, Eye, X, FileText, Smartphone, QrCode, Gift } from "lucide-react";
-import { getPayoutRequests, updatePayoutStatus } from "@/actions/adminActions";
+import React, { useEffect, useState, useRef } from "react";
+import { Banknote, CheckCircle2, Clock, MapPin, Building2, User, CreditCard, Eye, X, FileText, Smartphone, QrCode, Gift, Upload, RefreshCw, ImageIcon } from "lucide-react";
+import { getPayoutRequests, updatePayoutStatus, uploadPayoutQrCode } from "@/actions/adminActions";
 
 export default function AdminPayouts() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string>("");
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadRequests() {
@@ -22,13 +26,33 @@ export default function AdminPayouts() {
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     setUpdatingId(id);
-    const result = await updatePayoutStatus(id, newStatus);
+    let proofUrl: string | undefined = undefined;
+
+    if (proofFile) {
+      setUploadingProof(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", proofFile);
+        const upRes = await uploadPayoutQrCode(formData);
+        if (upRes.url) {
+          proofUrl = upRes.url;
+        }
+      } catch (err) {
+        console.error("Proof upload failed:", err);
+      } finally {
+        setUploadingProof(false);
+      }
+    }
+
+    const result = await updatePayoutStatus(id, newStatus, proofUrl);
 
     if (result.success) {
-      setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus } : r));
+      setRequests(requests.map(r => r.id === id ? { ...r, status: newStatus, ...(proofUrl ? { payment_proof_url: proofUrl } : {}) } : r));
       if (selectedRequest?.id === id) {
-        setSelectedRequest({ ...selectedRequest, status: newStatus });
+        setSelectedRequest({ ...selectedRequest, status: newStatus, ...(proofUrl ? { payment_proof_url: proofUrl } : {}) });
       }
+      setProofFile(null);
+      setProofPreview("");
     }
     setUpdatingId(null);
   };
@@ -251,16 +275,80 @@ export default function AdminPayouts() {
                 </div>
               </div>
 
+              {/* Payment Proof Section */}
+              <div className="pt-2">
+                {selectedRequest.status === 'pending' ? (
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-secondary uppercase tracking-wider block">
+                      Upload Payment Proof / Transaction Screenshot (Optional)
+                    </label>
+                    <div 
+                      onClick={() => proofInputRef.current?.click()}
+                      className="border-2 border-dashed border-gray-200 hover:border-primary/50 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-red-50/20"
+                    >
+                      <input 
+                        type="file" 
+                        ref={proofInputRef} 
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            setProofFile(file);
+                            setProofPreview(URL.createObjectURL(file));
+                          }
+                        }} 
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+                      {proofPreview ? (
+                        <div className="flex flex-col items-center space-y-2">
+                          <img src={proofPreview} alt="Proof Preview" className="max-h-36 object-contain rounded-xl border border-gray-200" />
+                          <span className="text-xs font-bold text-primary">Click to change payment receipt</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center space-y-1 py-2 text-center">
+                          <Upload className="w-6 h-6 text-gray-400" />
+                          <span className="text-xs font-bold text-gray-700">Upload Bank/UPI Transfer Receipt Screenshot</span>
+                          <span className="text-[10px] text-gray-400 font-medium">PNG, JPG up to 5MB (Will be shown in partner panel)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  selectedRequest.payment_proof_url ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-black text-secondary uppercase tracking-wider">Payment Proof / Receipt Uploaded</p>
+                      <div className="flex flex-col items-center p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl space-y-3">
+                        <img 
+                          src={selectedRequest.payment_proof_url} 
+                          alt="Payment Proof" 
+                          className="max-h-48 max-w-full object-contain rounded-xl border border-emerald-200 cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => window.open(selectedRequest.payment_proof_url, '_blank')}
+                        />
+                        <a 
+                          href={selectedRequest.payment_proof_url} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>View Full Payment Receipt</span>
+                        </a>
+                      </div>
+                    </div>
+                  ) : null
+                )}
+              </div>
+
               {/* Action in Modal */}
               <div className="pt-4 pb-4">
                 {selectedRequest.status === 'pending' ? (
                   <button 
                     onClick={() => handleStatusUpdate(selectedRequest.id, 'completed')}
-                    disabled={updatingId === selectedRequest.id}
-                    className="w-full bg-primary text-white py-4 rounded-2xl font-black hover:bg-red-700 transition-all shadow-xl flex items-center justify-center space-x-2"
+                    disabled={updatingId === selectedRequest.id || uploadingProof}
+                    className="w-full bg-primary text-white py-4 rounded-2xl font-black hover:bg-red-700 transition-all shadow-xl flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
-                    {updatingId === selectedRequest.id ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                    {updatingId === selectedRequest.id || uploadingProof ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
                         <CheckCircle2 className="w-5 h-5" />

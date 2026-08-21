@@ -169,7 +169,8 @@ export async function GET(req: NextRequest) {
                     ELSE 'Withdrawal Request'
                   END as detail, 
                   'debit' as type, 
-                  p.status as status 
+                  p.status as status,
+                  p.payment_proof_url
            FROM payout_requests p
            JOIN gyms g ON p.gym_id = g.id
            WHERE g.partner_id::text = $1::text AND p.payout_type = 'referral'

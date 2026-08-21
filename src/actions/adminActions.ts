@@ -758,7 +758,7 @@ export async function getSuperAdminBadgeCounts(lastViewedLeads?: string, lastVie
   }
 }
 
-export async function updatePayoutStatus(id: string, newStatus: string) {
+export async function updatePayoutStatus(id: string, newStatus: string, proofUrl?: string) {
   try {
     // 1. Fetch the request to check type
     const requestRes = await query("SELECT * FROM payout_requests WHERE id = $1", [id]);
@@ -791,7 +791,12 @@ export async function updatePayoutStatus(id: string, newStatus: string) {
       }
     }
 
-    await query("UPDATE payout_requests SET status = $1 WHERE id = $2", [newStatus, id]);
+    if (proofUrl) {
+      await query("UPDATE payout_requests SET status = $1, payment_proof_url = $2 WHERE id = $3", [newStatus, proofUrl, id]);
+    } else {
+      await query("UPDATE payout_requests SET status = $1 WHERE id = $2", [newStatus, id]);
+    }
+
     revalidatePath("/superadmin/payouts");
     revalidatePath("/partner/dashboard");
     revalidatePath("/partner/wallet");
