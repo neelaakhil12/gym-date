@@ -1,7 +1,7 @@
 "use client";
 
 import GymLogoIcon from "@/components/GymLogoIcon";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { 
   MapPin, 
   DollarSign, 
