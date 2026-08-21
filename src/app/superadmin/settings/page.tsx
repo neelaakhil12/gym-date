@@ -35,10 +35,19 @@ export default function AdminSettings() {
 
   async function loadConfig() {
     setLoading(true);
-    const data = await getPlatformConfig();
-    // Hide redundant keys and signup_bonus
-    setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
-    setLoading(false);
+    try {
+      const data = await getPlatformConfig();
+      if (Array.isArray(data)) {
+        setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+      } else {
+        setConfig([]);
+      }
+    } catch (e) {
+      console.error("Failed to load settings config:", e);
+      setConfig([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const handleSave = async (key: string, value: string) => {

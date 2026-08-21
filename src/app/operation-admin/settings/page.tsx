@@ -39,8 +39,17 @@ export default function OperationSettings() {
       const isAllowed = await checkStaffSettingsAccess(email);
       setAllowed(isAllowed);
       if (isAllowed) {
-        const data = await getPlatformConfig();
-        setConfig(data.filter((item: any) => item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings' && item.key !== 'signup_bonus'));
+        try {
+          const data = await getPlatformConfig();
+          if (Array.isArray(data)) {
+            setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings' && item.key !== 'signup_bonus'));
+          } else {
+            setConfig([]);
+          }
+        } catch (e) {
+          console.error("Failed to load staff config:", e);
+          setConfig([]);
+        }
       }
       setLoading(false);
     }

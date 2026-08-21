@@ -931,64 +931,31 @@ export async function getPlatformConfig() {
     const result = await query("SELECT * FROM platform_config ORDER BY key ASC");
     let configs = result.rows || [];
 
-    // Ensure platform_commission exists so it shows in the Settings UI
-    if (!configs.find((c: any) => c.key === 'platform_commission')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['platform_commission', '10', 'Global platform commission percentage (fallback for all gyms).']
-      );
-    }
+    const defaultConfigs = [
+      ['platform_commission', '10', 'Global platform commission percentage (fallback for all gyms).'],
+      ['user_referral_bonus', '10', 'Amount given to a user when they refer a friend (credited upon subscription payment)'],
+      ['partner_referral_bonus', '500', 'Referral bonus (in ₹) credited to gym partner wallet when an invited gym lead is approved by Super Admin.'],
+      ['max_wallet_per_txn', '10', 'Maximum wallet amount (in ₹) that can be deducted per booking transaction.'],
+      ['partner_referral_min_withdrawal', '1500', 'Minimum withdrawal amount limit (in ₹) for Gym Partner Referral Wallet.'],
+      ['partner_virtual_min_withdrawal', '500', 'Minimum withdrawal amount limit (in ₹) for Gym Partner Virtual Wallet (Revenue).'],
+      ['allow_staff_settings', 'false', 'Enable or disable Settings tab visibility for operations staff.']
+    ];
 
-    // Ensure user_referral_bonus exists
-    if (!configs.find((c: any) => c.key === 'user_referral_bonus')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['user_referral_bonus', '10', 'Amount given to a user when they refer a friend (credited upon subscription payment)']
-      );
-    }
-
-    // Ensure partner_referral_bonus exists
-    if (!configs.find((c: any) => c.key === 'partner_referral_bonus')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['partner_referral_bonus', '500', 'Referral bonus (in ₹) credited to gym partner wallet when an invited gym lead is approved by Super Admin.']
-      );
-    }
-
-    // Ensure max_wallet_per_txn exists
-    if (!configs.find((c: any) => c.key === 'max_wallet_per_txn')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['max_wallet_per_txn', '10', 'Maximum wallet amount (in ₹) that can be deducted per booking transaction.']
-      );
-    }
-
-    // Ensure partner_referral_min_withdrawal exists
-    if (!configs.find((c: any) => c.key === 'partner_referral_min_withdrawal')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['partner_referral_min_withdrawal', '1500', 'Minimum withdrawal amount limit (in ₹) for Gym Partner Referral Wallet.']
-      );
-    }
-
-    // Ensure partner_virtual_min_withdrawal exists
-    if (!configs.find((c: any) => c.key === 'partner_virtual_min_withdrawal')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['partner_virtual_min_withdrawal', '500', 'Minimum withdrawal amount limit (in ₹) for Gym Partner Virtual Wallet (Revenue).']
-      );
-    }
-
-    // Ensure allow_staff_settings exists for toggling staff settings access
-    if (!configs.find((c: any) => c.key === 'allow_staff_settings')) {
-      await query(
-        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['allow_staff_settings', 'false', 'Enable or disable Settings tab visibility for operations staff.']
-      );
+    for (const [k, v, desc] of defaultConfigs) {
+      if (!configs.find((c: any) => c.key === k)) {
+        await query(
+          "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+          [k, v, desc]
+        );
+      }
     }
 
     const updated = await query("SELECT * FROM platform_config ORDER BY key ASC");
-    return updated.rows || [];
+    return (updated.rows || []).map((row: any) => ({
+      key: String(row.key),
+      value: String(row.value || ''),
+      description: String(row.description || '')
+    }));
   } catch (error) {
     console.error("Error fetching platform config", error);
     return [];
