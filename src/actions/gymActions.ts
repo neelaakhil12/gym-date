@@ -269,25 +269,37 @@ export async function registerPartnerRequest(data: {
   referredBy?: string;
 }) {
   try {
-    // 1. Try with referral info
+    const id = crypto.randomUUID();
+
+    // 1. Insert into partner_requests
+    await query(
+      "INSERT INTO partner_requests (id, gym_name, owner_name, email, phone, city, address) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [id, data.gymName, data.ownerName, data.email, data.phone, data.city, data.address]
+    );
+
+    // 2. Ensure partner_requests_extra exists and insert status & referred_by
     try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_requests_extra (
+          request_id VARCHAR(255) PRIMARY KEY,
+          status VARCHAR(50) DEFAULT 'pending',
+          referred_by VARCHAR(50),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
       await query(
-        "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address, referred_by) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-        [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address, data.referredBy || null]
+        `INSERT INTO partner_requests_extra (request_id, status, referred_by, updated_at)
+         VALUES ($1, 'pending', $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (request_id)
+         DO UPDATE SET referred_by = EXCLUDED.referred_by, updated_at = CURRENT_TIMESTAMP`,
+        [id, data.referredBy ? data.referredBy.trim().toUpperCase() : null]
       );
-    } catch (dbErr: any) {
-      // 2. Fallback: Try without referred_by if column doesn't exist
-      if (dbErr.message?.includes("referred_by") || dbErr.message?.includes("does not exist")) {
-        console.warn("Retrying registration without referred_by column...");
-        await query(
-          "INSERT INTO partner_requests (gym_name, owner_name, email, phone, city, address) VALUES ($1, $2, $3, $4, $5, $6)",
-          [data.gymName, data.ownerName, data.email, data.phone, data.city, data.address]
-        );
-      } else {
-        throw dbErr;
-      }
+    } catch (extraErr) {
+      console.warn("partner_requests_extra insert error:", extraErr);
     }
     
+    revalidatePath("/superadmin/partner-requests");
     revalidatePath("/admin/partner-requests");
     return { success: true };
   } catch (error: any) {

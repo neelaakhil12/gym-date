@@ -296,42 +296,43 @@ export async function updateUser(id: string, data: any) {
 
 export async function getPartnerRequests() {
   try {
-    // Ensure table & columns exist
+    // Ensure partner_requests_extra exists
     try {
       await query(`
-        CREATE TABLE IF NOT EXISTS partner_requests (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          gym_name TEXT NOT NULL,
-          owner_name TEXT NOT NULL,
-          email TEXT NOT NULL,
-          phone TEXT NOT NULL,
-          city TEXT,
-          address TEXT,
-          status TEXT DEFAULT 'pending',
-          referred_by TEXT,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS partner_requests_extra (
+          request_id VARCHAR(255) PRIMARY KEY,
+          status VARCHAR(50) DEFAULT 'pending',
+          referred_by VARCHAR(50),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS referred_by TEXT");
-    } catch (e) {
-      console.warn("Table verification note:", e);
-    }
+    } catch (e) {}
 
     let result;
     try {
       result = await query(`
         SELECT 
           pr.*,
+          COALESCE(pre.status, 'pending') as status,
+          pre.referred_by as referred_by,
           g.name as referrer_gym_name,
-          u.full_name as referrer_owner_name
+          COALESCE(u.full_name, u.email) as referrer_owner_name
         FROM partner_requests pr
-        LEFT JOIN users u ON TRIM(UPPER(COALESCE(pr.referred_by, ''))) = TRIM(UPPER(COALESCE(u.referral_code, '')))
+        LEFT JOIN partner_requests_extra pre ON pr.id::text = pre.request_id::text
+        LEFT JOIN users_extra ue ON TRIM(UPPER(COALESCE(pre.referred_by, ''))) = TRIM(UPPER(COALESCE(ue.referral_code, '')))
+        LEFT JOIN users u ON ue.user_id::text = u.id::text
         LEFT JOIN gyms g ON u.id::text = g.partner_id::text
         ORDER BY pr.created_at DESC
       `);
     } catch (joinErr) {
       console.warn("Falling back to simple partner_requests select:", joinErr);
-      result = await query(`SELECT * FROM partner_requests ORDER BY created_at DESC`);
+      result = await query(`
+        SELECT pr.*, COALESCE(pre.status, 'pending') as status, pre.referred_by as referred_by 
+        FROM partner_requests pr
+        LEFT JOIN partner_requests_extra pre ON pr.id::text = pre.request_id::text
+        ORDER BY pr.created_at DESC
+      `);
     }
     
     const enriched = [...(result?.rows || [])];
@@ -351,48 +352,45 @@ export async function getPartnerRequests() {
 
 export async function updatePartnerRequestStatus(id: string, status: string) {
   try {
-    // 1. Check existing columns in partner_requests
-    let availableCols = new Set<string>();
+    // Ensure partner_requests_extra table exists
     try {
-      const colRes = await query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = 'partner_requests'
+      await query(`
+        CREATE TABLE IF NOT EXISTS partner_requests_extra (
+          request_id VARCHAR(255) PRIMARY KEY,
+          status VARCHAR(50) DEFAULT 'pending',
+          referred_by VARCHAR(50),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
       `);
-      availableCols = new Set((colRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
-    } catch (e) {
-      console.warn("Columns check issue:", e);
-    }
+    } catch (e) {}
 
-    // Attempt to add column if missing
-    if (!availableCols.has("status")) {
-      try {
-        await query("ALTER TABLE partner_requests ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'");
-        availableCols.add("status");
-      } catch (alterErr) {
-        console.warn("Could not alter partner_requests table:", alterErr);
-      }
-    }
+    // 1. Get current record
+    const leadRes = await query(`
+      SELECT 
+        pr.*,
+        COALESCE(pre.status, 'pending') as status,
+        pre.referred_by as referred_by
+      FROM partner_requests pr
+      LEFT JOIN partner_requests_extra pre ON pr.id::text = pre.request_id::text
+      WHERE pr.id::text = $1::text
+    `, [id]);
 
-    // 2. Get current record
-    let lead: any = {};
-    const leadRes = await query("SELECT * FROM partner_requests WHERE id::text = $1::text", [id]);
     if (leadRes.rows.length === 0) throw new Error("Lead not found.");
-    lead = leadRes.rows[0];
+    const lead = leadRes.rows[0];
     const previousStatus = lead.status;
 
-    // If status column exists, update it
-    if (availableCols.has("status")) {
-      const updateRes = await query(
-        "UPDATE partner_requests SET status = $1 WHERE id::text = $2::text RETURNING *",
-        [status, id]
-      );
-      if (updateRes.rows.length > 0) lead = updateRes.rows[0];
-    }
+    // 2. Update status in partner_requests_extra
+    await query(`
+      INSERT INTO partner_requests_extra (request_id, status, updated_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (request_id) 
+      DO UPDATE SET status = EXCLUDED.status, updated_at = CURRENT_TIMESTAMP
+    `, [id, status]);
 
     let creditedInfo = null;
 
-    // 3. If it's approved or rejected, send the professional email
+    // 3. Send email notification
     if (status === "approved" || status === "rejected") {
       try {
         await sendPartnerLeadStatusEmail(lead, status as 'approved' | 'rejected');
@@ -400,30 +398,12 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
         console.warn("[AdminActions] Email sending error (non-fatal):", emailErr);
       }
       
-      // Credit Referral Bonus if approved, referred by someone, and not already credited previously
+      // 4. Credit Referral Bonus if approved, referred by someone, and not already credited previously
       if (status === "approved" && lead.referred_by && previousStatus !== "approved") {
         try {
-          // Ensure referral_transactions table exists
-          await query(`
-            CREATE TABLE IF NOT EXISTS referral_transactions (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              referrer_id UUID REFERENCES users(id),
-              referred_user_email TEXT,
-              type TEXT,
-              amount DECIMAL(10,2),
-              status TEXT DEFAULT 'pending',
-              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            )
-          `);
-
-          // Ensure wallet_balance column exists on users
-          try {
-            await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
-          } catch (e) {}
-
           const cleanRefCode = lead.referred_by.trim().toUpperCase();
 
-          // Find the referrer in users_extra (case-insensitive)
+          // Find the referrer in users_extra
           const referrerRes = await query(`
             SELECT u.id, u.email, u.role_id, u.full_name, COALESCE(ue.wallet_balance, 0) as wallet_balance, ue.referral_code
             FROM users u
@@ -445,18 +425,21 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
 
             if (existingTxn.rows.length === 0) {
               // Get partner referral bonus from config
-              const { getConfigValue } = await import('@/lib/config');
-              const bonusStr = await getConfigValue('partner_referral_bonus');
-              let bonusAmount = parseFloat(bonusStr ?? '500');
+              const configRes = await query("SELECT value FROM platform_config WHERE key = 'partner_referral_bonus' LIMIT 1");
+              let bonusAmount = parseFloat(configRes.rows[0]?.value || '100');
 
-              // If the referrer is a gym partner, check if their gym has a custom partner_referral_amount
-              const gymRes = await query(
-                "SELECT partner_referral_amount FROM gyms WHERE partner_id::text = $1::text LIMIT 1", 
-                [referrer.id]
-              );
-              if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
-                bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
-              }
+              // Check if referrer's gym has a custom partner_referral_amount
+              try {
+                const gymRes = await query(`
+                  SELECT ge.partner_referral_amount 
+                  FROM gyms g 
+                  LEFT JOIN gyms_extra ge ON g.id = ge.gym_id 
+                  WHERE g.partner_id::text = $1::text LIMIT 1
+                `, [referrer.id]);
+                if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
+                  bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
+                }
+              } catch (gymErr) {}
               
               // Start Transaction to credit wallet in users_extra and record it
               await query("BEGIN");
@@ -489,6 +472,7 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
 
     revalidatePath("/superadmin/partner-requests");
     revalidatePath("/admin/partner-requests");
+    revalidatePath("/partner/dashboard");
     return { success: true, creditedInfo };
   } catch (error: any) {
     console.error("Error updating partner request status:", error);
