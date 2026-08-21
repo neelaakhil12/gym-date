@@ -46,12 +46,13 @@ export default function PartnerWallet() {
           return sum + (amount - commission);
         }, 0) || 0;
         
-        // Fetch payout history
-        const payoutHistory = await getPartnerPayoutRequests(gymData.id);
-        setPayouts(payoutHistory || []);
+        // Fetch payout history (only revenue/virtual payouts, not referral payouts)
+        const payoutHistory = await getPartnerPayoutRequests(gymData.id, 'revenue');
+        const revenuePayouts = (payoutHistory || []).filter((p: any) => !p.payout_type || p.payout_type === 'revenue' || p.payout_type === 'gym_revenue');
+        setPayouts(revenuePayouts);
 
-        // Calculate total withdrawn or pending withdrawal
-        const totalWithdrawn = payoutHistory?.reduce((sum: number, p: any) => {
+        // Calculate total withdrawn or pending withdrawal for virtual revenue wallet
+        const totalWithdrawn = revenuePayouts.reduce((sum: number, p: any) => {
           return sum + (parseFloat(p.amount) || 0);
         }, 0) || 0;
         

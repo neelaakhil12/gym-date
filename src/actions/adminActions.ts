@@ -835,13 +835,18 @@ export async function createPayoutRequest(payload: any) {
   }
 }
 
-export async function getPartnerPayoutRequests(gymId: string) {
+export async function getPartnerPayoutRequests(gymId: string, payoutType: string = 'revenue') {
   try {
     const result = await query(`
       SELECT * FROM payout_requests
-      WHERE gym_id = $1
+      WHERE gym_id::text = $1::text AND (
+        CASE 
+          WHEN $2 = 'referral' THEN payout_type = 'referral'
+          ELSE (payout_type IS NULL OR payout_type = 'revenue' OR payout_type = 'gym_revenue')
+        END
+      )
       ORDER BY created_at DESC
-    `, [gymId]);
+    `, [gymId, payoutType]);
     
     return result.rows || [];
   } catch (error) {
