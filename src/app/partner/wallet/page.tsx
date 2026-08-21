@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload, Clock, CheckCircle2 } from "lucide-react";
-import { getPartnerGym, getPartnerBookings, createPayoutRequest, getPartnerPayoutRequests } from "@/actions/adminActions";
+import { getPartnerGym, getPartnerBookings, createPayoutRequest, getPartnerPayoutRequests, uploadPayoutQrCode } from "@/actions/adminActions";
 import { supabase } from "@/lib/supabase";
 
 export default function PartnerWallet() {
@@ -114,18 +114,11 @@ export default function PartnerWallet() {
       
       // Upload QR Code if provided
       if (activeTab === "upi" && formData.qrCodeFile) {
-        const fileExt = formData.qrCodeFile.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `payouts/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("gym-images")
-          .upload(filePath, formData.qrCodeFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage.from("gym-images").getPublicUrl(filePath);
-        qrCodeUrl = publicUrl;
+        const uploadData = new FormData();
+        uploadData.append("file", formData.qrCodeFile);
+        const upRes = await uploadPayoutQrCode(uploadData);
+        if (upRes.error) throw new Error(upRes.error);
+        if (upRes.url) qrCodeUrl = upRes.url;
       }
 
       const payload: any = {

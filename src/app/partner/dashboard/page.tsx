@@ -27,9 +27,10 @@ import {
   Smartphone,
   RefreshCw,
   AlertCircle,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
-import { getPartnerGym, getPartnerBookings, createPayoutRequest } from "@/actions/adminActions";
+import { getPartnerGym, getPartnerBookings, createPayoutRequest, uploadPayoutQrCode } from "@/actions/adminActions";
 import { updateGymStatus, updateGymOffer } from "@/actions/gymActions";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { supabase } from "@/lib/supabase";
@@ -59,7 +60,10 @@ export default function PartnerDashboard() {
     ifscCode: "",
     upiId: "",
     mobileNumber: "",
+    qrCodeFile: null as File | null,
+    qrCodePreview: "" as string
   });
+  const qrRefInput = useRef<HTMLInputElement>(null);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -160,11 +164,21 @@ export default function PartnerDashboard() {
         payload.account_number = withdrawForm.accountNumber;
         payload.ifsc_code = withdrawForm.ifscCode;
       } else {
-        if (!withdrawForm.upiId && !withdrawForm.mobileNumber) {
-          throw new Error("Please fill UPI ID or Mobile Number.");
+        let qrCodeUrl = "";
+        if (withdrawForm.qrCodeFile) {
+          const uploadData = new FormData();
+          uploadData.append("file", withdrawForm.qrCodeFile);
+          const upRes = await uploadPayoutQrCode(uploadData);
+          if (upRes.error) throw new Error(upRes.error);
+          if (upRes.url) qrCodeUrl = upRes.url;
+        }
+
+        if (!withdrawForm.upiId && !withdrawForm.mobileNumber && !qrCodeUrl) {
+          throw new Error("Please provide UPI ID, Mobile Number, or QR Code / Screenshot.");
         }
         payload.upi_id = withdrawForm.upiId;
         payload.mobile_number = withdrawForm.mobileNumber;
+        payload.qr_code_url = qrCodeUrl;
       }
 
       const result = await createPayoutRequest(payload);
@@ -792,8 +806,7 @@ export default function PartnerDashboard() {
                         <div className="relative">
                           <QrCode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                           <input
-                            required
-                            placeholder="username@okaxis"
+                            placeholder="username@okaxis (Optional if QR uploaded)"
                             value={withdrawForm.upiId}
                             onChange={(e) => setWithdrawForm({ ...withdrawForm, upiId: e.target.value })}
                             className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
@@ -805,12 +818,47 @@ export default function PartnerDashboard() {
                         <div className="relative">
                           <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
                           <input
-                            required
                             placeholder="Registered Mobile Number"
                             value={withdrawForm.mobileNumber}
                             onChange={(e) => setWithdrawForm({ ...withdrawForm, mobileNumber: e.target.value })}
                             className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:border-primary/30 transition-all"
                           />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Upload QR Code / Screenshot (Optional)</label>
+                        <div 
+                          onClick={() => qrRefInput.current?.click()}
+                          className="border-2 border-dashed border-gray-200 hover:border-primary/50 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-red-50/20"
+                        >
+                          <input 
+                            type="file" 
+                            ref={qrRefInput} 
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                const file = e.target.files[0];
+                                setWithdrawForm({
+                                  ...withdrawForm,
+                                  qrCodeFile: file,
+                                  qrCodePreview: URL.createObjectURL(file)
+                                });
+                              }
+                            }} 
+                            accept="image/*" 
+                            className="hidden" 
+                          />
+                          {withdrawForm.qrCodePreview ? (
+                            <div className="flex flex-col items-center space-y-2">
+                              <img src={withdrawForm.qrCodePreview} alt="QR Code Preview" className="w-24 h-24 object-contain rounded-lg border border-gray-200" />
+                              <span className="text-xs font-bold text-primary">Click to change QR code</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center space-y-1 py-1">
+                              <Upload className="w-6 h-6 text-gray-400" />
+                              <span className="text-xs font-bold text-gray-600">Upload UPI QR / Screenshot</span>
+                              <span className="text-[10px] text-gray-400 font-medium">PNG, JPG up to 5MB</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </>

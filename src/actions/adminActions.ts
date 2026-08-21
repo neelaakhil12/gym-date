@@ -30,6 +30,28 @@ async function uploadCityImage(file: File): Promise<string | null> {
   }
 }
 
+export async function uploadPayoutQrCode(formData: FormData): Promise<{ url?: string; error?: string }> {
+  try {
+    const file = formData.get("file") as File;
+    if (!file || !(file instanceof File) || file.size === 0) return { error: "No file provided" };
+
+    const uploadDir = '/var/www/gymdate_uploads/payouts';
+    await mkdir(uploadDir, { recursive: true });
+
+    const ext = file.name.split(".").pop() || "jpg";
+    const fileName = `payout-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const filePath = path.join(uploadDir, fileName);
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await writeFile(filePath, buffer);
+
+    return { url: `/uploads/payouts/${fileName}` };
+  } catch (error: any) {
+    console.error("PAYOUT QR UPLOADER ERROR:", error);
+    return { error: error.message || "Failed to upload image" };
+  }
+}
+
 
 
 export async function getAllBookings() {

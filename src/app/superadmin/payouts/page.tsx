@@ -226,14 +226,23 @@ export default function AdminPayouts() {
                       </div>
                       {selectedRequest.qr_code_url && (
                         <div className="space-y-3 pt-2">
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">QR Code Provided</p>
-                          <div className="flex justify-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">QR Code / Payment Screenshot</p>
+                          <div className="flex flex-col items-center p-4 bg-white border border-gray-100 rounded-2xl shadow-sm space-y-3">
                             <img 
                               src={selectedRequest.qr_code_url} 
-                              alt="QR Code" 
-                              className="w-48 h-48 object-contain cursor-pointer hover:scale-105 transition-transform"
+                              alt="Payment QR / Screenshot" 
+                              className="max-h-56 max-w-full object-contain rounded-xl border border-gray-100 cursor-pointer hover:scale-105 transition-transform"
                               onClick={() => window.open(selectedRequest.qr_code_url, '_blank')}
                             />
+                            <a 
+                              href={selectedRequest.qr_code_url} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                              <span>Click to Open Full Size</span>
+                            </a>
                           </div>
                         </div>
                       )}
