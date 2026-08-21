@@ -36,15 +36,25 @@ export default function AdminSettings() {
   async function loadConfig() {
     setLoading(true);
     try {
-      const data = await getPlatformConfig();
-      if (Array.isArray(data)) {
-        setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+      const res = await fetch("/api/admin/settings-config", { cache: "no-store" });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.configs)) {
+        setConfig(json.configs.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
       } else {
-        setConfig([]);
+        const data = await getPlatformConfig();
+        if (Array.isArray(data)) {
+          setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+        }
       }
     } catch (e) {
-      console.error("Failed to load settings config:", e);
-      setConfig([]);
+      try {
+        const data = await getPlatformConfig();
+        if (Array.isArray(data)) {
+          setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+        }
+      } catch (err) {
+        console.error("Failed to load settings config:", err);
+      }
     } finally {
       setLoading(false);
     }
@@ -53,29 +63,46 @@ export default function AdminSettings() {
   const handleSave = async (key: string, value: string) => {
     setSavingKey(key);
     setMessage(null);
-    const res = await updatePlatformConfig(key, value);
-    if (res.success) {
-      setMessage({ type: 'success', text: `Successfully updated ${key.replace(/_/g, ' ')}` });
-      setTimeout(() => setMessage(null), 3000);
-    } else {
-      setMessage({ type: 'error', text: res.error || "Update failed" });
+    try {
+      const res = await fetch("/api/admin/settings-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMessage({ type: 'success', text: `Successfully updated ${key.replace(/_/g, ' ')}` });
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        throw new Error(json.error || "Failed to update");
+      }
+    } catch (e: any) {
+      const fallback = await updatePlatformConfig(key, value);
+      if (fallback.success) {
+        setMessage({ type: 'success', text: `Successfully updated ${key.replace(/_/g, ' ')}` });
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        setMessage({ type: 'error', text: fallback.error || e.message || "Update failed" });
+      }
+    } finally {
+      setSavingKey(null);
     }
-    setSavingKey(null);
   };
 
   const handleToggleStaffSettings = async (currentVal: string) => {
     const newVal = (currentVal === 'true' || currentVal === '1') ? 'false' : 'true';
-    setConfig(prev => prev.map(item => item.key === 'allow_staff_settings' ? { ...item, value: newVal } : item));
+    setConfig(prev => prev.map(item => item && item.key === 'allow_staff_settings' ? { ...item, value: newVal } : item));
     await handleSave('allow_staff_settings', newVal);
   };
 
   const handleValueChange = (key: string, newValue: string) => {
     setConfig(prev => prev.map(item => 
-      item.key === key ? { ...item, value: newValue } : item
+      item && item.key === key ? { ...item, value: newValue } : item
     ));
   };
 
-  const getConfigTitle = (key: string) => {
+  const getConfigTitle = (key?: string) => {
+    if (!key) return '';
     switch (key) {
       case 'platform_commission': return 'Global Platform Commission (%)';
       case 'user_referral_bonus': return 'User Referral Bonus (₹)';
@@ -87,7 +114,8 @@ export default function AdminSettings() {
     }
   };
 
-  const getConfigIcon = (key: string) => {
+  const getConfigIcon = (key?: string) => {
+    if (!key) return <SettingsIcon className="w-5 h-5 text-gray-500" />;
     if (key.includes('referral') && key.includes('partner')) return <Gift className="w-5 h-5 text-purple-500" />;
     if (key.includes('referral')) return <UserPlus className="w-5 h-5 text-blue-500" />;
     if (key.includes('withdrawal')) return <Banknote className="w-5 h-5 text-emerald-500" />;
@@ -96,9 +124,9 @@ export default function AdminSettings() {
     return <SettingsIcon className="w-5 h-5 text-gray-500" />;
   };
 
-  const staffSettingItem = config.find(item => item.key === 'allow_staff_settings');
+  const staffSettingItem = config.find(item => item && item.key === 'allow_staff_settings');
   const hiddenKeys = ['allow_staff_settings', 'refer_a_friend'];
-  const generalConfigs = config.filter(item => !hiddenKeys.includes(item.key));
+  const generalConfigs = config.filter(item => item && item.key && !hiddenKeys.includes(item.key));
   const isStaffAccessEnabled = staffSettingItem?.value === 'true' || staffSettingItem?.value === '1';
 
   return (
