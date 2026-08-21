@@ -204,14 +204,20 @@ export default function PartnerRequestsPage() {
                       </div>
                     </div>
                     {request.referred_by && (
-                      <div className="flex items-center space-x-3 text-sm text-gray-600">
-                        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center text-primary">
-                          <Gift className="w-4 h-4" />
+                      <div className="flex items-center space-x-3 text-sm text-gray-600 md:col-span-2 bg-amber-50/80 border border-amber-200/80 p-3.5 rounded-2xl">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                          <Gift className="w-5 h-5" />
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-primary uppercase tracking-widest">REFERRED BY</p>
-                          <p className="font-black text-secondary">
-                            {request.referrer_gym_name || request.referrer_owner_name || request.referred_by}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest">REFERRED BY GYM PARTNER</p>
+                          <p className="font-black text-secondary text-sm flex items-center flex-wrap gap-1.5 mt-0.5">
+                            <span>{request.referrer_gym_name || "Partner Gym"}</span>
+                            {request.referrer_owner_name && (
+                              <span className="text-gray-500 font-semibold text-xs">({request.referrer_owner_name})</span>
+                            )}
+                            <span className="font-mono text-xs text-amber-700 bg-amber-200/60 px-2 py-0.5 rounded-md font-bold">
+                              #{request.referred_by}
+                            </span>
                           </p>
                         </div>
                       </div>

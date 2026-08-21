@@ -152,7 +152,14 @@ export async function GET(req: NextRequest) {
     // Get recent payouts (withdrawals for partners)
     try {
       const payouts = await query(
-        `SELECT p.amount, p.created_at, p.status as detail, 'debit' as type, 'debited' as status 
+        `SELECT p.amount, p.created_at, 
+                CASE 
+                  WHEN p.payout_method = 'bank' THEN 'Withdrawal to Bank (' || COALESCE(p.bank_name, 'Account') || ')'
+                  WHEN p.payout_method = 'upi' THEN 'Withdrawal via UPI (' || COALESCE(p.upi_id, '') || ')'
+                  ELSE 'Withdrawal Request'
+                END as detail, 
+                'debit' as type, 
+                p.status as status 
          FROM payout_requests p
          JOIN gyms g ON p.gym_id = g.id
          WHERE g.partner_id::text = $1::text AND p.payout_type = 'referral'

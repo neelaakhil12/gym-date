@@ -577,42 +577,52 @@ export default function PartnerDashboard() {
                       <td colSpan={4} className="px-8 py-10 text-center text-gray-400 font-bold italic">No recent referral activity.</td>
                     </tr>
                   ) : (
-                    walletData.history.map((item: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-8 py-4">
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                              item.type === 'credit' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'
-                            }`}>
-                              {item.type === 'credit' ? <TrendingUp className="w-4 h-4" /> : <ArrowDownCircle className="w-4 h-4" />}
-                            </div>
-                            <span className={`font-black uppercase text-[10px] tracking-wider ${
-                              item.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {item.type === 'credit' ? 'Earning' : 'Payout'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-slate-800">{item.detail || (item.type === 'credit' ? 'Referral Bonus' : 'Withdrawal')}</span>
-                            {item.type === 'debit' && (
-                              <span className={`text-[9px] font-black uppercase mt-0.5 ${
-                                item.detail === 'completed' ? 'text-green-500' : 'text-amber-500'
+                    walletData.history.map((item: any, idx: number) => {
+                      const isDebit = item.type === 'debit' || item.status === 'debited' || parseFloat(item.amount) < 0;
+                      const absAmount = Math.abs(parseFloat(item.amount || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      return (
+                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-8 py-4">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                isDebit ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'
                               }`}>
-                                {item.detail}
+                                {isDebit ? <ArrowDownCircle className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
+                              </div>
+                              <span className={`font-black uppercase text-[10px] tracking-wider ${
+                                isDebit ? 'text-red-600' : 'text-green-600'
+                              }`}>
+                                {isDebit ? 'Withdrawal' : 'Earning'}
                               </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className={`px-6 py-4 font-black ${item.type === 'credit' ? 'text-slate-900' : 'text-red-600'}`}>
-                          {item.type === 'credit' ? '+' : '-'}₹{parseFloat(item.amount).toLocaleString()}
-                        </td>
-                        <td className="px-8 py-4 text-right text-gray-400 font-medium">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
-                        </td>
-                      </tr>
-                    ))
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-800">{item.detail || (isDebit ? 'Withdrawal' : 'Partner Referral Bonus')}</span>
+                              {isDebit && item.status && (
+                                <span className={`text-[9px] font-black uppercase mt-0.5 ${
+                                  item.status === 'completed' ? 'text-green-600' : 'text-amber-600'
+                                }`}>
+                                  Status: {item.status}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black ${
+                              isDebit 
+                                ? 'text-red-600 bg-red-50 border border-red-100' 
+                                : 'text-green-600 bg-green-50 border border-green-100'
+                            }`}>
+                              {isDebit ? `-₹${absAmount}` : `+₹${absAmount}`}
+                            </span>
+                          </td>
+                          <td className="px-8 py-4 text-right text-gray-400 font-medium text-xs">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
