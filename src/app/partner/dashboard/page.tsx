@@ -119,8 +119,10 @@ export default function PartnerDashboard() {
     e.preventDefault();
     if (!gym || !walletData) return;
 
-    if (walletData.walletBalance < 1500) {
-      setWithdrawMessage({ type: "error", text: "Minimum ₹1,500 required to withdraw." });
+    const minLimit = walletData.partnerReferralMinWithdrawal || 1500;
+
+    if (walletData.walletBalance < minLimit) {
+      setWithdrawMessage({ type: "error", text: `Minimum ₹${minLimit.toLocaleString()} required to withdraw.` });
       return;
     }
 
@@ -130,7 +132,7 @@ export default function PartnerDashboard() {
     try {
       const payload: any = {
         gym_id: gym.id,
-        amount: 1500, // Fixed amount as requested
+        amount: minLimit,
         payout_method: withdrawType,
         status: 'pending',
         payout_type: 'referral'
@@ -138,15 +140,15 @@ export default function PartnerDashboard() {
 
       if (withdrawType === "bank") {
         if (!withdrawForm.bankName || !withdrawForm.accountHolder || !withdrawForm.accountNumber || !withdrawForm.ifscCode) {
-          throw new Error("Please fill all bank details.");
+          throw new Error("Please fill all required bank account details.");
         }
         payload.bank_name = withdrawForm.bankName;
         payload.account_holder = withdrawForm.accountHolder;
         payload.account_number = withdrawForm.accountNumber;
         payload.ifsc_code = withdrawForm.ifscCode;
       } else {
-        if (!withdrawForm.upiId || !withdrawForm.mobileNumber) {
-          throw new Error("Please fill all UPI details.");
+        if (!withdrawForm.upiId && !withdrawForm.mobileNumber) {
+          throw new Error("Please fill UPI ID or Mobile Number.");
         }
         payload.upi_id = withdrawForm.upiId;
         payload.mobile_number = withdrawForm.mobileNumber;
@@ -155,12 +157,22 @@ export default function PartnerDashboard() {
       const result = await createPayoutRequest(payload);
       if (result.error) throw new Error(result.error);
 
-      setWithdrawMessage({ type: "success", text: "Withdrawal request sent! Admin will approve it shortly." });
+      setWithdrawMessage({ type: "success", text: "Withdrawal request submitted! Super Admin will review and approve shortly." });
       
-      // Optimistically update balance locally
+      // Update balance locally
       setWalletData((prev: any) => ({
         ...prev,
-        walletBalance: prev.walletBalance - 1500
+        walletBalance: Math.max(0, prev.walletBalance - minLimit),
+        history: [
+          {
+            amount: minLimit.toString(),
+            created_at: new Date().toISOString(),
+            detail: withdrawType === 'upi' ? `Withdrawal via UPI (${withdrawForm.upiId || withdrawForm.mobileNumber})` : `Withdrawal to Bank (${withdrawForm.bankName})`,
+            type: 'debit',
+            status: 'pending'
+          },
+          ...(prev.history || [])
+        ]
       }));
 
       setTimeout(() => {
@@ -479,15 +491,21 @@ export default function PartnerDashboard() {
                   <span className="text-xs font-black uppercase tracking-widest">Referral Wallet</span>
                 </div>
                 <div className="text-5xl font-black mb-2">₹{(walletData?.walletBalance || 0).toLocaleString()}</div>
-                <p className="text-white/60 text-xs font-medium mb-6">Earned from partner referrals</p>
+                <p className="text-white/60 text-xs font-medium mb-6">
+                  Earned from partner referrals • Min limit: ₹{(walletData?.partnerReferralMinWithdrawal || 1500).toLocaleString()}
+                </p>
                 
                 <button 
                   onClick={() => setShowRefWithdrawModal(true)}
-                  disabled={!walletData || walletData.walletBalance < 1500}
+                  disabled={!walletData || walletData.walletBalance < (walletData?.partnerReferralMinWithdrawal || 1500)}
                   className="w-full flex items-center justify-center space-x-2 py-3 bg-primary hover:bg-red-700 disabled:bg-white/10 disabled:text-white/30 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-primary/20"
                 >
                   <ArrowDownCircle className="w-4 h-4" />
-                  <span>{walletData?.walletBalance >= 1500 ? "Withdraw ₹1,500" : "Min ₹1,500 to Withdraw"}</span>
+                  <span>
+                    {walletData?.walletBalance >= (walletData?.partnerReferralMinWithdrawal || 1500) 
+                      ? `Withdraw ₹${(walletData?.partnerReferralMinWithdrawal || 1500).toLocaleString()}` 
+                      : `Min ₹${(walletData?.partnerReferralMinWithdrawal || 1500).toLocaleString()} to Withdraw`}
+                  </span>
                 </button>
               </div>
               {/* Decorative Circle */}
@@ -653,8 +671,8 @@ export default function PartnerDashboard() {
                 <div className="bg-slate-900 rounded-2xl p-6 text-white relative overflow-hidden">
                   <div className="relative z-10 flex justify-between items-center">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Fixed Withdrawal Amount</p>
-                      <div className="text-4xl font-black">₹1,500</div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Withdrawal Amount</p>
+                      <div className="text-4xl font-black">₹{(walletData?.partnerReferralMinWithdrawal || 1500).toLocaleString()}</div>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Current Balance</p>

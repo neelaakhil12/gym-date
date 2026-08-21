@@ -700,6 +700,33 @@ export async function getPayoutRequests() {
   }
 }
 
+export async function getSuperAdminBadgeCounts() {
+  try {
+    let pendingLeads = 0;
+    try {
+      const leadsRes = await query(`
+        SELECT COUNT(*) FROM partner_requests pr 
+        LEFT JOIN partner_requests_extra pre ON pr.id::text = pre.request_id::text 
+        WHERE COALESCE(pre.status, 'pending') = 'pending'
+      `);
+      pendingLeads = parseInt(leadsRes.rows[0]?.count || '0');
+    } catch (e) {}
+
+    let pendingPayouts = 0;
+    try {
+      const payoutsRes = await query(`
+        SELECT COUNT(*) FROM payout_requests 
+        WHERE status = 'pending'
+      `);
+      pendingPayouts = parseInt(payoutsRes.rows[0]?.count || '0');
+    } catch (e) {}
+
+    return { pendingLeads, pendingPayouts };
+  } catch (error) {
+    return { pendingLeads: 0, pendingPayouts: 0 };
+  }
+}
+
 export async function updatePayoutStatus(id: string, newStatus: string) {
   try {
     // 1. Fetch the request to check type
@@ -707,24 +734,46 @@ export async function updatePayoutStatus(id: string, newStatus: string) {
     if (requestRes.rows.length === 0) return { error: "Request not found" };
     const request = requestRes.rows[0];
 
-    // 2. If marking as completed and it's a referral payout, deduct from user wallet
+    // 2. If marking as completed and it's a referral payout, deduct from user wallet & record transaction
     if (newStatus === 'completed' && request.status !== 'completed' && request.payout_type === 'referral') {
       // Find the partner_id associated with the gym
-      const gymRes = await query("SELECT partner_id FROM gyms WHERE id = $1", [request.gym_id]);
+      const gymRes = await query("SELECT partner_id FROM gyms WHERE id::text = $1::text", [request.gym_id]);
       if (gymRes.rows.length > 0) {
         const partnerId = gymRes.rows[0].partner_id;
         if (partnerId) {
-          // Deduct from users table
+          // Deduct from users_extra table
           await query(
-            "UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - $1) WHERE id = $2",
+            "UPDATE users_extra SET wallet_balance = GREATEST(0, wallet_balance - $1), updated_at = CURRENT_TIMESTAMP WHERE user_id::text = $2::text",
             [request.amount, partnerId]
           );
+
+          // Deduct from users table as fallback
+          try {
+            await query(
+              "UPDATE users SET wallet_balance = GREATEST(0, wallet_balance - $1) WHERE id::text = $2::text",
+              [request.amount, partnerId]
+            );
+          } catch (e) {}
+
+          // Record debit transaction in referral_transactions
+          const detail = request.payout_method === 'upi'
+            ? `Withdrawal via UPI (${request.upi_id || ''})`
+            : `Withdrawal to Bank (${request.bank_name || 'Account'})`;
+
+          await query(
+            "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'debit', $3, 'debited')",
+            [partnerId, detail, request.amount]
+          );
+
           console.log(`[Payout] Deducted ₹${request.amount} from partner ${partnerId} wallet for referral payout.`);
         }
       }
     }
 
     await query("UPDATE payout_requests SET status = $1 WHERE id = $2", [newStatus, id]);
+    revalidatePath("/superadmin/payouts");
+    revalidatePath("/partner/dashboard");
+    revalidatePath("/partner/wallet");
     return { success: true };
   } catch (error: any) {
     console.error("Error updating payout status", error);
@@ -902,6 +951,22 @@ export async function getPlatformConfig() {
       await query(
         "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
         ['max_wallet_per_txn', '10', 'Maximum wallet amount (in ₹) that can be deducted per booking transaction.']
+      );
+    }
+
+    // Ensure partner_referral_min_withdrawal exists
+    if (!configs.find((c: any) => c.key === 'partner_referral_min_withdrawal')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['partner_referral_min_withdrawal', '1500', 'Minimum withdrawal amount limit (in ₹) for Gym Partner Referral Wallet.']
+      );
+    }
+
+    // Ensure partner_virtual_min_withdrawal exists
+    if (!configs.find((c: any) => c.key === 'partner_virtual_min_withdrawal')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['partner_virtual_min_withdrawal', '500', 'Minimum withdrawal amount limit (in ₹) for Gym Partner Virtual Wallet (Revenue).']
       );
     }
 

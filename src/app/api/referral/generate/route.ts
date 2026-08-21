@@ -187,6 +187,8 @@ export async function GET(req: NextRequest) {
       totalEarned: parseFloat(stats.rows[0]?.total_earned || '0'),
       bonusPerReferral,
       maxWalletPerTxn: parseFloat(configMap['max_wallet_per_txn'] || '10'),
+      partnerReferralMinWithdrawal: parseFloat(configMap['partner_referral_min_withdrawal'] || '1500'),
+      partnerVirtualMinWithdrawal: parseFloat(configMap['partner_virtual_min_withdrawal'] || '500'),
       isPartner: isPartnerContext,
       history: history.slice(0, 10)
     });

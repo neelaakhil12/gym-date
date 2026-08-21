@@ -9,6 +9,7 @@ export default function PartnerWallet() {
   const [gym, setGym] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [balance, setBalance] = useState(0);
+  const [minWithdrawal, setMinWithdrawal] = useState(500);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -55,6 +56,17 @@ export default function PartnerWallet() {
         }, 0) || 0;
         
         setBalance(Math.max(0, totalEarnings - totalWithdrawn));
+
+        // Fetch dynamic minimum withdrawal limit
+        if (gymData.partner_id) {
+          try {
+            const refRes = await fetch(`/api/referral/generate?userId=${gymData.partner_id}&type=partner`);
+            const refData = await refRes.json();
+            if (refData.partnerVirtualMinWithdrawal) {
+              setMinWithdrawal(refData.partnerVirtualMinWithdrawal);
+            }
+          } catch (e) {}
+        }
       }
       setLoading(false);
     }
@@ -82,8 +94,13 @@ export default function PartnerWallet() {
       return;
     }
 
+    if (amountNum < minWithdrawal) {
+      setMessage({ type: "error", text: `Minimum withdrawal amount is ₹${minWithdrawal.toLocaleString()}.` });
+      return;
+    }
+
     if (amountNum > balance) {
-      setMessage({ type: "error", text: "Insufficient balance." });
+      setMessage({ type: "error", text: "Insufficient available balance." });
       return;
     }
 
@@ -100,7 +117,7 @@ export default function PartnerWallet() {
         const filePath = `payouts/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("gym-images") // Reusing gym-images bucket for simplicity
+          .from("gym-images")
           .upload(filePath, formData.qrCodeFile);
 
         if (uploadError) throw uploadError;
@@ -113,15 +130,22 @@ export default function PartnerWallet() {
         gym_id: gym.id,
         amount: amountNum,
         payout_method: activeTab,
-        status: 'pending'
+        status: 'pending',
+        payout_type: 'revenue'
       };
 
       if (activeTab === "bank") {
+        if (!formData.bankName || !formData.accountHolder || !formData.accountNumber || !formData.ifscCode) {
+          throw new Error("Please fill all required bank account details.");
+        }
         payload.bank_name = formData.bankName;
         payload.account_holder = formData.accountHolder;
         payload.account_number = formData.accountNumber;
         payload.ifsc_code = formData.ifscCode;
       } else {
+        if (!formData.upiId && !formData.mobileNumber && !qrCodeUrl) {
+          throw new Error("Please provide UPI ID, mobile number, or QR Code.");
+        }
         payload.upi_id = formData.upiId;
         payload.mobile_number = formData.mobileNumber;
         payload.qr_code_url = qrCodeUrl;
@@ -131,11 +155,11 @@ export default function PartnerWallet() {
 
       if (result.error) throw new Error(result.error);
 
-      setMessage({ type: "success", text: "Your owner will verify and accept the withdraw shortly." });
+      setMessage({ type: "success", text: "Withdrawal request submitted! Super Admin will review and approve shortly." });
       setTimeout(() => {
         setShowWithdrawForm(false);
         setMessage({ type: "", text: "" });
-        // Refresh payout history locally (optimistic)
+        // Refresh payout history locally
         setPayouts([{
           id: Math.random().toString(),
           amount: payload.amount,
@@ -143,7 +167,7 @@ export default function PartnerWallet() {
           payout_method: payload.payout_method,
           created_at: new Date().toISOString()
         }, ...payouts]);
-        // Deduct from available balance optimistically
+        // Deduct from available balance
         setBalance(prev => Math.max(0, prev - amountNum));
       }, 2000);
       
@@ -171,7 +195,7 @@ export default function PartnerWallet() {
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-black text-slate-900">Virtual Wallet</h1>
-        <p className="text-gray-500 mt-1">Manage your earnings and request payouts.</p>
+        <p className="text-gray-500 mt-1">Manage your gym earnings and request payouts.</p>
       </div>
 
       {/* Balance Card */}
@@ -182,14 +206,17 @@ export default function PartnerWallet() {
             <span className="text-sm font-bold uppercase tracking-widest">Available Balance (Net)</span>
           </div>
           <h2 className="text-5xl font-black mb-1 text-white">₹{balance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</h2>
-          <p className="text-slate-400 text-xs mb-8 font-medium italic">After platform commission of {gym?.commission_rate || 10}%</p>
+          <p className="text-slate-400 text-xs mb-6 font-medium italic">
+            After platform commission of {gym?.commission_rate || 10}% • Min withdrawal limit: ₹{minWithdrawal.toLocaleString()}
+          </p>
           
           <button 
             onClick={() => setShowWithdrawForm(true)}
-            className="bg-primary hover:bg-red-700 text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg hover:shadow-primary/20 flex items-center space-x-2 group"
+            disabled={balance < minWithdrawal}
+            className="bg-primary hover:bg-red-700 disabled:bg-white/10 disabled:text-white/30 text-white px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg hover:shadow-primary/20 flex items-center space-x-2 group"
           >
             <ArrowDownCircle className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
-            <span>Withdraw Money</span>
+            <span>{balance >= minWithdrawal ? "Withdraw Money" : `Min ₹${minWithdrawal.toLocaleString()} to Withdraw`}</span>
           </button>
         </div>
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
@@ -203,7 +230,7 @@ export default function PartnerWallet() {
         {payouts.length > 0 ? (
           <div className="space-y-4">
             {payouts.map((payout: any) => (
-              <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <div key={payout.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-gray-100/50 transition-colors">
                 <div className="flex items-center space-x-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                     payout.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
@@ -211,15 +238,19 @@ export default function PartnerWallet() {
                     {payout.status === 'completed' ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">₹{parseFloat(payout.amount).toLocaleString()}</h4>
-                    <p className="text-xs text-gray-500">
-                      {new Date(payout.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} • {payout.payout_method === 'upi' ? 'UPI' : 'Bank'}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-black text-red-600 bg-red-50 border border-red-100 mb-1">
+                      -₹{parseFloat(payout.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                    <p className="text-xs text-gray-500 font-medium">
+                      {new Date(payout.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {payout.payout_method === 'upi' ? 'UPI / QR' : 'Bank Transfer'}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-lg ${
-                    payout.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  <span className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg border ${
+                    payout.status === 'completed' 
+                      ? 'bg-green-50 text-green-700 border-green-200' 
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
                   }`}>
                     {payout.status}
                   </span>

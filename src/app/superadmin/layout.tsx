@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import AdminAuthProvider from "@/components/AdminAuthProvider";
+import { getSuperAdminBadgeCounts } from "@/actions/adminActions";
 
 const adminLinks = [
   { name: "Dashboard", href: "/superadmin/dashboard", icon: LayoutDashboard },
@@ -36,6 +37,20 @@ export default function AdminLayout({
   const router = useRouter();
   const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [badgeCounts, setBadgeCounts] = useState({ pendingLeads: 0, pendingPayouts: 0 });
+
+  const loadBadges = async () => {
+    try {
+      const counts = await getSuperAdminBadgeCounts();
+      setBadgeCounts(counts);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadBadges();
+    const interval = setInterval(loadBadges, 15000);
+    return () => clearInterval(interval);
+  }, [pathname]);
 
   useEffect(() => {
     const publicAdminPaths = ["/superadmin", "/superadmin/forgot-password", "/superadmin/reset-password"];
@@ -106,19 +121,36 @@ export default function AdminLayout({
             {filteredLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname?.startsWith(link.href);
+              const isLeads = link.href === "/superadmin/partner-requests";
+              const isPayouts = link.href === "/superadmin/payouts";
+              const leadsCount = isLeads ? badgeCounts.pendingLeads : 0;
+              const payoutsCount = isPayouts ? badgeCounts.pendingPayouts : 0;
               
               return (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
                     isActive 
                       ? "bg-primary text-white shadow-md shadow-primary/20" 
                       : "text-gray-300 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium text-sm">{link.name}</span>
+                  <div className="flex items-center space-x-3">
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium text-sm">{link.name}</span>
+                  </div>
+
+                  {leadsCount > 0 && (
+                    <span className="bg-red-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm shadow-red-500/50">
+                      {leadsCount}
+                    </span>
+                  )}
+                  {payoutsCount > 0 && (
+                    <span className="bg-amber-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                      {payoutsCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

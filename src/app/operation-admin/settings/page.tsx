@@ -69,10 +69,24 @@ export default function OperationSettings() {
     ));
   };
 
+  const getConfigTitle = (key: string) => {
+    switch (key) {
+      case 'platform_commission': return 'Global Platform Commission (%)';
+      case 'user_referral_bonus': return 'User Referral Bonus (₹)';
+      case 'partner_referral_bonus': return 'Partner Referral Bonus (Refer a Gym) (₹)';
+      case 'max_wallet_per_txn': return 'Max User Wallet Usable Per Booking (₹)';
+      case 'partner_referral_min_withdrawal': return 'Partner Referral Wallet Min Withdrawal Limit (₹)';
+      case 'partner_virtual_min_withdrawal': return 'Partner Virtual Wallet (Revenue) Min Withdrawal Limit (₹)';
+      default: return key.replace(/_/g, ' ');
+    }
+  };
+
   const getConfigIcon = (key: string) => {
+    if (key.includes('referral') && key.includes('partner')) return <Gift className="w-5 h-5 text-purple-500" />;
     if (key.includes('referral')) return <UserPlus className="w-5 h-5 text-blue-500" />;
-    if (key.includes('bonus')) return <Gift className="w-5 h-5 text-primary" />;
+    if (key.includes('withdrawal')) return <Banknote className="w-5 h-5 text-emerald-500" />;
     if (key.includes('wallet')) return <Coins className="w-5 h-5 text-amber-500" />;
+    if (key.includes('commission')) return <SlidersHorizontal className="w-5 h-5 text-red-500" />;
     return <SettingsIcon className="w-5 h-5 text-gray-500" />;
   };
 
@@ -82,7 +96,7 @@ export default function OperationSettings() {
       <div>
         <h1 className="text-2xl font-black text-secondary">Staff Settings</h1>
         <p className="text-gray-500 mt-1 text-sm font-medium">
-          Manage referral bonuses, wallet usage limits, and core platform rules.
+          Manage referral bonuses, withdrawal limits, and core platform rules.
         </p>
       </div>
 
@@ -121,49 +135,57 @@ export default function OperationSettings() {
         </div>
       ) : (
         <div className="grid gap-6">
-          {config.filter(item => !['allow_staff_settings', 'refer_a_friend'].includes(item.key)).map((item) => (
-            <div key={item.key} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-gray-50 rounded-2xl flex-shrink-0">
-                  {getConfigIcon(item.key)}
+          {config.filter(item => !['allow_staff_settings', 'refer_a_friend'].includes(item.key)).map((item) => {
+            const isPercent = item.key === 'platform_commission';
+            return (
+              <div key={item.key} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-gray-50 rounded-2xl flex-shrink-0">
+                    {getConfigIcon(item.key)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
+                      {getConfigTitle(item.key)}
+                    </h3>
+                    <p className="text-xs text-gray-400 font-medium mt-1">
+                      {item.description || "Platform configuration value."}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
-                    {item.key === 'user_referral_bonus' || item.key === 'refer_a_friend' ? 'User Referral Bonus' : 
-                     item.key === 'partner_referral_bonus' ? 'Partner Referral Bonus (Refer a Gym)' : 
-                     item.key.replace(/_/g, ' ')}
-                  </h3>
-                  <p className="text-xs text-gray-400 font-medium mt-1">
-                    {item.description || "Platform configuration value."}
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">₹</span>
-                  <input
-                    type="number"
-                    value={item.value}
-                    onChange={(e) => handleValueChange(item.key, e.target.value)}
-                    className="w-32 pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-black text-secondary"
-                  />
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    {!isPercent && (
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">₹</span>
+                    )}
+                    <input
+                      type="number"
+                      value={item.value}
+                      onChange={(e) => handleValueChange(item.key, e.target.value)}
+                      className={`w-32 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-black text-secondary ${
+                        isPercent ? 'px-4 pr-8 text-right' : 'pl-8 pr-4'
+                      }`}
+                    />
+                    {isPercent && (
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">%</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleSave(item.key, item.value)}
+                    disabled={savingKey === item.key}
+                    className="p-3 bg-secondary text-white rounded-2xl hover:bg-primary transition-all disabled:opacity-50 shadow-lg shadow-secondary/10 group"
+                    title="Save Setting"
+                  >
+                    {savingKey === item.key ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleSave(item.key, item.value)}
-                  disabled={savingKey === item.key}
-                  className="p-3 bg-secondary text-white rounded-2xl hover:bg-primary transition-all disabled:opacity-50 shadow-lg shadow-secondary/10 group"
-                  title="Save Setting"
-                >
-                  {savingKey === item.key ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  )}
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {config.length === 0 && (
             <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
