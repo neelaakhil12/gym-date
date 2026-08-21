@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import QRCode from "qrcode";
+import { query } from "@/lib/db";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -35,7 +36,33 @@ export async function sendBookingConfirmationEmail(booking: any) {
       }
     });
 
-    // 2. Prepare Email Content
+    // Generate Base64 Data URL
+    const qrDataUrl = `data:image/png;base64,${qrBuffer.toString('base64')}`;
+
+    // 2. Ensure bookings_extra table exists and store QR code in database
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS bookings_extra (
+          booking_id VARCHAR(255) PRIMARY KEY,
+          ticket_code VARCHAR(50),
+          qr_code TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      if (booking.id) {
+        await query(`
+          INSERT INTO bookings_extra (booking_id, ticket_code, qr_code, created_at)
+          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+          ON CONFLICT (booking_id) 
+          DO UPDATE SET ticket_code = EXCLUDED.ticket_code, qr_code = EXCLUDED.qr_code
+        `, [String(booking.id), shortId, qrDataUrl]);
+        console.log(`[Email & DB] Successfully saved QR code in database for booking ${booking.id}`);
+      }
+    } catch (dbErr) {
+      console.error("[Email & DB] Error saving QR code to bookings_extra table:", dbErr);
+    }
+
+    // 3. Prepare Email Content
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
       ? booking.gyms.location 
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((booking.gyms?.name || "Gym") + " " + (booking.gyms?.address || ""))}`;
@@ -76,10 +103,10 @@ export async function sendBookingConfirmationEmail(booking: any) {
               </table>
             </div>
 
-            <!-- Middle Section: High-Res Access QR Code -->
+            <!-- Middle Section: Guaranteed Display QR Code -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
-              <div style="display: inline-block; padding: 16px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px;">
-                <img src="https://quickchart.io/qr?text=${encodeURIComponent(qrValue)}&size=300&margin=1&format=png" alt="Access QR Code" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
+              <div style="display: inline-block; padding: 16px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px; line-height: 0;">
+                <img src="cid:gymdatepassqr" alt="Access QR Code" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
               </div>
               
               <div>
@@ -125,12 +152,25 @@ export async function sendBookingConfirmationEmail(booking: any) {
 
           <!-- Footer -->
           <div style="margin-top: 24px; text-align: center;">
-            <p style="font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;">This digital pass is securely linked to your account on <a href="https://gymdate.in" style="color: #e50914; text-decoration: none; font-weight: bold;">gymdate.in</a>.</p>
+            <p style="font-size: 11px; color: #94a3b8; margin: 0 0 4px 0;">This digital pass is securely stored in your account on <a href="https://gymdate.in" style="color: #e50914; text-decoration: none; font-weight: bold;">gymdate.in</a>.</p>
             <p style="font-size: 11px; color: #cbd5e1; margin: 0;">GymDate Technologies • All rights reserved</p>
           </div>
 
         </div>
-      `
+      `,
+      attachments: [
+        {
+          filename: `ticket-${shortId}.png`,
+          content: qrBuffer,
+          contentType: 'image/png',
+          cid: 'gymdatepassqr',
+          contentDisposition: 'inline',
+          headers: {
+            'Content-ID': '<gymdatepassqr>',
+            'X-Attachment-Id': 'gymdatepassqr'
+          }
+        }
+      ]
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -155,51 +195,60 @@ export async function sendPartnerLeadStatusEmail(lead: any, status: 'approved' |
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; border: 1px solid #f0f0f0; padding: 40px; border-radius: 24px; color: #1a1a1a; line-height: 1.6;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #e50914; margin: 0; font-size: 32px; font-weight: 900;">GymDate</h1>
-            <p style="color: #666; font-size: 14px; margin-top: 5px; text-transform: uppercase; tracking-widest: 0.1em;">Partner Portal</p>
+            <h1 style="color: #e50914; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -1px;">GymDate</h1>
+            <p style="color: #666; font-size: 14px; margin-top: 5px;">Partner Network</p>
           </div>
-
-          <h2 style="color: #333; font-size: 24px; font-weight: 800; margin-bottom: 20px;">
-            Hello ${lead.owner_name},
+          
+          <h2 style="color: #111; font-size: 22px; font-weight: 700; margin-bottom: 15px;">
+            ${isApproved ? 'Welcome to the GymDate Family! 🚀' : 'Partnership Application Status'}
           </h2>
-
+          
+          <p style="font-size: 16px; color: #444;">Dear <b>${lead.owner_name || lead.name || 'Partner'}</b>,</p>
+          
           ${isApproved ? `
-            <p style="font-size: 16px;">We are thrilled to inform you that your application to partner with <strong>GymDate</strong> for <strong>${lead.gym_name}</strong> has been <strong>Approved</strong>! 🎊</p>
-            
-            <div style="background: #fdf2f2; border-left: 4px solid #e50914; padding: 20px; border-radius: 12px; margin: 25px 0;">
-              <h3 style="margin-top: 0; color: #e50914; font-size: 18px;">What's Next?</h3>
-              <p style="margin-bottom: 0; font-size: 14px;">Our onboarding team will reach out to you within the next 24 hours to set up your digital dashboard, list your gym on our platform, and help you welcome your first GymDate members.</p>
-            </div>
-
-            <p style="font-size: 16px;">Welcome to India's fastest-growing fitness network. We look forward to a successful partnership!</p>
-          ` : `
-            <p style="font-size: 16px;">Thank you for your interest in partnering with <strong>GymDate</strong> for <strong>${lead.gym_name}</strong>.</p>
-            
-            <p style="font-size: 16px; color: #666;">After carefully reviewing your application and our current network requirements in <strong>${lead.city}</strong>, we are unable to proceed with your partnership at this moment.</p>
-            
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 12px; margin: 25px 0;">
-              <p style="margin: 0; font-size: 14px; color: #666;">Don't worry! We've kept your details in our database. As we expand our reach, we may reach out to you in the future when new opportunities arise in your area.</p>
-            </div>
-
-            <p style="font-size: 16px;">We wish you the very best for your business.</p>
-          `}
-
-          <div style="border-top: 1px solid #eee; margin-top: 40px; pt-30px; text-align: center;">
-            <p style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">Team GymDate</p>
-            <p style="font-size: 12px; color: #999;">
-              If you have any questions, feel free to reply to this email or contact us at 
-              <a href="mailto:founder@gymdate.in" style="color: #e50914; text-decoration: none;">founder@gymdate.in</a>
+            <p style="font-size: 15px; color: #444;">
+              We are thrilled to inform you that your partnership application for <b>${lead.gym_name || lead.name || 'your gym'}</b> has been officially <b>APPROVED</b>!
             </p>
-          </div>
+            <p style="font-size: 15px; color: #444;">
+              Your gym profile is now set up and being listed on our platform. You can now start receiving bookings and members through GymDate.
+            </p>
+            <div style="background-color: #f8fafc; border-left: 4px solid #16a34a; padding: 15px 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0; font-size: 14px; color: #334155;">
+                <b>Next Steps:</b> Our team will assist you with onboarding your staff and setting up the QR scanner at your facility.
+              </p>
+            </div>
+            <div style="text-align: center; margin-top: 35px;">
+              <a href="https://gymdate.in/partner/login" style="background-color: #e50914; color: #fff; padding: 14px 28px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; display: inline-block;">
+                Access Partner Portal ➔
+              </a>
+            </div>
+          ` : `
+            <p style="font-size: 15px; color: #444;">
+              Thank you for your interest in partnering with GymDate for <b>${lead.gym_name || lead.name || 'your gym'}</b>.
+            </p>
+            <p style="font-size: 15px; color: #444;">
+              After carefully reviewing your application, we regret to inform you that we cannot approve your partnership request at this time.
+            </p>
+            <div style="background-color: #f8fafc; border-left: 4px solid #e50914; padding: 15px 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+              <p style="margin: 0; font-size: 14px; color: #334155;">
+                If you have any questions or would like to provide additional details regarding your gym, please feel free to reach out to our team at <a href="mailto:support@gymdate.in" style="color: #e50914; text-decoration: underline;">support@gymdate.in</a>.
+              </p>
+            </div>
+          `}
+          
+          <hr style="border: none; border-top: 1px solid #eaeaea; margin: 35px 0 20px 0;" />
+          <p style="font-size: 12px; color: #888; text-align: center; margin: 0;">
+            GymDate Technologies Inc. • Helping gyms grow and athletes connect.
+          </p>
         </div>
       `
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`Partner lead ${status} email sent to ${lead.email}: %s`, info.messageId);
+    console.log("Partner status email sent: %s", info.messageId);
     return true;
   } catch (error) {
-    console.error("Error sending partner lead email:", error);
+    console.error("Error sending partner status email:", error);
     return false;
   }
 }

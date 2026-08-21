@@ -64,11 +64,14 @@ export async function GET(req: NextRequest) {
     // Fetch bookings with gym and user details
     const bookingsResult = await query(
       `SELECT b.*, 
+       COALESCE(be.ticket_code, UPPER(SUBSTRING(b.id::text, 1, 8))) as ticket_code,
+       be.qr_code,
        ${customerNameExpr} as customer_name,
        ${customerEmailExpr} as customer_email,
        COALESCE(u.phone, 'N/A') as customer_phone,
        json_build_object('name', g.name, 'location', g.location) as gyms
        FROM bookings b
+       LEFT JOIN bookings_extra be ON b.id::text = be.booking_id::text
        LEFT JOIN gyms g ON b.gym_id::text = g.id::text
        LEFT JOIN users u ON b.user_id::text = u.id::text OR LOWER(u.email) = LOWER($1)
        ${whereClause}
