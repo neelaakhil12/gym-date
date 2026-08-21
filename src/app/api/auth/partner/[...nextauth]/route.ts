@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 export const partnerAuthOptions = {
   providers: [
     CredentialsProvider({
+      id: "credentials",
       name: "PartnerCredentials",
       credentials: {
         email: { label: "Email", type: "text" },

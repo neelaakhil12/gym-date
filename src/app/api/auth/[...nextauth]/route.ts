@@ -44,9 +44,18 @@ export const authOptions = {
           } else if (targetRole === 'staff') {
             // Operations Admin login only checks staff_users
             userResult = await query("SELECT id, email, full_name, password_hash, 'operation_admin' as role_id FROM staff_users WHERE email = $1", [email]);
+          } else if (targetRole === 'partner') {
+            // Partner login checks partner_users first
+            userResult = await query("SELECT id, email, full_name, password_hash, 'partner' as role_id FROM partner_users WHERE email = $1", [email]);
+            if (userResult.rows.length === 0) {
+              userResult = await query("SELECT id, email, full_name, password_hash, role_id FROM users WHERE email = $1", [email]);
+            }
           } else {
             // Default check for partners or generic login
             userResult = await query("SELECT id, email, full_name, password_hash, role_id FROM users WHERE email = $1", [email]);
+            if (userResult.rows.length === 0) {
+              userResult = await query("SELECT id, email, full_name, password_hash, 'partner' as role_id FROM partner_users WHERE email = $1", [email]);
+            }
             
             // Legacy/fallback check
             if (userResult.rows.length === 0) {
