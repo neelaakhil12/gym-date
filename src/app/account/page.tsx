@@ -543,9 +543,44 @@ export default function AccountPage() {
                       When you renew a subscription, up to <strong>₹{walletData?.maxWalletPerTxn || 10}</strong> from your wallet 
                       will automatically be deducted from your payment. The remaining amount is charged via Razorpay.
                     </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Example: Plan costs ₹499 → Wallet pays ₹{walletData?.maxWalletPerTxn || 10} → You pay ₹{499 - (walletData?.maxWalletPerTxn || 10)}
-                    </p>
+                  {/* Referral History / Breakdown */}
+                  <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm">
+                    <h4 className="font-black text-secondary mb-4 flex items-center justify-between">
+                      <span className="flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-2 text-green-500" />
+                        Referral Activity & Earnings
+                      </span>
+                      <span className="text-xs text-gray-400 font-bold">
+                        {walletData?.history?.length || 0} credited
+                      </span>
+                    </h4>
+
+                    {(!walletData?.history || walletData.history.length === 0) ? (
+                      <div className="text-center py-6 text-gray-400 text-xs font-bold">
+                        No referral activity yet. Share your link to start earning!
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {walletData.history.map((item: any, idx: number) => (
+                          <div key={idx} className="py-3.5 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center font-black text-xs">
+                                ₹
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-secondary">{item.detail || "Friend Sign Up"}</p>
+                                <p className="text-[10px] text-gray-400 font-semibold">
+                                  {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xs font-black text-green-600 bg-green-50 px-2.5 py-1 rounded-lg">
+                              +₹{parseFloat(item.amount || 30).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
