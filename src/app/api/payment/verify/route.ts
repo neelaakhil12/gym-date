@@ -140,9 +140,9 @@ export async function POST(req: NextRequest) {
         );
         const maxUsable = parseFloat(configRes.rows[0]?.value || '10');
 
-        // Deduct from user
+        // Deduct from user wallet in users_extra
         await query(
-          'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) - $1 WHERE id::text = $2::text',
+          'UPDATE users_extra SET wallet_balance = GREATEST(0, COALESCE(wallet_balance, 0) - $1), updated_at = CURRENT_TIMESTAMP WHERE user_id::text = $2::text',
           [maxUsable, finalUserId]
         );
 
@@ -162,9 +162,12 @@ export async function POST(req: NextRequest) {
     // ── 5. Credit Referral Bonus ──────────────────────────────────────────
     try {
       if (finalUserId) {
-        // Fetch user data directly from Postgres
+        // Fetch user data with referred_by from users_extra
         const userRes = await query(
-          'SELECT id, email, wallet_balance, referred_by FROM users WHERE id = $1',
+          `SELECT u.id, u.email, ue.referred_by
+           FROM users u
+           LEFT JOIN users_extra ue ON u.id = ue.user_id
+           WHERE u.id::text = $1::text`,
           [finalUserId]
         );
         
@@ -175,7 +178,7 @@ export async function POST(req: NextRequest) {
           
           // Check if this is the user's first subscription ever
           const bookingCheck = await query(
-            'SELECT COUNT(*) as count FROM bookings WHERE user_id = $1',
+            'SELECT COUNT(*) as count FROM bookings WHERE user_id::text = $1::text',
             [dbUser.id]
           );
           
@@ -184,15 +187,18 @@ export async function POST(req: NextRequest) {
 
           // Check if referral was already credited upon login / previously
           const existingCredit = await query(
-            'SELECT id FROM referral_transactions WHERE LOWER(referred_user_email) = $1',
-            [customerEmail.trim().toLowerCase()]
+            'SELECT id FROM referral_transactions WHERE LOWER(referred_user_email) = $1 AND type = $2',
+            [customerEmail.trim().toLowerCase(), 'user']
           );
 
           // Only credit if never credited before
           if (bookingCount <= 1 && existingCredit.rows.length === 0) {
-            // Find the referrer
+            // Find the referrer in users_extra
             const referrerRes = await query(
-              'SELECT id, email FROM users WHERE TRIM(UPPER(referral_code)) = TRIM(UPPER($1))',
+              `SELECT u.id, u.email, u.role_id, ue.referral_code
+               FROM users u
+               JOIN users_extra ue ON u.id = ue.user_id
+               WHERE TRIM(UPPER(ue.referral_code)) = TRIM(UPPER($1))`,
               [referredBy]
             );
 
@@ -205,18 +211,14 @@ export async function POST(req: NextRequest) {
               );
               const configMap: Record<string, string> = {};
               configRes.rows.forEach((r: any) => { configMap[r.key] = r.value; });
-              const userBonus = parseFloat(configMap['refer_a_friend'] || '50');
+              const userBonus = parseFloat(configMap['refer_a_friend'] || '30');
               const partnerBonus = parseFloat(configMap['partner_referral_bonus'] || '500');
 
-              // Determine if referrer is a partner
-              const referrerInfo = await query('SELECT id, email, role_id FROM users WHERE referral_code ILIKE $1', [referredBy]);
-              const referrerUser = referrerInfo.rows[0];
-              const isPartnerReferrer = referrerUser?.role_id === 'partner';
+              const isPartnerReferrer = referrer?.role_id === 'partner';
               
               let bonusAmount = userBonus;
               if (isPartnerReferrer) {
-                // Priority: 1. Gym-specific amount, 2. Global platform config, 3. Default 500
-                const gymRes = await query('SELECT partner_referral_amount FROM gyms WHERE partner_id = $1 LIMIT 1', [referrerUser.id]);
+                const gymRes = await query('SELECT partner_referral_amount FROM gyms WHERE partner_id::text = $1::text LIMIT 1', [referrer.id]);
                 if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
                   bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
                 } else {
@@ -226,16 +228,19 @@ export async function POST(req: NextRequest) {
 
               console.log(`[Referral] Crediting ₹${bonusAmount} to referrer ${referrer.email}`);
 
-              // 1. Credit the referrer's wallet
+              // 1. Credit the referrer's wallet in users_extra
               await query(
-                'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
-                [bonusAmount, referrer.id]
+                `INSERT INTO users_extra (user_id, wallet_balance, updated_at)
+                 VALUES ($1, $2, CURRENT_TIMESTAMP)
+                 ON CONFLICT (user_id) 
+                 DO UPDATE SET wallet_balance = COALESCE(users_extra.wallet_balance, 0) + $2, updated_at = CURRENT_TIMESTAMP`,
+                [referrer.id, bonusAmount]
               );
 
               // 2. Record the transaction
               await query(
                 `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
-                 VALUES ($1, $2, 'credit', $3, 'credited')`,
+                 VALUES ($1, $2, 'user', $3, 'credited')`,
                 [referrer.id, customerEmail, bonusAmount]
               );
 

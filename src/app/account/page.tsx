@@ -114,15 +114,22 @@ export default function AccountPage() {
               setIsEditProfileOpen(true);
             }
 
-            // Apply referral code if stored in localStorage (works for both Google + OTP login)
-            const pendingRef = localStorage.getItem('referral_code');
+            // Apply referral code if stored in storage or cookie (works for Google + OTP login)
+            const cookieMatch = document.cookie.match(/gymdate_ref=([^;]+)/);
+            const pendingRef = localStorage.getItem('referral_code') || 
+                               sessionStorage.getItem('referral_code') || 
+                               (cookieMatch ? decodeURIComponent(cookieMatch[1]) : null);
             if (pendingRef) {
-              await fetch('/api/referral/apply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, referralCode: pendingRef }),
-              });
+              try {
+                await fetch('/api/referral/apply', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email, referralCode: pendingRef }),
+                });
+              } catch (e) {}
               localStorage.removeItem('referral_code');
+              sessionStorage.removeItem('referral_code');
+              document.cookie = "gymdate_ref=; path=/; max-age=0";
             }
 
             // Fetch referral/wallet data

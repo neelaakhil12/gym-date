@@ -130,15 +130,7 @@ export async function sendBookingConfirmationEmail(booking: any) {
           </div>
 
         </div>
-      `,
-      attachments: [
-        {
-          filename: `ticket-${shortId}.png`,
-          content: qrBuffer,
-          contentType: 'image/png',
-          cid: 'gymdatepassqr'
-        }
-      ]
+      `
     };
 
     const info = await transporter.sendMail(mailOptions);

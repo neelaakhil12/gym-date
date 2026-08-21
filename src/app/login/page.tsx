@@ -25,11 +25,13 @@ export default function LoginPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const searchParams = useSearchParams();
 
-  // Save referral code from URL to localStorage
+  // Save referral code from URL to localStorage, sessionStorage & cookie
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) {
       localStorage.setItem("referral_code", ref);
+      sessionStorage.setItem("referral_code", ref);
+      document.cookie = `gymdate_ref=${encodeURIComponent(ref)}; path=/; max-age=2592000; SameSite=Lax`;
     }
   }, [searchParams]);
 
@@ -76,15 +78,22 @@ export default function LoginPage() {
         throw new Error(res.error);
       }
 
-      // Apply referral code if present
-      const refCode = localStorage.getItem("referral_code");
+      // Apply referral code if present in storage or cookie
+      const cookieMatch = document.cookie.match(/gymdate_ref=([^;]+)/);
+      const refCode = localStorage.getItem("referral_code") || 
+                      sessionStorage.getItem("referral_code") || 
+                      (cookieMatch ? decodeURIComponent(cookieMatch[1]) : null);
       if (refCode) {
-        await fetch("/api/referral/apply", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, referralCode: refCode }),
-        });
+        try {
+          await fetch("/api/referral/apply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, referralCode: refCode }),
+          });
+        } catch (e) {}
         localStorage.removeItem("referral_code");
+        sessionStorage.removeItem("referral_code");
+        document.cookie = "gymdate_ref=; path=/; max-age=0";
       }
 
       // Successfully verified! Redirect to account page.
