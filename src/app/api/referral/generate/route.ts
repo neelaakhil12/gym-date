@@ -87,14 +87,14 @@ export async function GET(req: NextRequest) {
     );
 
     // 7. Get platform config
-    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'partner_referral_bonus', 'max_wallet_per_txn')`);
+    const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'refer_a_friend', 'partner_referral_bonus', 'max_wallet_per_txn')`);
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });
 
     // Determine correct bonus based on context and partner custom amount
     let bonusPerReferral = isPartnerContext 
       ? parseFloat(configMap['partner_referral_bonus'] || '500')
-      : parseFloat(configMap['refer_a_friend'] || '30');
+      : parseFloat(configMap['user_referral_bonus'] || configMap['refer_a_friend'] || '10');
 
     if (isPartnerContext) {
       try {

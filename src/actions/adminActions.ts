@@ -897,11 +897,11 @@ export async function getPlatformConfig() {
       );
     }
 
-    // Ensure refer_a_friend exists
-    if (!configs.find((c: any) => c.key === 'refer_a_friend')) {
+    // Ensure user_referral_bonus exists
+    if (!configs.find((c: any) => c.key === 'user_referral_bonus')) {
       await query(
         "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
-        ['refer_a_friend', '30', 'Referral bonus (in ₹) credited to user wallet when a friend logs in with their referral link.']
+        ['user_referral_bonus', '10', 'Amount given to a user when they refer a friend (credited upon subscription payment)']
       );
     }
 

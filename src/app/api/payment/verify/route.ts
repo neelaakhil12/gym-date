@@ -207,11 +207,11 @@ export async function POST(req: NextRequest) {
               
               // Get configuration for bonus amounts (user and partner)
               const configRes = await query(
-                "SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'partner_referral_bonus')"
+                "SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'refer_a_friend', 'partner_referral_bonus')"
               );
               const configMap: Record<string, string> = {};
               configRes.rows.forEach((r: any) => { configMap[r.key] = r.value; });
-              const userBonus = parseFloat(configMap['refer_a_friend'] || '30');
+              const userBonus = parseFloat(configMap['user_referral_bonus'] || configMap['refer_a_friend'] || '10');
               const partnerBonus = parseFloat(configMap['partner_referral_bonus'] || '500');
 
               const isPartnerReferrer = referrer?.role_id === 'partner';

@@ -74,7 +74,7 @@ export default function AdminSettings() {
   };
 
   const staffSettingItem = config.find(item => item.key === 'allow_staff_settings');
-  const hiddenKeys = ['allow_staff_settings', 'refer_a_friend', 'user_referral_bonus'];
+  const hiddenKeys = ['allow_staff_settings', 'refer_a_friend'];
   const generalConfigs = config.filter(item => !hiddenKeys.includes(item.key));
   const isStaffAccessEnabled = staffSettingItem?.value === 'true' || staffSettingItem?.value === '1';
 

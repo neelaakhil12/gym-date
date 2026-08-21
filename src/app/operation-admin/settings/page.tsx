@@ -121,7 +121,7 @@ export default function OperationSettings() {
         </div>
       ) : (
         <div className="grid gap-6">
-          {config.filter(item => !['allow_staff_settings', 'refer_a_friend', 'user_referral_bonus'].includes(item.key)).map((item) => (
+          {config.filter(item => !['allow_staff_settings', 'refer_a_friend'].includes(item.key)).map((item) => (
             <div key={item.key} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-gray-50 rounded-2xl flex-shrink-0">
@@ -129,7 +129,7 @@ export default function OperationSettings() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-secondary uppercase tracking-wider">
-                    {item.key === 'refer_a_friend' ? 'User Referral Bonus' : 
+                    {item.key === 'user_referral_bonus' || item.key === 'refer_a_friend' ? 'User Referral Bonus' : 
                      item.key === 'partner_referral_bonus' ? 'Partner Referral Bonus (Refer a Gym)' : 
                      item.key.replace(/_/g, ' ')}
                   </h3>
