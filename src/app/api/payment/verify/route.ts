@@ -182,11 +182,17 @@ export async function POST(req: NextRequest) {
           const bookingCount = parseInt(bookingCheck.rows[0]?.count || '0');
           console.log(`[Referral] Checking bonus for ${customerEmail}. ReferredBy: ${referredBy}, BookingCount: ${bookingCount}`);
 
-          // Only credit on first purchase
-          if (bookingCount <= 1) {
+          // Check if referral was already credited upon login / previously
+          const existingCredit = await query(
+            'SELECT id FROM referral_transactions WHERE LOWER(referred_user_email) = $1',
+            [customerEmail.trim().toLowerCase()]
+          );
+
+          // Only credit if never credited before
+          if (bookingCount <= 1 && existingCredit.rows.length === 0) {
             // Find the referrer
             const referrerRes = await query(
-              'SELECT id, email FROM users WHERE referral_code ILIKE $1',
+              'SELECT id, email FROM users WHERE TRIM(UPPER(referral_code)) = TRIM(UPPER($1))',
               [referredBy]
             );
 

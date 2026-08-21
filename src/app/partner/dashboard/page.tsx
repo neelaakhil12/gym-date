@@ -522,7 +522,7 @@ export default function PartnerDashboard() {
             <div className="max-w-2xl">
               <h3 className="text-2xl font-black text-slate-900 mb-4">Partner Referral Program</h3>
               <p className="text-gray-500 leading-relaxed mb-8">
-                Refer other gym owners to <span className="text-primary font-bold">GymDate</span>. When they join India's largest fitness network using your unique link, you earn <span className="text-slate-900 font-black">₹{gym?.partner_referral_amount || walletData?.bonusPerReferral || 100}</span> as a referral bonus!
+                Refer other gym owners to <span className="text-primary font-bold">GymDate</span>. When they apply via your unique partner link and get approved by Super Admin, you earn <span className="text-slate-900 font-black">₹{gym?.partner_referral_amount || walletData?.bonusPerReferral || 500}</span> directly in your wallet!
               </p>
 
               <div className="relative group">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import crypto from 'crypto';
 
-// GET /api/referral/generate?userId=xxx
+// GET /api/referral/generate?userId=xxx&type=user|partner
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -17,13 +17,13 @@ export async function GET(req: NextRequest) {
     `);
     const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
 
-    // Check if user already exists
-    const existing = await query('SELECT * FROM users WHERE id = $1', [userId]);
+    // Check if user exists
+    const existing = await query('SELECT * FROM users WHERE id::text = $1::text', [userId]);
     if (existing.rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const user = existing.rows[0];
     let code = user.referral_code;
-    let walletBalance = user.wallet_balance || 0;
+    let walletBalance = parseFloat(user.wallet_balance || '0');
 
     // Check users_extra for referral code or wallet balance fallback
     try {
@@ -38,10 +38,10 @@ export async function GET(req: NextRequest) {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      const extraRes = await query('SELECT referral_code, wallet_balance FROM users_extra WHERE user_id = $1', [userId]);
+      const extraRes = await query('SELECT referral_code, wallet_balance FROM users_extra WHERE user_id::text = $1::text', [userId]);
       if (extraRes.rows.length > 0) {
         if (!code) code = extraRes.rows[0].referral_code;
-        if (!walletBalance) walletBalance = extraRes.rows[0].wallet_balance;
+        if (!walletBalance && extraRes.rows[0].wallet_balance) walletBalance = parseFloat(extraRes.rows[0].wallet_balance);
       }
     } catch (e) {}
     
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       code = crypto.randomBytes(4).toString('hex').toUpperCase(); // e.g. "A3F92C1B"
       if (userCols.has("referral_code")) {
         try {
-          await query('UPDATE users SET referral_code = $1 WHERE id = $2', [code, userId]);
+          await query('UPDATE users SET referral_code = $1 WHERE id::text = $2::text', [code, userId]);
         } catch (err) {}
       }
       try {
@@ -65,25 +65,59 @@ export async function GET(req: NextRequest) {
       } catch (err) {}
     }
 
-    // Get referral stats
+    // Ensure referral_transactions table exists
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS referral_transactions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          referrer_id UUID REFERENCES users(id),
+          referred_user_email TEXT,
+          type TEXT,
+          amount DECIMAL(10,2),
+          status TEXT DEFAULT 'pending',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {}
+
+    // Get referral stats (using referrer_id::text to prevent uuid comparison errors)
     const stats = await query(
       `SELECT COUNT(*) as total, COALESCE(SUM(amount), 0) as total_earned
-       FROM referral_transactions WHERE referrer_id = $1`,
+       FROM referral_transactions WHERE referrer_id::text = $1::text`,
       [userId]
     );
 
-    // 4. Get config
+    // Get platform config
     const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'partner_referral_bonus', 'max_wallet_per_txn')`);
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });
 
-    // Determine correct bonus based on context
+    // Determine correct bonus based on context and partner custom amount
     let bonusPerReferral = isPartnerContext 
       ? parseFloat(configMap['partner_referral_bonus'] || '500')
       : parseFloat(configMap['refer_a_friend'] || '30');
 
+    if (isPartnerContext) {
+      try {
+        const gymRes = await query('SELECT partner_referral_amount FROM gyms WHERE partner_id::text = $1::text LIMIT 1', [userId]);
+        if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
+          bonusPerReferral = parseFloat(gymRes.rows[0].partner_referral_amount);
+        }
+      } catch (err) {}
+    }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gymdate.in';
+    // Resolve site origin
+    let host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
+    let proto = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+    let siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (!siteUrl && host) {
+      siteUrl = `${proto}://${host}`;
+    }
+    if (!siteUrl) {
+      siteUrl = 'https://gymdate.in';
+    }
+    siteUrl = siteUrl.replace(/\/$/, '');
+
     const referralLink = isPartnerContext 
       ? `${siteUrl}/partner?ref=${code}`
       : `${siteUrl}/login?ref=${code}`;
@@ -129,7 +163,7 @@ export async function GET(req: NextRequest) {
       success: true,
       referralCode: code,
       referralLink,
-      walletBalance: parseFloat(walletBalance || '0'),
+      walletBalance,
       totalReferrals: parseInt(stats.rows[0]?.total || '0'),
       totalEarned: parseFloat(stats.rows[0]?.total_earned || '0'),
       bonusPerReferral,

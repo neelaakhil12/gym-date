@@ -23,18 +23,28 @@ type PartnerFormValues = z.infer<typeof partnerSchema>;
 
 export default function PartnerPage() {
   const searchParams = useSearchParams();
-  const refCode = searchParams.get('ref');
+  const [refCode, setRefCode] = React.useState<string | null>(null);
   const [referrerName, setReferrerName] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (refCode) {
-      fetch(`/api/referral/resolve?code=${refCode}`)
+    let code = searchParams.get('ref');
+    if (code) {
+      sessionStorage.setItem('partner_referral_code', code);
+      localStorage.setItem('partner_referral_code', code);
+    } else {
+      code = sessionStorage.getItem('partner_referral_code') || localStorage.getItem('partner_referral_code');
+    }
+    
+    if (code) {
+      setRefCode(code);
+      fetch(`/api/referral/resolve?code=${code}`)
         .then(r => r.json())
         .then(data => {
-          if (data.success) setReferrerName(data.name);
-        });
+          if (data.success && data.name) setReferrerName(data.name);
+        })
+        .catch(() => {});
     }
-  }, [refCode]);
+  }, [searchParams]);
 
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<PartnerFormValues>({
     resolver: zodResolver(partnerSchema)

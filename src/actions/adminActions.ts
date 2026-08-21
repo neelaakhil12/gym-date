@@ -379,6 +379,7 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
     const leadRes = await query("SELECT * FROM partner_requests WHERE id::text = $1::text", [id]);
     if (leadRes.rows.length === 0) throw new Error("Lead not found.");
     lead = leadRes.rows[0];
+    const previousStatus = lead.status;
 
     // If status column exists, update it
     if (availableCols.has("status")) {
@@ -389,47 +390,91 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
       if (updateRes.rows.length > 0) lead = updateRes.rows[0];
     }
 
-    // 2. If it's approved or rejected, send the professional email
-    if (status === "approved" || status === "rejected") {
-      await sendPartnerLeadStatusEmail(lead, status as 'approved' | 'rejected');
-      
-      // Credit Referral Bonus if approved and referred by someone
-      if (status === "approved" && lead.referred_by) {
-        try {
-          // Get partner referral bonus from config via reusable helper
-          // Get global default from config
-          const { getConfigValue } = await import('@/lib/config');
-          const bonusStr = await getConfigValue('partner_referral_bonus');
-          let bonusAmount = parseFloat(bonusStr ?? '500');
+    let creditedInfo = null;
 
-          // Find the referrer
-          const referrerRes = await query("SELECT id, email, role_id FROM users WHERE referral_code = $1", [lead.referred_by]);
+    // 3. If it's approved or rejected, send the professional email
+    if (status === "approved" || status === "rejected") {
+      try {
+        await sendPartnerLeadStatusEmail(lead, status as 'approved' | 'rejected');
+      } catch (emailErr) {
+        console.warn("[AdminActions] Email sending error (non-fatal):", emailErr);
+      }
+      
+      // Credit Referral Bonus if approved, referred by someone, and not already credited previously
+      if (status === "approved" && lead.referred_by && previousStatus !== "approved") {
+        try {
+          // Ensure referral_transactions table exists
+          await query(`
+            CREATE TABLE IF NOT EXISTS referral_transactions (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              referrer_id UUID REFERENCES users(id),
+              referred_user_email TEXT,
+              type TEXT,
+              amount DECIMAL(10,2),
+              status TEXT DEFAULT 'pending',
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+
+          // Ensure wallet_balance column exists on users
+          try {
+            await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
+          } catch (e) {}
+
+          const cleanRefCode = lead.referred_by.trim().toUpperCase();
+
+          // Find the referrer case-insensitively
+          const referrerRes = await query(
+            "SELECT id, email, role_id, full_name FROM users WHERE TRIM(UPPER(referral_code)) = $1", 
+            [cleanRefCode]
+          );
           
           if (referrerRes.rows.length > 0) {
             const referrer = referrerRes.rows[0];
             
-            // If the referrer is a partner, check if they have a custom referral amount set
-            if (referrer.role_id === 'partner') {
-              const gymRes = await query("SELECT partner_referral_amount FROM gyms WHERE partner_id = $1 LIMIT 1", [referrer.id]);
+            // Check if bonus was already credited for this referee email to this referrer
+            const existingTxn = await query(
+              `SELECT id FROM referral_transactions 
+               WHERE referrer_id::text = $1::text 
+                 AND LOWER(referred_user_email) = $2 
+                 AND type = 'partner'`,
+              [referrer.id, lead.email.trim().toLowerCase()]
+            );
+
+            if (existingTxn.rows.length === 0) {
+              // Get partner referral bonus from config
+              const { getConfigValue } = await import('@/lib/config');
+              const bonusStr = await getConfigValue('partner_referral_bonus');
+              let bonusAmount = parseFloat(bonusStr ?? '500');
+
+              // If the referrer is a gym partner, check if their gym has a custom partner_referral_amount
+              const gymRes = await query(
+                "SELECT partner_referral_amount FROM gyms WHERE partner_id::text = $1::text LIMIT 1", 
+                [referrer.id]
+              );
               if (gymRes.rows.length > 0 && gymRes.rows[0].partner_referral_amount) {
                 bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
               }
+              
+              // Start Transaction to credit wallet and record it
+              await query("BEGIN");
+              
+              // 1. Update wallet balance
+              await query(
+                "UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id::text = $2::text", 
+                [bonusAmount, referrer.id]
+              );
+              
+              // 2. Record transaction
+              await query(
+                "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'partner', $3, 'credited')",
+                [referrer.id, lead.email.trim().toLowerCase(), bonusAmount]
+              );
+              
+              await query("COMMIT");
+              creditedInfo = { bonusAmount, referrerName: referrer.full_name || referrer.email };
+              console.log(`[AdminActions] Credited ₹${bonusAmount} to partner ${referrer.email} for referring ${lead.email}`);
             }
-            
-            // Start Transaction to credit wallet and record it
-            await query("BEGIN");
-            
-            // 1. Update wallet balance
-            await query("UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2", [bonusAmount, referrer.id]);
-            
-            // 2. Record transaction
-            await query(
-              "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'partner', $3, 'credited')",
-              [referrer.id, lead.email, bonusAmount]
-            );
-            
-            await query("COMMIT");
-            console.log(`[AdminActions] Credited ₹${bonusAmount} to partner ${referrer.email} for referring ${lead.email}`);
           }
         } catch (creditErr) {
           await query("ROLLBACK");
@@ -438,8 +483,9 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
       }
     }
 
+    revalidatePath("/superadmin/partner-requests");
     revalidatePath("/admin/partner-requests");
-    return { success: true };
+    return { success: true, creditedInfo };
   } catch (error: any) {
     console.error("Error updating partner request status:", error);
     return { error: error.message };
@@ -844,6 +890,30 @@ export async function getPlatformConfig() {
       await query(
         "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
         ['platform_commission', '10', 'Global platform commission percentage (fallback for all gyms).']
+      );
+    }
+
+    // Ensure refer_a_friend exists
+    if (!configs.find((c: any) => c.key === 'refer_a_friend')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['refer_a_friend', '30', 'Referral bonus (in ₹) credited to user wallet when a friend logs in with their referral link.']
+      );
+    }
+
+    // Ensure partner_referral_bonus exists
+    if (!configs.find((c: any) => c.key === 'partner_referral_bonus')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['partner_referral_bonus', '500', 'Referral bonus (in ₹) credited to gym partner wallet when an invited gym lead is approved by Super Admin.']
+      );
+    }
+
+    // Ensure max_wallet_per_txn exists
+    if (!configs.find((c: any) => c.key === 'max_wallet_per_txn')) {
+      await query(
+        "INSERT INTO platform_config (key, value, description) VALUES ($1, $2, $3) ON CONFLICT (key) DO NOTHING",
+        ['max_wallet_per_txn', '10', 'Maximum wallet amount (in ₹) that can be deducted per booking transaction.']
       );
     }
 

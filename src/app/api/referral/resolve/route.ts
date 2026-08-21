@@ -7,13 +7,15 @@ export async function GET(req: NextRequest) {
     const code = searchParams.get('code');
     if (!code) return NextResponse.json({ error: 'Missing code' }, { status: 400 });
 
+    const cleanCode = code.trim().toUpperCase();
+
     const result = await query(`
-      SELECT g.name 
+      SELECT COALESCE(g.name, u.full_name, 'A Partner') as name 
       FROM users u
-      JOIN gyms g ON u.id::text = g.partner_id::text
-      WHERE u.referral_code = $1
+      LEFT JOIN gyms g ON u.id::text = g.partner_id::text
+      WHERE TRIM(UPPER(u.referral_code)) = $1
       LIMIT 1
-    `, [code]);
+    `, [cleanCode]);
 
     if (result.rows.length === 0) {
       return NextResponse.json({ success: false, name: null });

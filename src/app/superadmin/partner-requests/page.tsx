@@ -63,7 +63,12 @@ export default function PartnerRequestsPage() {
       setRequests(requests.map(req => 
         req.id === id ? { ...req, status: newStatus } : req
       ));
-      toast.success(`Status updated to ${newStatus}`);
+      
+      if (newStatus === "approved" && result.creditedInfo) {
+        toast.success(`Approved! Credited ₹${result.creditedInfo.bonusAmount} to ${result.creditedInfo.referrerName}'s wallet.`);
+      } else {
+        toast.success(`Status updated to ${newStatus}`);
+      }
     } catch (error: any) {
       console.error("Error updating status:", error);
       toast.error(error.message || "Failed to update status");
