@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-// POST /api/referral/apply - called after login/signup to apply referral & credit bonus to referrer
+// POST /api/referral/apply - called after login/signup to bind referral code to new user
+// Referral bonus is credited ONLY when referee purchases their first subscription (in payment/verify)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanRefCode = referralCode.trim().toUpperCase();
 
-    // Ensure users_extra and referral_transactions tables exist
+    // Ensure users_extra table exists
     try {
       await query(`
         CREATE TABLE IF NOT EXISTS users_extra (
@@ -30,23 +31,11 @@ export async function POST(req: NextRequest) {
       await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50)");
       await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50)");
       await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
-
-      await query(`
-        CREATE TABLE IF NOT EXISTS referral_transactions (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          referrer_id UUID REFERENCES users(id),
-          referred_user_email TEXT,
-          type TEXT,
-          amount DECIMAL(10,2),
-          status TEXT DEFAULT 'credited',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
     } catch (e) {}
 
     // 1. Look up the referee user
     const userRes = await query(`
-      SELECT u.id, u.email, ue.referred_by, ue.referral_code, COALESCE(ue.wallet_balance, 0) as wallet_balance
+      SELECT u.id, u.email, ue.referred_by, ue.referral_code
       FROM users u
       LEFT JOIN users_extra ue ON u.id = ue.user_id
       WHERE u.email = $1
@@ -63,14 +52,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot refer yourself' }, { status: 400 });
     }
 
-    // 3. Prevent duplicate referral if already referred
+    // 3. If referee already has a referred_by code attached, do not overwrite
     if (userData.referred_by) {
       return NextResponse.json({ success: true, message: 'Referral already recorded for this user' });
     }
 
-    // 4. Find the referrer by referral code in users_extra (case-insensitive)
+    // 4. Find the referrer by referral code in users_extra
     const referrerRes = await query(`
-      SELECT u.id, u.email, u.role_id, u.full_name, COALESCE(ue.wallet_balance, 0) as wallet_balance, ue.referral_code
+      SELECT u.id, u.email, u.role_id, u.full_name, ue.referral_code
       FROM users u
       JOIN users_extra ue ON u.id = ue.user_id
       WHERE TRIM(UPPER(ue.referral_code)) = $1
@@ -82,76 +71,23 @@ export async function POST(req: NextRequest) {
 
     const referrer = referrerRes.rows[0];
 
-    // Prevent self-referral if IDs match
+    // Prevent self-referral if user IDs match
     if (referrer.id === userData.id) {
       return NextResponse.json({ error: 'Cannot refer yourself' }, { status: 400 });
     }
 
-    // Check if bonus was already credited for this referee to this referrer
-    const existingTxn = await query(
-      `SELECT id FROM referral_transactions 
-       WHERE referrer_id::text = $1::text 
-         AND LOWER(referred_user_email) = $2 
-         AND type = 'user'`,
-      [referrer.id, cleanEmail]
-    );
+    // 5. Save the referrer code on referee in users_extra
+    await query(`
+      INSERT INTO users_extra (user_id, referred_by, updated_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by, updated_at = CURRENT_TIMESTAMP
+    `, [userData.id, cleanRefCode]);
 
-    if (existingTxn.rows.length > 0) {
-      await query(`
-        INSERT INTO users_extra (user_id, referred_by, updated_at)
-        VALUES ($1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by, updated_at = CURRENT_TIMESTAMP
-      `, [userData.id, cleanRefCode]);
-      return NextResponse.json({ success: true, message: 'Referral bonus already awarded previously' });
-    }
-
-    // 5. Get user referral bonus amount from platform_config (key: refer_a_friend)
-    let bonusAmount = 30; // default ₹30
-    try {
-      const configRes = await query("SELECT value FROM platform_config WHERE key = 'refer_a_friend'");
-      if (configRes.rows.length > 0 && configRes.rows[0].value) {
-        bonusAmount = parseFloat(configRes.rows[0].value) || 30;
-      }
-    } catch (e) {
-      console.warn("Could not fetch refer_a_friend config, using default 30:", e);
-    }
-
-    // 6. Execute atomic transaction to update referred_by, credit referrer wallet in users_extra, and record transaction
-    await query("BEGIN");
-    try {
-      // Set referred_by on referee in users_extra
-      await query(`
-        INSERT INTO users_extra (user_id, referred_by, updated_at)
-        VALUES ($1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by, updated_at = CURRENT_TIMESTAMP
-      `, [userData.id, cleanRefCode]);
-
-      // Credit referrer's wallet in users_extra
-      await query(`
-        INSERT INTO users_extra (user_id, wallet_balance, updated_at)
-        VALUES ($1, $2, CURRENT_TIMESTAMP)
-        ON CONFLICT (user_id) 
-        DO UPDATE SET wallet_balance = COALESCE(users_extra.wallet_balance, 0) + $2, updated_at = CURRENT_TIMESTAMP
-      `, [referrer.id, bonusAmount]);
-
-      // Record referral transaction
-      await query(
-        `INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status)
-         VALUES ($1, $2, 'user', $3, 'credited')`,
-        [referrer.id, cleanEmail, bonusAmount]
-      );
-
-      await query("COMMIT");
-      console.log(`[Referral Apply] Successfully credited ₹${bonusAmount} to referrer ${referrer.email} for new user login ${cleanEmail}`);
-    } catch (txnErr) {
-      await query("ROLLBACK");
-      throw txnErr;
-    }
+    console.log(`[Referral Apply] Successfully linked referee ${cleanEmail} to referrer ${referrer.email} (Code: ${cleanRefCode}). Bonus will be credited upon subscription payment.`);
 
     return NextResponse.json({
       success: true,
-      message: `Referral applied! ₹${bonusAmount} credited to ${referrer.email}'s wallet.`,
-      bonusAmount
+      message: `Referral linked! Bonus will be credited when ${cleanEmail} takes their first subscription.`
     });
   } catch (err: any) {
     console.error("[Referral Apply Error]:", err);

@@ -491,7 +491,7 @@ export default function AccountPage() {
                   <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm p-6 space-y-4">
                     <div>
                       <h3 className="font-black text-secondary text-lg">Your Referral Link</h3>
-                      <p className="text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and logs in using your link, you earn ₹{walletData?.bonusPerReferral || 30} in your wallet!</p>
+                      <p className="text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and takes a subscription using your link, you earn ₹{walletData?.bonusPerReferral || 30} in your wallet!</p>
                     </div>
 
                     {walletData?.referralLink ? (
@@ -521,7 +521,7 @@ export default function AccountPage() {
                     <div className="grid grid-cols-3 gap-3 pt-2">
                       {[
                         { step: "1", label: "Share your link", desc: "Send to friends" },
-                        { step: "2", label: "Friend logs in", desc: "Via your link" },
+                        { step: "2", label: "Friend subscribes", desc: "Takes a gym plan" },
                         { step: "3", label: `You earn ₹${walletData?.bonusPerReferral || 30}`, desc: "Instant wallet credit" },
                       ].map(({ step, label, desc }) => (
                         <div key={step} className="text-center p-4 bg-gray-50 rounded-2xl">
