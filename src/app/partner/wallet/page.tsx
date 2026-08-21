@@ -58,15 +58,16 @@ export default function PartnerWallet() {
         setBalance(Math.max(0, totalEarnings - totalWithdrawn));
 
         // Fetch dynamic minimum withdrawal limit
-        if (gymData.partner_id) {
-          try {
-            const refRes = await fetch(`/api/referral/generate?userId=${gymData.partner_id}&type=partner`);
-            const refData = await refRes.json();
-            if (refData.partnerVirtualMinWithdrawal) {
-              setMinWithdrawal(refData.partnerVirtualMinWithdrawal);
+        try {
+          const setRes = await fetch("/api/admin/settings-config", { cache: "no-store" });
+          const setData = await setRes.json();
+          if (setData.success && Array.isArray(setData.configs)) {
+            const vLimit = setData.configs.find((c: any) => c.key === 'partner_virtual_min_withdrawal');
+            if (vLimit && vLimit.value) {
+              setMinWithdrawal(parseFloat(vLimit.value));
             }
-          } catch (e) {}
-        }
+          }
+        } catch (e) {}
       }
       setLoading(false);
     }

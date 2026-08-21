@@ -96,9 +96,22 @@ export default function PartnerDashboard() {
         // Fetch referral data
         if (data.partner_id) {
           try {
-            const refRes = await fetch(`/api/referral/generate?userId=${data.partner_id}&type=partner`);
+            const refRes = await fetch(`/api/referral/generate?userId=${data.partner_id}&type=partner`, { cache: "no-store" });
             const refData = await refRes.json();
-            if (refData.success) setWalletData(refData);
+            if (refData.success) {
+              // Ensure live limit from settings config is used
+              try {
+                const setRes = await fetch("/api/admin/settings-config", { cache: "no-store" });
+                const setData = await setRes.json();
+                if (setData.success && Array.isArray(setData.configs)) {
+                  const rLimit = setData.configs.find((c: any) => c.key === 'partner_referral_min_withdrawal');
+                  if (rLimit && rLimit.value) {
+                    refData.partnerReferralMinWithdrawal = parseFloat(rLimit.value);
+                  }
+                }
+              } catch (e) {}
+              setWalletData(refData);
+            }
           } catch (err) {
             console.error("Failed to fetch referral data:", err);
           }
