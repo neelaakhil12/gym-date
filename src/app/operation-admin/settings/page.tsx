@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   UserPlus,
   ShieldAlert,
-  ArrowLeft
+  ArrowLeft,
+  Banknote,
+  SlidersHorizontal
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { getPlatformConfig, updatePlatformConfig, checkStaffSettingsAccess } from "@/actions/adminActions";

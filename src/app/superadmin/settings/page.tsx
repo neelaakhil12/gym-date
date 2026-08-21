@@ -13,7 +13,8 @@ import {
   UserPlus,
   ToggleLeft,
   ToggleRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Banknote
 } from "lucide-react";
 import { getPlatformConfig, updatePlatformConfig } from "@/actions/adminActions";
 
