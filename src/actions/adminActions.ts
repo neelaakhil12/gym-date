@@ -764,16 +764,6 @@ export async function updatePayoutStatus(id: string, newStatus: string) {
             );
           } catch (e) {}
 
-          // Record debit transaction in referral_transactions
-          const detail = request.payout_method === 'upi'
-            ? `Withdrawal via UPI (${request.upi_id || ''})`
-            : `Withdrawal to Bank (${request.bank_name || 'Account'})`;
-
-          await query(
-            "INSERT INTO referral_transactions (referrer_id, referred_user_email, type, amount, status) VALUES ($1, $2, 'debit', $3, 'debited')",
-            [partnerId, detail, request.amount]
-          );
-
           console.log(`[Payout] Deducted ₹${request.amount} from partner ${partnerId} wallet for referral payout.`);
         }
       }
