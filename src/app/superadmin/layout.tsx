@@ -28,7 +28,7 @@ const adminLinks = [
   { name: "Settings", href: "/superadmin/settings", icon: ClipboardList },
 ];
 
-export default function AdminLayout({
+function AdminLayoutInner({
   children,
 }: {
   children: React.ReactNode;
@@ -109,15 +109,14 @@ export default function AdminLayout({
   // If we are on a public admin page, don't show the dashboard sidebar
   const publicAdminPaths = ["/superadmin", "/superadmin/forgot-password", "/superadmin/reset-password"];
   if (publicAdminPaths.includes(pathname)) {
-    return <AdminAuthProvider>{children}</AdminAuthProvider>;
+    return <>{children}</>;
   }
 
   // Links for Super Admin
   const filteredLinks = adminLinks;
 
   return (
-    <AdminAuthProvider>
-      <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -231,6 +230,17 @@ export default function AdminLayout({
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AdminAuthProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
     </AdminAuthProvider>
   );
 }
