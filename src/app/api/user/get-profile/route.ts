@@ -20,11 +20,14 @@ export async function GET(req: Request) {
 
     if (profile) {
       try {
-        const extraRes = await query('SELECT * FROM users_extra WHERE user_id = $1', [profile.id]);
+        const extraRes = await query('SELECT * FROM users_extra WHERE user_id::text = $1::text', [profile.id]);
         if (extraRes.rows.length > 0) {
           const extra = extraRes.rows[0];
           profile = {
             ...profile,
+            wallet_balance: extra.wallet_balance !== undefined && extra.wallet_balance !== null ? parseFloat(extra.wallet_balance) : 0,
+            referral_code: extra.referral_code || null,
+            referred_by: extra.referred_by || null,
             address: extra.address || profile.address || profile.location,
             latitude: extra.latitude ?? profile.latitude ?? profile.lat,
             longitude: extra.longitude ?? profile.longitude ?? profile.lng

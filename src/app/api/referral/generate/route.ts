@@ -10,27 +10,13 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type'); // 'user' or 'partner'
     if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
-    // Inspect available columns in users table
-    const userColsRes = await query(`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_schema = 'public' AND table_name = 'users'
-    `);
-    const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
-
-    // Check if user exists
-    const existing = await query('SELECT * FROM users WHERE id::text = $1::text', [userId]);
-    if (existing.rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
-    const user = existing.rows[0];
-    let code = user.referral_code;
-    let walletBalance = parseFloat(user.wallet_balance || '0');
-
-    // Check users_extra for referral code or wallet balance fallback
+    // 1. Ensure users_extra table exists with all required columns
     try {
       await query(`
         CREATE TABLE IF NOT EXISTS users_extra (
           user_id UUID PRIMARY KEY,
           referral_code VARCHAR(50),
+          referred_by VARCHAR(50),
           wallet_balance DECIMAL(10,2) DEFAULT 0,
           address TEXT,
           latitude DOUBLE PRECISION,
@@ -38,34 +24,47 @@ export async function GET(req: NextRequest) {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      const extraRes = await query('SELECT referral_code, wallet_balance FROM users_extra WHERE user_id::text = $1::text', [userId]);
-      if (extraRes.rows.length > 0) {
-        if (!code) code = extraRes.rows[0].referral_code;
-        if (!walletBalance && extraRes.rows[0].wallet_balance) walletBalance = parseFloat(extraRes.rows[0].wallet_balance);
-      }
+      await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50)");
+      await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50)");
+      await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
     } catch (e) {}
-    
+
+    // 2. Check if user exists in users table
+    const existing = await query('SELECT * FROM users WHERE id::text = $1::text', [userId]);
+    if (existing.rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const user = existing.rows[0];
+
+    // 3. Fetch permanent referral code and wallet balance from users_extra
+    let code: string | null = null;
+    let walletBalance = 0;
+
+    const extraRes = await query('SELECT referral_code, wallet_balance FROM users_extra WHERE user_id::text = $1::text', [userId]);
+    if (extraRes.rows.length > 0) {
+      if (extraRes.rows[0].referral_code) {
+        code = extraRes.rows[0].referral_code;
+      }
+      if (extraRes.rows[0].wallet_balance !== null && extraRes.rows[0].wallet_balance !== undefined) {
+        walletBalance = parseFloat(extraRes.rows[0].wallet_balance);
+      }
+    }
+
+    // 4. If code is still missing, generate a PERMANENT unique code and save it in users_extra
+    if (!code) {
+      code = crypto.randomBytes(4).toString('hex').toUpperCase(); // e.g. "85FC345D"
+      await query(`
+        INSERT INTO users_extra (user_id, referral_code, wallet_balance, updated_at)
+        VALUES ($1, $2, 0, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET referral_code = EXCLUDED.referral_code, updated_at = CURRENT_TIMESTAMP
+      `, [userId, code]);
+      console.log(`[Referral Generate] Generated and saved permanent referral code ${code} for user ${userId}`);
+    }
+
     // Determine role context: use 'type' param if provided, otherwise fallback to database role
     const isPartnerContext = type ? (type === 'partner') : (user.role_id === 'partner');
 
-    // Generate a new unique code if not set
-    if (!code) {
-      code = crypto.randomBytes(4).toString('hex').toUpperCase(); // e.g. "A3F92C1B"
-      if (userCols.has("referral_code")) {
-        try {
-          await query('UPDATE users SET referral_code = $1 WHERE id::text = $2::text', [code, userId]);
-        } catch (err) {}
-      }
-      try {
-        await query(`
-          INSERT INTO users_extra (user_id, referral_code, updated_at)
-          VALUES ($1, $2, CURRENT_TIMESTAMP)
-          ON CONFLICT (user_id) DO UPDATE SET referral_code = EXCLUDED.referral_code, updated_at = CURRENT_TIMESTAMP
-        `, [userId, code]);
-      } catch (err) {}
-    }
-
-    // Ensure referral_transactions table exists
+    // 5. Ensure referral_transactions table exists
     try {
       await query(`
         CREATE TABLE IF NOT EXISTS referral_transactions (
@@ -74,20 +73,20 @@ export async function GET(req: NextRequest) {
           referred_user_email TEXT,
           type TEXT,
           amount DECIMAL(10,2),
-          status TEXT DEFAULT 'pending',
+          status TEXT DEFAULT 'credited',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
       `);
     } catch (e) {}
 
-    // Get referral stats (using referrer_id::text to prevent uuid comparison errors)
+    // 6. Get referral stats from referral_transactions
     const stats = await query(
       `SELECT COUNT(*) as total, COALESCE(SUM(amount), 0) as total_earned
        FROM referral_transactions WHERE referrer_id::text = $1::text`,
       [userId]
     );
 
-    // Get platform config
+    // 7. Get platform config
     const config = await query(`SELECT key, value FROM platform_config WHERE key IN ('refer_a_friend', 'partner_referral_bonus', 'max_wallet_per_txn')`);
     const configMap: Record<string, string> = {};
     config.rows.forEach((r: any) => { configMap[r.key] = r.value; });

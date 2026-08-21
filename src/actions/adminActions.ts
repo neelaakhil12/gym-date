@@ -423,11 +423,13 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
 
           const cleanRefCode = lead.referred_by.trim().toUpperCase();
 
-          // Find the referrer case-insensitively
-          const referrerRes = await query(
-            "SELECT id, email, role_id, full_name FROM users WHERE TRIM(UPPER(referral_code)) = $1", 
-            [cleanRefCode]
-          );
+          // Find the referrer in users_extra (case-insensitive)
+          const referrerRes = await query(`
+            SELECT u.id, u.email, u.role_id, u.full_name, COALESCE(ue.wallet_balance, 0) as wallet_balance, ue.referral_code
+            FROM users u
+            JOIN users_extra ue ON u.id = ue.user_id
+            WHERE TRIM(UPPER(ue.referral_code)) = $1
+          `, [cleanRefCode]);
           
           if (referrerRes.rows.length > 0) {
             const referrer = referrerRes.rows[0];
@@ -456,14 +458,16 @@ export async function updatePartnerRequestStatus(id: string, status: string) {
                 bonusAmount = parseFloat(gymRes.rows[0].partner_referral_amount);
               }
               
-              // Start Transaction to credit wallet and record it
+              // Start Transaction to credit wallet in users_extra and record it
               await query("BEGIN");
               
-              // 1. Update wallet balance
-              await query(
-                "UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id::text = $2::text", 
-                [bonusAmount, referrer.id]
-              );
+              // 1. Update wallet balance in users_extra
+              await query(`
+                INSERT INTO users_extra (user_id, wallet_balance, updated_at)
+                VALUES ($1, $2, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id) 
+                DO UPDATE SET wallet_balance = COALESCE(users_extra.wallet_balance, 0) + $2, updated_at = CURRENT_TIMESTAMP
+              `, [referrer.id, bonusAmount]);
               
               // 2. Record transaction
               await query(

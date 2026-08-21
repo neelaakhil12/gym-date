@@ -13,28 +13,45 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanRefCode = referralCode.trim().toUpperCase();
 
-    // Ensure referral_transactions table exists
-    await query(`
-      CREATE TABLE IF NOT EXISTS referral_transactions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        referrer_id UUID REFERENCES users(id),
-        referred_user_email TEXT,
-        type TEXT,
-        amount DECIMAL(10,2),
-        status TEXT DEFAULT 'pending',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Ensure users columns exist
+    // Ensure users_extra and referral_transactions tables exist
     try {
-      await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
-      await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code TEXT");
-      await query("ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by TEXT");
+      await query(`
+        CREATE TABLE IF NOT EXISTS users_extra (
+          user_id UUID PRIMARY KEY,
+          referral_code VARCHAR(50),
+          referred_by VARCHAR(50),
+          wallet_balance DECIMAL(10,2) DEFAULT 0,
+          address TEXT,
+          latitude DOUBLE PRECISION,
+          longitude DOUBLE PRECISION,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50)");
+      await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50)");
+      await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
+
+      await query(`
+        CREATE TABLE IF NOT EXISTS referral_transactions (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          referrer_id UUID REFERENCES users(id),
+          referred_user_email TEXT,
+          type TEXT,
+          amount DECIMAL(10,2),
+          status TEXT DEFAULT 'credited',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
     } catch (e) {}
 
     // 1. Look up the referee user
-    const userRes = await query('SELECT id, referred_by, referral_code, wallet_balance FROM users WHERE email = $1', [cleanEmail]);
+    const userRes = await query(`
+      SELECT u.id, u.email, ue.referred_by, ue.referral_code, COALESCE(ue.wallet_balance, 0) as wallet_balance
+      FROM users u
+      LEFT JOIN users_extra ue ON u.id = ue.user_id
+      WHERE u.email = $1
+    `, [cleanEmail]);
+
     if (userRes.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -51,11 +68,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'Referral already recorded for this user' });
     }
 
-    // 4. Find the referrer by referral code (case-insensitive)
-    const referrerRes = await query(
-      'SELECT id, email, role_id, wallet_balance, referral_code FROM users WHERE TRIM(UPPER(referral_code)) = $1',
-      [cleanRefCode]
-    );
+    // 4. Find the referrer by referral code in users_extra (case-insensitive)
+    const referrerRes = await query(`
+      SELECT u.id, u.email, u.role_id, u.full_name, COALESCE(ue.wallet_balance, 0) as wallet_balance, ue.referral_code
+      FROM users u
+      JOIN users_extra ue ON u.id = ue.user_id
+      WHERE TRIM(UPPER(ue.referral_code)) = $1
+    `, [cleanRefCode]);
 
     if (referrerRes.rows.length === 0) {
       return NextResponse.json({ error: 'Invalid referral code' }, { status: 404 });
@@ -78,7 +97,11 @@ export async function POST(req: NextRequest) {
     );
 
     if (existingTxn.rows.length > 0) {
-      await query('UPDATE users SET referred_by = $1 WHERE id = $2', [cleanRefCode, userData.id]);
+      await query(`
+        INSERT INTO users_extra (user_id, referred_by, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by, updated_at = CURRENT_TIMESTAMP
+      `, [userData.id, cleanRefCode]);
       return NextResponse.json({ success: true, message: 'Referral bonus already awarded previously' });
     }
 
@@ -93,17 +116,23 @@ export async function POST(req: NextRequest) {
       console.warn("Could not fetch refer_a_friend config, using default 30:", e);
     }
 
-    // 6. Execute atomic transaction to update referred_by, credit referrer wallet, and record transaction
+    // 6. Execute atomic transaction to update referred_by, credit referrer wallet in users_extra, and record transaction
     await query("BEGIN");
     try {
-      // Set referred_by on new user
-      await query('UPDATE users SET referred_by = $1 WHERE id = $2', [cleanRefCode, userData.id]);
+      // Set referred_by on referee in users_extra
+      await query(`
+        INSERT INTO users_extra (user_id, referred_by, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) DO UPDATE SET referred_by = EXCLUDED.referred_by, updated_at = CURRENT_TIMESTAMP
+      `, [userData.id, cleanRefCode]);
 
-      // Credit referrer's wallet
-      await query(
-        'UPDATE users SET wallet_balance = COALESCE(wallet_balance, 0) + $1 WHERE id = $2',
-        [bonusAmount, referrer.id]
-      );
+      // Credit referrer's wallet in users_extra
+      await query(`
+        INSERT INTO users_extra (user_id, wallet_balance, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET wallet_balance = COALESCE(users_extra.wallet_balance, 0) + $2, updated_at = CURRENT_TIMESTAMP
+      `, [referrer.id, bonusAmount]);
 
       // Record referral transaction
       await query(

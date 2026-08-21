@@ -12,8 +12,9 @@ export async function GET(req: NextRequest) {
     const result = await query(`
       SELECT COALESCE(g.name, u.full_name, 'A Partner') as name 
       FROM users u
+      JOIN users_extra ue ON u.id = ue.user_id
       LEFT JOIN gyms g ON u.id::text = g.partner_id::text
-      WHERE TRIM(UPPER(u.referral_code)) = $1
+      WHERE TRIM(UPPER(ue.referral_code)) = $1
       LIMIT 1
     `, [cleanCode]);
 
