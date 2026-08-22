@@ -345,23 +345,41 @@ export const OwnerDashboard: React.FC = () => {
     'Yoga Mats', 'Zumba Classes', 'Shower', 'Crossfit Rig'
   ];
 
+  const formatImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('file://')) {
+      return url;
+    }
+    return `https://gymdate.in${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const openEditGymScreen = () => {
-    if (partnerGym) {
-      setEditGymName(partnerGym.name || '');
-      setEditGymLocation(partnerGym.location || '');
-      setEditLat(partnerGym.lat ? String(partnerGym.lat) : '17.161922');
-      setEditLng(partnerGym.lng ? String(partnerGym.lng) : '78.658058');
-      setEditRating(partnerGym.rating ? String(partnerGym.rating) : '4.6');
-      setEditReviews(partnerGym.reviews ? String(partnerGym.reviews) : '1');
-      setEditHasOffer(Boolean(partnerGym.has_offer));
-      setEditOfferPercentage(partnerGym.offer_percentage ? String(partnerGym.offer_percentage) : '10');
-      setEditDescription(partnerGym.description || '');
-      setEditPrimaryImage(partnerGym.image || '');
-      setEditGallery(partnerGym.gallery || []);
-      setEditAmenities(partnerGym.amenities || ['sdfbg', 'wertyuytrew']);
+    const gymToEdit = partnerGym || activeGym;
+    if (gymToEdit) {
+      setEditGymName(gymToEdit.name || 'CULTFIT GYM');
+      setEditGymLocation(gymToEdit.location || 'Hyderabad, Telangana');
+      setEditLat(gymToEdit.lat ? String(gymToEdit.lat) : '17.161922');
+      setEditLng(gymToEdit.lng ? String(gymToEdit.lng) : '78.658058');
+      setEditRating(gymToEdit.rating ? String(gymToEdit.rating) : '4.6');
+      setEditReviews(gymToEdit.reviews ? String(gymToEdit.reviews) : '1');
+      setEditHasOffer(Boolean(gymToEdit.has_offer));
+      setEditOfferPercentage(gymToEdit.offer_percentage ? String(gymToEdit.offer_percentage) : '10');
+      setEditDescription(gymToEdit.description || 'Premium fitness facility offering high-energy workouts and state-of-the-art strength gear.');
+
+      const coverImg = formatImageUrl(gymToEdit.image) || 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png';
+      setEditPrimaryImage(coverImg);
+
+      const rawGallery = gymToEdit.gallery || [];
+      const formattedGallery = Array.isArray(rawGallery) && rawGallery.length > 0
+        ? rawGallery.map((g: string) => formatImageUrl(g))
+        : [coverImg];
+      setEditGallery(formattedGallery);
+
+      const rawAmenities = gymToEdit.amenities || [];
+      setEditAmenities(Array.isArray(rawAmenities) && rawAmenities.length > 0 ? rawAmenities : ['sdfbg', 'wertyuytrew', 'AC', 'Personal Trainer', 'Parking', 'WiFi']);
       
-      const gymPlans = partnerGym.plans && partnerGym.plans.length > 0 
-        ? partnerGym.plans.map((p: any) => ({ name: p.name, price: String(p.price).replace(/[^0-9.]/g, '') }))
+      const gymPlans = gymToEdit.plans && gymToEdit.plans.length > 0 
+        ? gymToEdit.plans.map((p: any) => ({ name: p.name, price: String(p.price).replace(/[^0-9.]/g, '') }))
         : [
             { name: 'Monthly', price: '1' },
             { name: 'Weekly Pass', price: '499' },
@@ -1732,7 +1750,7 @@ export const OwnerDashboard: React.FC = () => {
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Primary Cover Image</Text>
                 {editPrimaryImage ? (
                   <View style={{ width: '100%', height: 140, borderRadius: 14, overflow: 'hidden', backgroundColor: '#F1F5F9', marginBottom: 8, position: 'relative' }}>
-                    <Image source={{ uri: editPrimaryImage }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <Image source={{ uri: formatImageUrl(editPrimaryImage) }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                     <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(15, 23, 42, 0.85)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                       <Text style={{ fontSize: 8.5, fontWeight: '900', color: '#FFFFFF', textTransform: 'uppercase' }}>CURRENT IMAGE</Text>
                     </View>
@@ -1756,7 +1774,7 @@ export const OwnerDashboard: React.FC = () => {
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {editGallery.map((img, idx) => (
                         <View key={idx} style={{ width: 100, height: 75, borderRadius: 10, overflow: 'hidden', position: 'relative' }}>
-                          <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                          <Image source={{ uri: formatImageUrl(img) }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
                           <View style={{ position: 'absolute', top: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.85)', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
                             <Text style={{ fontSize: 7, fontWeight: '900', color: '#FFFFFF' }}>CURRENT</Text>
                           </View>

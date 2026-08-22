@@ -117,6 +117,12 @@ export async function GET(req: Request) {
         const payRes = await query("SELECT COALESCE(SUM(amount), 0) as pending FROM payout_requests WHERE gym_id::text = $1::text AND status = 'pending'", [gym.id]);
         pendingPayout = parseFloat(payRes.rows[0]?.pending || '0');
       } catch (_) {}
+
+      // Fetch pricing plans
+      try {
+        const plansRes = await query("SELECT * FROM plans WHERE gym_id::text = $1::text ORDER BY id ASC", [gym.id]);
+        gym.plans = plansRes.rows || [];
+      } catch (_) {}
     }
 
     return NextResponse.json(
