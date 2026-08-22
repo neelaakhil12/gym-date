@@ -22,7 +22,8 @@ import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_CLIENT_ID = '341891746262-9phgg3534a11a05d16iuoejh6h48kgnq.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = '341891746262-9phgg3534a11a05d16iuoejh6h48kgnq.apps.googleusercontent.com';
+const GOOGLE_ANDROID_CLIENT_ID = '341891746262-gt148tchd2clskbe54mgelmjqbc8hski.apps.googleusercontent.com';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
 import { 
@@ -79,9 +80,9 @@ export const Onboarding: React.FC = () => {
   const [googleName, setGoogleName] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_CLIENT_ID,
-    androidClientId: GOOGLE_CLIENT_ID,
-    iosClientId: GOOGLE_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: GOOGLE_WEB_CLIENT_ID,
   });
 
   useEffect(() => {
