@@ -89,17 +89,23 @@ function MapContent() {
       const container = document.getElementById("map");
       if (!container) return;
 
-      // Reset existing map container if re-rendering
+      // Clean up previous instance if any
       (container as any)._leaflet_id = null;
+      container.innerHTML = "";
 
-      const map = L.map("map", { zoomControl: false }).setView([userLat, userLng], 13);
+      // Initialize map without external link controls
+      const map = L.map("map", { 
+        zoomControl: true, 
+        attributionControl: false,
+        dragging: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        scrollWheelZoom: true,
+      }).setView([userLat, userLng], 14);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: "© OpenStreetMap",
       }).addTo(map);
-
-      L.control.zoom({ position: "bottomright" }).addTo(map);
 
       // User location marker
       const userIcon = L.divIcon({
@@ -109,7 +115,7 @@ function MapContent() {
         iconAnchor: [14, 14],
       });
       const userMarker = L.marker([userLat, userLng], { icon: userIcon }).addTo(map)
-        .bindPopup('<b style="font-size:13px;color:#0F172A;">📍 Your Pinned Location</b>');
+        .bindPopup('<div style="font-family:sans-serif;font-size:12px;font-weight:700;color:#0F172A;text-align:center;">📍 Your Pinned Location</div>');
 
       const allMarkers = [userMarker];
 
@@ -120,6 +126,7 @@ function MapContent() {
       });
 
       filtered.forEach((g) => {
+        const distKm = haversineKm(userLat, userLng, g.latitude, g.longitude).toFixed(1);
         const gymIcon = L.divIcon({
           className: "",
           html: `<div style="background:#10B981;color:#fff;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:800;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.25);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px;">🏋️ ₹${g.pricePerDay}/d</div>`,
@@ -131,8 +138,8 @@ function MapContent() {
 
         const popupContent = `
           <div style="text-align:center;min-width:160px;font-family:sans-serif;padding:4px;">
-            <div style="font-size:14px;font-weight:800;color:#0F172A;margin-bottom:2px;">${g.name}</div>
-            <div style="font-size:12px;font-weight:700;color:#10B981;margin-bottom:8px;">₹${g.pricePerDay}/day • ${g.rating} ★</div>
+            <div style="font-size:13px;font-weight:800;color:#0F172A;margin-bottom:2px;">${g.name}</div>
+            <div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:4px;">₹${g.pricePerDay}/day • ${g.rating} ★ (${distKm} km away)</div>
             <button 
               id="gym-btn-${g.id}"
               style="background:#FF0000;color:#fff;border:none;padding:8px 14px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;width:100%;"
@@ -147,7 +154,9 @@ function MapContent() {
         marker.on("popupopen", () => {
           const btn = document.getElementById(`gym-btn-${g.id}`);
           if (btn) {
-            btn.onclick = () => {
+            btn.onclick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
               if ((window as any).ReactNativeWebView?.postMessage) {
                 (window as any).ReactNativeWebView.postMessage(
                   JSON.stringify({ type: "OPEN_GYM", id: g.id })
@@ -165,12 +174,12 @@ function MapContent() {
       if (allMarkers.length > 1) {
         const group = new L.featureGroup(allMarkers);
         map.fitBounds(group.getBounds().pad(0.2));
+      } else {
+        map.setView([userLat, userLng], 14);
       }
     }
 
-    return () => {
-      // cleanup
-    };
+    return () => {};
   }, [loading, gyms, userLat, userLng, radius]);
 
   return (
@@ -180,7 +189,7 @@ function MapContent() {
           <span style={{ fontSize: 13, fontWeight: 700, color: "#64748B" }}>Loading live map...</span>
         </div>
       )}
-      <div id="map" style={{ width: "100%", height: "100%", minHeight: "380px" }} />
+      <div id="map" style={{ width: "100%", height: "100%", minHeight: "380px", touchAction: "none" }} />
     </div>
   );
 }

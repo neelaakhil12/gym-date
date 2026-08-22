@@ -69,28 +69,27 @@ export const HomeDashboard: React.FC = () => {
     }
   }, []);
 
-  // Compute real distance for a gym using userCoords
-  const getGymDistance = (gym: Gym): string => {
-    if (
-      userCoords &&
-      gym.coordinates?.lat && gym.coordinates?.lng &&
-      gym.coordinates.lat !== 0 && gym.coordinates.lng !== 0
-    ) {
-      const km = haversineKm(userCoords.lat, userCoords.lng, gym.coordinates.lat, gym.coordinates.lng);
-      return km >= 100 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
+  // Effective user GPS coordinates (with profile fallback)
+  const effectiveUserCoords = React.useMemo(() => {
+    if (userCoords?.lat && userCoords?.lng) return userCoords;
+    if (userProfile.latitude && userProfile.longitude) {
+      return { lat: userProfile.latitude, lng: userProfile.longitude };
     }
-    return '-- km';
+    return { lat: 17.385044, lng: 78.486671 };
+  }, [userCoords, userProfile.latitude, userProfile.longitude]);
+
+  // Compute real distance for a gym using effectiveUserCoords
+  const getGymDistance = (gym: Gym): string => {
+    const gLat = gym.coordinates?.lat || 17.3208917;
+    const gLng = gym.coordinates?.lng || 78.562233;
+    const km = haversineKm(effectiveUserCoords.lat, effectiveUserCoords.lng, gLat, gLng);
+    return km >= 100 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
   };
 
   const getGymDistanceNum = (gym: Gym): number => {
-    if (
-      userCoords &&
-      gym.coordinates?.lat && gym.coordinates?.lng &&
-      gym.coordinates.lat !== 0 && gym.coordinates.lng !== 0
-    ) {
-      return haversineKm(userCoords.lat, userCoords.lng, gym.coordinates.lat, gym.coordinates.lng);
-    }
-    return 9999;
+    const gLat = gym.coordinates?.lat || 17.3208917;
+    const gLng = gym.coordinates?.lng || 78.562233;
+    return haversineKm(effectiveUserCoords.lat, effectiveUserCoords.lng, gLat, gLng);
   };
 
   // Filter gyms by selected radius
@@ -287,7 +286,7 @@ export const HomeDashboard: React.FC = () => {
   };
 
   const pinnedLocationTitle = userProfile.address || 'Hyderabad';
-  const mapUri = `https://gymdate.in/map-view?lat=${userCoords?.lat || userProfile.latitude || 17.385044}&lng=${userCoords?.lng || userProfile.longitude || 78.486671}&radius=${selectedRadius}`;
+  const mapUri = `https://gymdate.in/map-view?lat=${effectiveUserCoords.lat}&lng=${effectiveUserCoords.lng}&radius=${selectedRadius}`;
 
   return (
     <ScrollView style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} contentContainerStyle={{ paddingBottom: 130 }}>
@@ -455,7 +454,7 @@ export const HomeDashboard: React.FC = () => {
               isLight && { color: '#475569' },
               viewMode === 'list' && styles.viewSwitchTextActive
             ]}>
-              📋 List View
+              📋 List View ({filteredGyms.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -479,9 +478,16 @@ export const HomeDashboard: React.FC = () => {
           ) : (
             <View style={{ height: 380, width: '100%', borderRadius: 20, overflow: 'hidden', backgroundColor: isLight ? '#F1F5F9' : '#0F172A' }}>
               <WebView
-                key={mapUri}
+                key={`${selectedRadius}-${effectiveUserCoords.lat}-${effectiveUserCoords.lng}`}
                 originWhitelist={['*']}
                 source={{ uri: mapUri }}
+                onShouldStartLoadWithRequest={(request) => {
+                  // Strictly allow only /map-view. Block external URL navigation in app!
+                  if (request.url.includes('/map-view') || request.url.startsWith('data:') || request.url.startsWith('about:blank')) {
+                    return true;
+                  }
+                  return false;
+                }}
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
@@ -493,6 +499,7 @@ export const HomeDashboard: React.FC = () => {
                 style={{ flex: 1, backgroundColor: 'transparent' }}
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
+                nestedScrollEnabled={true}
                 scrollEnabled={false}
               />
             </View>
@@ -511,33 +518,51 @@ export const HomeDashboard: React.FC = () => {
       ) : (
         /* List View Mode */
         <View style={styles.listViewContainer}>
-          {filteredGyms.map((gym) => (
-            <TouchableOpacity 
-              key={gym.id}
-              onPress={() => handleGymClick(gym.id)}
-              style={[styles.listCard, isLight && { backgroundColor: '#ffffff', borderColor: '#E2E8F0' }]}
-              activeOpacity={0.88}
-            >
-              <Image source={{ uri: gym.image }} style={styles.listCardImg} />
-              <View style={styles.listCardContent}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Text style={[styles.listCardTitle, isLight && { color: '#0F172A' }]} numberOfLines={1}>{gym.name}</Text>
-                  <Text style={styles.listCardPrice}>₹{gym.pricePerDay}<Text style={{ fontSize: 9, color: '#64748B' }}>/d</Text></Text>
-                </View>
-                <Text style={[styles.listCardLoc, isLight && { color: '#64748B' }]} numberOfLines={1}>{gym.location}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Star size={11} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginRight: 3 }} />
-                    <Text style={{ color: isLight ? '#0F172A' : '#ffffff', fontSize: 10, fontWeight: '800' }}>{gym.rating}</Text>
+          {filteredGyms.length === 0 ? (
+            <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 24, marginBottom: 8 }}>📍</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', textAlign: 'center', marginBottom: 4 }}>
+                No Gyms Within {selectedRadius} km
+              </Text>
+              <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', marginBottom: 12 }}>
+                Try selecting 5 km, 10 km, or All to view nearby gyms.
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedRadius('all')}
+                style={{ backgroundColor: THEME.COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 }}
+              >
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>View All Gyms</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            filteredGyms.map((gym) => (
+              <TouchableOpacity 
+                key={gym.id}
+                onPress={() => handleGymClick(gym.id)}
+                style={[styles.listCard, isLight && { backgroundColor: '#ffffff', borderColor: '#E2E8F0' }]}
+                activeOpacity={0.88}
+              >
+                <Image source={{ uri: gym.image }} style={styles.listCardImg} />
+                <View style={styles.listCardContent}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={[styles.listCardTitle, isLight && { color: '#0F172A' }]} numberOfLines={1}>
+                      {gym.name}
+                    </Text>
+                    <Text style={styles.listCardPrice}>₹{gym.pricePerDay}/d</Text>
                   </View>
-                  <View style={styles.listCardDistBadge}>
-                    <MapPin size={9} color="#10B981" style={{ marginRight: 2 }} />
-                    <Text style={styles.listCardDistText}>{getGymDistance(gym)}</Text>
+                  <Text style={[styles.listCardLoc, isLight && { color: '#64748B' }]} numberOfLines={1}>
+                    {gym.location}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                    <Text style={{ fontSize: 10, color: '#F59E0B', fontWeight: '700' }}>★ {gym.rating} ({gym.reviewsCount})</Text>
+                    <View style={styles.listCardDistBadge}>
+                      <Text style={styles.listCardDistText}>📍 {getGymDistance(gym)}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       )}
 
