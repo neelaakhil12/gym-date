@@ -1704,9 +1704,23 @@ export const OwnerDashboard: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 }}>
                 {editPlans.map((plan, idx) => (
-                  <View key={idx} style={{ width: '48%', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', position: 'relative' }}>
+                  <View 
+                    key={idx} 
+                    style={{ 
+                      width: '48.5%', 
+                      backgroundColor: '#F8FAFC', 
+                      padding: 12, 
+                      borderRadius: 14, 
+                      borderWidth: 1, 
+                      borderColor: '#E2E8F0', 
+                      position: 'relative',
+                      ...Platform.select({
+                        web: { boxSizing: 'border-box' }
+                      })
+                    }}
+                  >
                     <TouchableOpacity 
                       onPress={() => handleRemovePlan(idx)}
                       style={{ position: 'absolute', top: 8, right: 8, padding: 2 }}
