@@ -395,8 +395,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
             pricePerDay: price,
             location: gym.location,
             coordinates: { 
-              lat: (gym as any).lat ? parseFloat((gym as any).lat) : 0, 
-              lng: (gym as any).lng ? parseFloat((gym as any).lng) : 0 
+              lat: (gym as any).lat ? parseFloat((gym as any).lat) : ((gym as any).latitude ? parseFloat((gym as any).latitude) : 0), 
+              lng: (gym as any).lng ? parseFloat((gym as any).lng) : ((gym as any).longitude ? parseFloat((gym as any).longitude) : 0) 
             },
             facilities: gym.amenities || ['Locker Room', 'Air Conditioned', 'Free Weights'],
             image: gym.image || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
