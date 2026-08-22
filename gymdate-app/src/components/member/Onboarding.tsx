@@ -17,7 +17,12 @@ import {
   Modal
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const GOOGLE_CLIENT_ID = '341891746262-9phgg3534a11a05d16iuoejh6h48kgnq.apps.googleusercontent.com';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
 import { 
@@ -73,6 +78,60 @@ export const Onboarding: React.FC = () => {
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_CLIENT_ID,
+    androidClientId: GOOGLE_CLIENT_ID,
+    iosClientId: GOOGLE_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const { authentication } = googleResponse;
+      const fetchUserInfo = async () => {
+        setIsGoogleLoading(true);
+        try {
+          const userRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+            headers: { Authorization: `Bearer ${authentication?.accessToken}` },
+          });
+          const googleUser = await userRes.json();
+          if (googleUser?.email) {
+            const cleanEmail = googleUser.email.toLowerCase();
+            const cleanName = googleUser.name || 'Gym Member';
+
+            const syncedUser = await apiService.syncProfile({
+              email: cleanEmail,
+              name: cleanName,
+              phone: loginPhone.trim() || undefined,
+            });
+
+            if (referralCodeInput.trim()) {
+              try {
+                await apiService.applyReferral(cleanEmail, referralCodeInput.trim());
+              } catch (e) {
+                console.warn('[Referral Apply] Error:', e);
+              }
+            }
+
+            setLoginInput(cleanEmail);
+            setUserProfile(prev => ({
+              ...prev,
+              name: syncedUser?.full_name || cleanName,
+              email: cleanEmail,
+              phone: syncedUser?.phone || loginPhone.trim() || '',
+            }));
+            setIsLoggedIn(true);
+            setActiveScreen('home');
+          }
+        } catch (err: any) {
+          console.warn('[Google Auth] fetch user error:', err);
+          showAlert('Google Login', 'Could not complete Google authentication.');
+        } finally {
+          setIsGoogleLoading(false);
+        }
+      };
+      fetchUserInfo();
+    }
+  }, [googleResponse]);
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -399,10 +458,21 @@ export const Onboarding: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    setGoogleEmail(loginInput.trim() || '');
-    setGoogleName(loginName.trim() || '');
-    setShowGoogleModal(true);
+  const handleGoogleLogin = async () => {
+    try {
+      if (promptGoogleAsync) {
+        await promptGoogleAsync();
+      } else {
+        setGoogleEmail(loginInput.trim() || '');
+        setGoogleName(loginName.trim() || '');
+        setShowGoogleModal(true);
+      }
+    } catch (err: any) {
+      console.warn('Google prompt error:', err);
+      setGoogleEmail(loginInput.trim() || '');
+      setGoogleName(loginName.trim() || '');
+      setShowGoogleModal(true);
+    }
   };
 
   const handleGoogleSubmit = async () => {
