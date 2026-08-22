@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -7,7 +7,8 @@ import {
   ScrollView, 
   Image, 
   Alert,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { useGymDate, Gym } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
@@ -18,10 +19,14 @@ import {
   Star, 
   Bell, 
   ChevronRight,
-  Menu 
+  Menu,
+  Navigation,
+  Compass,
+  Layers
 } from 'lucide-react-native';
+import { getCurrentLocation, reverseGeocode } from '../../utils/location';
 
-// ── Haversine distance (same as website & NearbyGyms) ─────────────────────
+// ── Haversine distance helper ─────────────────────
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -38,14 +43,35 @@ export const HomeDashboard: React.FC = () => {
     setActiveScreen, 
     setSelectedGymId, 
     userProfile, 
+    setUserProfile,
     gyms,
     unreadNotificationsCount,
     themeMode,
     userCoords,
+    setUserCoords,
   } = useGymDate();
   const { isDark, bg } = useTheme();
 
-  // Compute real distance for a gym using global userCoords (persists across navigation)
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [selectedRadius, setSelectedRadius] = useState<number | 'all'>('all');
+  const [isLocating, setIsLocating] = useState(false);
+
+  const isLight = themeMode === 'light';
+
+  // Listen for gym card clicks inside Leaflet iframe on web
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleIframeMessage = (e: MessageEvent) => {
+        if (e.data && e.data.type === 'OPEN_GYM' && e.data.id) {
+          handleGymClick(e.data.id);
+        }
+      };
+      window.addEventListener('message', handleIframeMessage);
+      return () => window.removeEventListener('message', handleIframeMessage);
+    }
+  }, []);
+
+  // Compute real distance for a gym using userCoords
   const getGymDistance = (gym: Gym): string => {
     if (
       userCoords &&
@@ -56,6 +82,47 @@ export const HomeDashboard: React.FC = () => {
       return km >= 100 ? `${Math.round(km)} km` : `${km.toFixed(1)} km`;
     }
     return '-- km';
+  };
+
+  const getGymDistanceNum = (gym: Gym): number => {
+    if (
+      userCoords &&
+      gym.coordinates?.lat && gym.coordinates?.lng &&
+      gym.coordinates.lat !== 0 && gym.coordinates.lng !== 0
+    ) {
+      return haversineKm(userCoords.lat, userCoords.lng, gym.coordinates.lat, gym.coordinates.lng);
+    }
+    return 9999;
+  };
+
+  // Filter gyms by selected radius
+  const filteredGyms = gyms.filter(gym => {
+    if (selectedRadius === 'all') return true;
+    const dist = getGymDistanceNum(gym);
+    return dist <= selectedRadius;
+  });
+
+  const handleLocateUser = async () => {
+    setIsLocating(true);
+    try {
+      const coords = await getCurrentLocation();
+      setUserCoords({ lat: coords.latitude, lng: coords.longitude });
+      const geo = await reverseGeocode(coords.latitude, coords.longitude);
+      setUserProfile(prev => ({
+        ...prev,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        address: geo.address || geo.city || prev.address
+      }));
+    } catch (err: any) {
+      if (Platform.OS === 'web') {
+        window.alert(err.message || 'Could not fetch current GPS location.');
+      } else {
+        Alert.alert('Location Error', err.message || 'Could not fetch current GPS location.');
+      }
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   const handleGymClick = (id: string) => {
@@ -79,10 +146,125 @@ export const HomeDashboard: React.FC = () => {
   };
 
   const initials = getInitials(userProfile.name);
-  const isLight = themeMode === 'light';
+
+  // Generate interactive Leaflet Map HTML
+  const generateMapHtml = () => {
+    const lat = userCoords?.lat || userProfile.latitude || 17.385044;
+    const lng = userCoords?.lng || userProfile.longitude || 78.486671;
+
+    const gymsPayload = filteredGyms.map(g => ({
+      id: g.id,
+      name: (g.name || 'Gym').replace(/'/g, "\\'"),
+      price: g.pricePerDay || 299,
+      rating: g.rating || 4.8,
+      lat: g.coordinates?.lat || lat + 0.01,
+      lng: g.coordinates?.lng || lng + 0.01,
+    }));
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body, html, #map { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #e2e8f0; }
+          
+          .user-pulse-marker {
+            width: 28px; height: 28px; background: #EF4444; border: 3px solid #ffffff;
+            border-radius: 50%; box-shadow: 0 0 14px rgba(239, 68, 68, 0.7);
+            display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px;
+            animation: userPulse 1.8s infinite;
+          }
+          @keyframes userPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+          }
+          
+          .gym-price-pill {
+            background: #059669; color: #ffffff; padding: 5px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 800; border: 2px solid #ffffff;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); white-space: nowrap;
+            cursor: pointer; display: flex; align-items: center; gap: 4px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .gym-price-pill:hover { transform: scale(1.12); background: #047857; }
+          
+          .leaflet-popup-content-wrapper {
+            border-radius: 18px; padding: 4px; box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            background: #ffffff; border: 1px solid #e2e8f0;
+          }
+          .leaflet-popup-content { margin: 10px; }
+          .gym-popup-card { text-align: center; min-width: 155px; }
+          .gym-popup-title { font-size: 14px; font-weight: 800; color: #0F172A; margin-bottom: 2px; }
+          .gym-popup-rate { font-size: 12px; font-weight: 700; color: #059669; margin-bottom: 10px; }
+          .gym-popup-btn {
+            background: #EF4444; color: #ffffff; border: none; padding: 8px 14px;
+            border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer;
+            width: 100%; transition: opacity 0.2s;
+          }
+          .gym-popup-btn:hover { opacity: 0.9; }
+        </style>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          const userLat = ${lat};
+          const userLng = ${lng};
+          const map = L.map('map', { zoomControl: false }).setView([userLat, userLng], 13);
+          
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
+
+          L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+          // Pinned User Location
+          const userIcon = L.divIcon({
+            className: '',
+            html: '<div class="user-pulse-marker">🎯</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+          L.marker([userLat, userLng], { icon: userIcon }).addTo(map)
+            .bindPopup('<b style="font-size:12px;">📍 Your Pinned Location</b>');
+
+          // Pinned Gym Locations
+          const gymsData = ${JSON.stringify(gymsPayload)};
+          gymsData.forEach(g => {
+            if (g.lat && g.lng) {
+              const gymIcon = L.divIcon({
+                className: '',
+                html: '<div class="gym-price-pill">🏋️ ₹' + g.price + '/d</div>',
+                iconSize: [88, 28],
+                iconAnchor: [44, 14]
+              });
+              const marker = L.marker([g.lat, g.lng], { icon: gymIcon }).addTo(map);
+              marker.bindPopup(
+                '<div class="gym-popup-card">' +
+                  '<div class="gym-popup-title">' + g.name + '</div>' +
+                  '<div class="gym-popup-rate">₹' + g.price + '/day • ' + g.rating + ' ★</div>' +
+                  '<button class="gym-popup-btn" onclick="window.parent.postMessage({ type: \\'OPEN_GYM\\', id: \\'' + g.id + '\\' }, \\'*\\')">View Passes & Gym →</button>' +
+                '</div>'
+              );
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `;
+  };
+
+  const pinnedLocationTitle = userProfile.address || 'Hyderabad';
+  const pinnedCoordsText = userCoords ? `${userCoords.lat.toFixed(3)}, ${userCoords.lng.toFixed(3)}` : '17.385, 78.486';
 
   return (
-    <ScrollView style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} contentContainerStyle={{ paddingBottom: 130 }}>
+    <ScrollView style={[styles.container, isLight && { backgroundColor: '#0B0F17' }]} contentContainerStyle={{ paddingBottom: 130 }}>
       {/* 1. Header Toolbar */}
       <View style={styles.headerBar}>
         <View style={styles.profileRow}>
@@ -96,17 +278,17 @@ export const HomeDashboard: React.FC = () => {
             )}
           </TouchableOpacity>
           <View style={{ flexShrink: 1 }}>
-            <Text style={styles.welcomeText}>Welcome back,</Text>
-            <Text style={[styles.nameText, isLight && { color: '#111827' }]} numberOfLines={1} ellipsizeMode="tail">{userProfile.name}</Text>
+            <Text style={styles.welcomeText}>Hello, {userProfile.name?.split(' ')[0] || 'User'} 👋</Text>
+            <Text style={styles.subGreetingText} numberOfLines={1}>Find nearby premium gyms & passes</Text>
           </View>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity 
             onPress={() => setActiveScreen('notifications')} 
-            style={[styles.notificationBtn, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }, { marginRight: 8 }]}
+            style={[styles.notificationBtn, { marginRight: 8 }]}
           >
-            <Bell size={16} color={isLight ? '#374151' : '#ffffff'} />
+            <Bell size={16} color="#ffffff" />
             {unreadNotificationsCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>{unreadNotificationsCount}</Text>
@@ -116,106 +298,209 @@ export const HomeDashboard: React.FC = () => {
 
           <TouchableOpacity 
             onPress={() => setActiveScreen('profile')} 
-            style={[styles.notificationBtn, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}
+            style={styles.notificationBtn}
           >
-            <Menu size={16} color={isLight ? '#374151' : '#ffffff'} />
+            <Menu size={16} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 2. Unified Search */}
+      {/* 2. Pinned Location Card (Matching Plan2Park Format) */}
+      <View style={styles.pinnedSection}>
+        <View style={styles.pinnedCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                <MapPin size={12} color="#EF4444" />
+                <Text style={styles.pinnedTag}>SEARCH NEAR PINNED LOCATION</Text>
+              </View>
+              <Text style={styles.pinnedAddress} numberOfLines={1}>
+                {pinnedLocationTitle} ({pinnedCoordsText})
+              </Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.changePinBtn} 
+              onPress={handleLocateUser}
+              disabled={isLocating}
+              activeOpacity={0.8}
+            >
+              {isLocating ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text style={styles.changePinBtnText}>Change Pin 🎯</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* 3. Search Bar */}
       <View style={styles.searchContainer}>
         <TouchableOpacity 
           onPress={() => setActiveScreen('discovery')}
-          style={[styles.searchBar, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}
+          style={styles.searchBar}
           activeOpacity={0.8}
         >
-          <Search size={14} color={isLight ? '#6B7280' : THEME.COLORS.textMuted} style={{ marginRight: 8 }} />
-          <Text style={[styles.searchBarText, isLight && { color: '#4B5563' }]}>Search premium gyms, fitness classes...</Text>
+          <Search size={15} color="#94A3B8" style={{ marginRight: 10 }} />
+          <Text style={styles.searchBarText}>Search specific gym, area, or landmark...</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 3. Gym Image Banners Carousel */}
-      <View style={styles.videoSectionContainer}>
-        <View style={styles.videoSectionHeader}>
-          <Text style={[styles.videoSectionTitle, isLight && { color: '#111827' }]}>Featured Gym Environments</Text>
-          <Text style={styles.videoSectionSub}>Explore cinematic views of premium workout vibes.</Text>
+      {/* 4. Radius Distance Filter Pills */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.radiusScroll}>
+        {[
+          { label: '🌐 All', value: 'all' },
+          { label: '🎯 1 km', value: 1 },
+          { label: '🎯 5 km', value: 5 },
+          { label: '🎯 10 km', value: 10 },
+          { label: '🎯 25 km', value: 25 },
+        ].map((item, idx) => {
+          const isSelected = selectedRadius === item.value;
+          return (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => setSelectedRadius(item.value as any)}
+              style={[styles.radiusChip, isSelected && styles.radiusChipActive]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.radiusChipText, isSelected && styles.radiusChipTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* 5. Demand Heat Map Banner & View Switcher (Live Map View vs List View) */}
+      <View style={styles.mapControlHeader}>
+        {/* Heat Map Legend Banner */}
+        <View style={styles.heatMapBanner}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+            <Text style={styles.heatMapTitle}>🔥 Gym Demand Heat Map</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.heatMapStatus}><Text style={{ color: '#10B981', fontSize: 13 }}>●</Text> Easy</Text>
+              <Text style={styles.heatMapStatus}><Text style={{ color: '#F59E0B', fontSize: 13 }}>●</Text> Moderate</Text>
+              <Text style={styles.heatMapStatus}><Text style={{ color: '#EF4444', fontSize: 13 }}>●</Text> Full</Text>
+            </View>
+          </View>
+          <Text style={styles.heatMapSubtitle}>Helps users decide workout rush & pass booking before traveling.</Text>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoScroll}>
-          {[
-            {
-              id: 'gym-1',
-              name: "Gold's Gym Elite",
-              location: "Bandra West, Mumbai",
-              image: require('../../../assets/gym_slide_reception.jpg'),
-              tag: "PREMIUM LOUNGE"
-            },
-            {
-              id: 'gym-2',
-              name: "UFC Gym & Octagon Club",
-              location: "Indiranagar, Bangalore",
-              image: require('../../../assets/gym_slide_floor.jpg'),
-              tag: "TRAINING FLOOR"
-            },
-            {
-              id: 'gym-3',
-              name: "Cult.fit Premium Center",
-              location: "Gachibowli, Hyderabad",
-              image: require('../../../assets/gym_slide_yoga.jpg'),
-              tag: "MIND & BODY"
-            },
-            {
-              id: 'gym-1',
-              name: "Gold's Gym Elite",
-              location: "Bandra West, Mumbai",
-              image: require('../../../assets/gym_slide_cardio.jpg'),
-              tag: "CARDIO ZONE"
-            },
-            {
-              id: 'gym-3',
-              name: "Cult.fit Premium Center",
-              location: "Gachibowli, Hyderabad",
-              image: require('../../../assets/gym_slide_crossfit.jpg'),
-              tag: "CROSSFIT RIG"
-            }
-          ].map((slide, idx) => (
-            <TouchableOpacity 
-              key={idx}
-              onPress={() => handleGymClick(slide.id)}
-              style={styles.videoCard}
-              activeOpacity={0.9}
-            >
-              <Image
-                source={slide.image}
-                style={styles.videoStyle}
-              />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* View Switcher Toggle */}
+        <View style={styles.viewSwitcherRow}>
+          <TouchableOpacity
+            onPress={() => setViewMode('map')}
+            style={[styles.viewSwitchBtn, viewMode === 'map' && styles.viewSwitchBtnActive]}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.viewSwitchText, viewMode === 'map' && styles.viewSwitchTextActive]}>
+              🗺️ Live Map View ({filteredGyms.length})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setViewMode('list')}
+            style={[styles.viewSwitchBtn, viewMode === 'list' && styles.viewSwitchBtnActive]}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.viewSwitchText, viewMode === 'list' && styles.viewSwitchTextActive]}>
+              📋 List View
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* 4. Horizontal Categories Row */}
+      {/* 6. Live Interactive Map or List View */}
+      {viewMode === 'map' ? (
+        <View style={styles.mapContainer}>
+          {Platform.OS === 'web' ? (
+            <iframe
+              id="gymdate-leaflet-map"
+              srcDoc={generateMapHtml()}
+              style={{
+                width: '100%',
+                height: 380,
+                border: 'none',
+                borderRadius: 20,
+                overflow: 'hidden'
+              }}
+            />
+          ) : (
+            <View style={{ height: 320, backgroundColor: '#1E293B', borderRadius: 20, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <MapPin size={32} color={THEME.COLORS.primary} style={{ marginBottom: 8 }} />
+              <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 13 }}>Nearby Pinned Gyms ({filteredGyms.length})</Text>
+              <Text style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center', marginTop: 4 }}>
+                Explore live gym pins around {pinnedLocationTitle}
+              </Text>
+            </View>
+          )}
+
+          {/* Overlay Button: View All Gyms */}
+          <TouchableOpacity
+            style={styles.floatingViewAllBtn}
+            onPress={() => setActiveScreen('discovery')}
+            activeOpacity={0.9}
+          >
+            <Search size={13} color="#ffffff" style={{ marginRight: 6 }} />
+            <Text style={styles.floatingViewAllText}>View All Gyms ({gyms.length})</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* List View Mode */
+        <View style={styles.listViewContainer}>
+          {filteredGyms.map((gym) => (
+            <TouchableOpacity 
+              key={gym.id}
+              onPress={() => handleGymClick(gym.id)}
+              style={styles.listCard}
+              activeOpacity={0.88}
+            >
+              <Image source={{ uri: gym.image }} style={styles.listCardImg} />
+              <View style={styles.listCardContent}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Text style={styles.listCardTitle} numberOfLines={1}>{gym.name}</Text>
+                  <Text style={styles.listCardPrice}>₹{gym.pricePerDay}<Text style={{ fontSize: 9, color: '#94A3B8' }}>/d</Text></Text>
+                </View>
+                <Text style={styles.listCardLoc} numberOfLines={1}>{gym.location}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Star size={11} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginRight: 3 }} />
+                    <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>{gym.rating}</Text>
+                  </View>
+                  <View style={styles.listCardDistBadge}>
+                    <MapPin size={9} color="#10B981" style={{ marginRight: 2 }} />
+                    <Text style={styles.listCardDistText}>{getGymDistance(gym)}</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* 7. Horizontal Categories Row */}
       <View style={styles.categoriesSection}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
           {categories.map((cat, i) => (
             <TouchableOpacity 
               key={i} 
               onPress={() => setActiveScreen('discovery')}
-              style={[styles.categoryChip, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}
+              style={styles.categoryChip}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.categoryChipText, isLight && { color: '#4B5563' }]}>{cat.icon} {cat.name}</Text>
+              <Text style={styles.categoryChipText}>{cat.icon} {cat.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* 5. Horizontal Nearby Gyms list */}
+      {/* 8. Horizontal Nearby Premium Gyms Carousel */}
       <View style={styles.sectionHeaderRow}>
-        <Text style={[styles.sectionTitle, isLight && { color: '#111827' }]}>Nearby Premium Gyms</Text>
+        <Text style={styles.sectionTitle}>Nearby Premium Gyms</Text>
         <TouchableOpacity onPress={() => setActiveScreen('discovery')} style={styles.seeAllBtn}>
           <Text style={styles.seeAllText}>See All</Text>
-          <ChevronRight size={10} color={THEME.COLORS.primary} style={{ marginLeft: 2 }} />
+          <ChevronRight size={11} color={THEME.COLORS.primary} style={{ marginLeft: 2 }} />
         </TouchableOpacity>
       </View>
 
@@ -224,7 +509,7 @@ export const HomeDashboard: React.FC = () => {
           <TouchableOpacity 
             key={gym.id}
             onPress={() => handleGymClick(gym.id)}
-            style={[styles.gymCard, isLight && { backgroundColor: '#ffffff', borderColor: '#E5E7EB' }]}
+            style={styles.gymCard}
             activeOpacity={0.9}
           >
             <Image source={{ uri: gym.image }} style={styles.gymImg} />
@@ -237,8 +522,8 @@ export const HomeDashboard: React.FC = () => {
             </View>
 
             <View style={styles.gymInfo}>
-              <Text style={[styles.gymName, isLight && { color: '#1F2937' }]} numberOfLines={1}>{gym.name}</Text>
-              <Text style={[styles.gymLoc, isLight && { color: '#6B7280' }]} numberOfLines={1}>{gym.location}</Text>
+              <Text style={styles.gymName} numberOfLines={1}>{gym.name}</Text>
+              <Text style={styles.gymLoc} numberOfLines={1}>{gym.location}</Text>
               
               <View style={styles.ratingRow}>
                 <Star size={10} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginRight: 2 }} />
@@ -256,6 +541,7 @@ export const HomeDashboard: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#0B0F17',
   },
   headerBar: {
     flexDirection: 'row',
@@ -273,10 +559,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
     borderColor: THEME.COLORS.primary,
     overflow: 'hidden',
   },
@@ -286,23 +572,22 @@ const styles = StyleSheet.create({
     objectFit: 'cover',
   },
   welcomeText: {
-    fontSize: 9,
-    color: THEME.COLORS.textMuted,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  nameText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 14,
     color: '#ffffff',
-    
+    fontWeight: '800',
+  },
+  subGreetingText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#10B981',
+    marginTop: 1,
   },
   notificationBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -324,101 +609,224 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
   },
+  pinnedSection: {
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 4,
+  },
+  pinnedCard: {
+    backgroundColor: 'rgba(16, 185, 129, 0.06)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  pinnedTag: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#10B981',
+    letterSpacing: 0.5,
+  },
+  pinnedAddress: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginTop: 1,
+  },
+  changePinBtn: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  changePinBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
   searchContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 44,
+  },
+  searchBarText: {
+    color: '#94A3B8',
+    fontSize: 11,
+  },
+  radiusScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+    paddingVertical: 4,
+  },
+  radiusChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+  },
+  radiusChipActive: {
+    backgroundColor: '#059669',
+    borderColor: '#10B981',
+  },
+  radiusChipText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  radiusChipTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  mapControlHeader: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  heatMapBanner: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+  heatMapTitle: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  heatMapStatus: {
+    color: '#94A3B8',
+    fontSize: 9.5,
+    fontWeight: '700',
+  },
+  heatMapSubtitle: {
+    color: '#64748B',
+    fontSize: 9,
+    marginTop: 1,
+  },
+  viewSwitcherRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  viewSwitchBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewSwitchBtnActive: {
+    backgroundColor: '#059669',
+    borderColor: '#10B981',
+  },
+  viewSwitchText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  viewSwitchTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  mapContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 12,
+    position: 'relative',
+  },
+  floatingViewAllBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 32,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  floatingViewAllText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  listViewContainer: {
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 12,
+  },
+  listCard: {
+    flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 46,
+    padding: 10,
+    alignItems: 'center',
   },
-  searchBarText: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 11,
+  listCardImg: {
+    width: 65,
+    height: 65,
+    borderRadius: 12,
+    objectFit: 'cover',
   },
-  videoSectionContainer: {
-    paddingVertical: 10,
+  listCardContent: {
+    flex: 1,
+    marginLeft: 12,
   },
-  videoSectionHeader: {
-    paddingHorizontal: 20,
-    marginBottom: 10,
-  },
-  videoSectionTitle: {
-    color: '#ffffff',
-    
+  listCardTitle: {
+    fontSize: 12,
     fontWeight: '800',
-    fontSize: 13,
-    letterSpacing: 0.5,
+    color: '#ffffff',
+    flex: 1,
+    marginRight: 6,
   },
-  videoSectionSub: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 9,
+  listCardPrice: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#10B981',
+  },
+  listCardLoc: {
+    fontSize: 9.5,
+    color: '#94A3B8',
     marginTop: 2,
   },
-  videoScroll: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  videoCard: {
-    width: 260,
-    height: 150,
-    borderRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#000000',
-    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
-  },
-  videoStyle: {
-    width: '100%',
-    height: '100%',
-  },
-  videoOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  },
-  videoContent: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    right: 12,
-  },
-  videoTagContainer: {
-    alignSelf: 'flex-start',
-    backgroundColor: THEME.COLORS.primary,
+  listCardDistBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
-    marginBottom: 6,
+    borderRadius: 6,
   },
-  videoTagText: {
-    color: '#ffffff',
-    fontSize: 7,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  videoGymName: {
-    color: '#ffffff',
+  listCardDistText: {
+    color: '#10B981',
+    fontSize: 9,
     fontWeight: '800',
-    fontSize: 12,
-    
-  },
-  videoGymLoc: {
-    color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 8.5,
-    marginTop: 1,
   },
   categoriesSection: {
-    paddingVertical: 10,
+    paddingVertical: 6,
   },
   categoryScroll: {
     paddingHorizontal: 20,
@@ -427,8 +835,8 @@ const styles = StyleSheet.create({
   categoryChip: {
     paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderRadius: 20,
   },
@@ -444,12 +852,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 12,
+    marginTop: 14,
+    marginBottom: 10,
   },
   sectionTitle: {
     color: '#ffffff',
-    
     fontWeight: '800',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -461,7 +868,7 @@ const styles = StyleSheet.create({
   seeAllText: {
     color: THEME.COLORS.primary,
     fontWeight: '800',
-    fontSize: 9,
+    fontSize: 9.5,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -541,101 +948,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     marginLeft: 3,
   },
-  challengeContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  challengeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 20,
-  },
-  challengeBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(254, 110, 0, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  challengeBadgeIcon: {
-    fontSize: 18,
-  },
-  challengeInfo: {
-    flex: 1,
-    marginLeft: 12,
-    marginRight: 8,
-  },
-  challengeLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: THEME.COLORS.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  challengeTitle: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 11,
-    marginTop: 1,
-  },
-  challengeDesc: {
-    color: THEME.COLORS.textMuted,
-    fontSize: 9,
-    marginTop: 1,
-  },
-  challengeBtn: {
-    backgroundColor: THEME.COLORS.secondary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  challengeBtnText: {
-    color: THEME.COLORS.textBlack,
-    fontWeight: '800',
-    fontSize: 9,
-    textTransform: 'uppercase',
-  },
-  coachesGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  coachCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    padding: 10,
-    borderRadius: 16,
-  },
-  coachAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    objectFit: 'cover',
-  },
-  coachInfo: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  coachName: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 10,
-  },
-  coachSpec: {
-    color: THEME.COLORS.primary,
-    fontSize: 8,
-    fontWeight: '600',
-    marginTop: 1,
-  },
   initialsAvatar: {
     backgroundColor: THEME.COLORS.primary,
     alignItems: 'center',
@@ -647,6 +959,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900',
-    
   }
 });
