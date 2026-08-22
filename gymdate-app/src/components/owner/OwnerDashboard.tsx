@@ -578,19 +578,6 @@ export const OwnerDashboard: React.FC = () => {
             <Text style={styles.pageTitle}>Bookings & Revenue</Text>
             <Text style={styles.pageSubtitle}>Live check-in history and revenue payouts breakdown.</Text>
 
-            {/* Metrics Row */}
-            <View style={styles.statsRow}>
-              <View style={styles.statMetricCard}>
-                <View style={styles.statMetricIconBoxGreen}>
-                  <DollarSign size={18} color="#059669" />
-                </View>
-                <Text style={styles.statMetricLabel}>Net Revenue</Text>
-                <Text style={styles.statMetricValGreen}>₹{liveStats.totalRevenue.toLocaleString()}</Text>
-                <Text style={styles.statMetricSub}>After 10% platform share</Text>
-              </View>
-
-              <View style={styles.statMetricCard}>
-                <View style={styles.statMetricIconBoxBlue}>
             {/* Stats Overview: EXACT 3 CARDS MATCHING WEBSITE */}
             <View style={styles.statsRowThree}>
               {/* 1. Total Revenue */}
