@@ -1058,71 +1058,186 @@ export const OwnerDashboard: React.FC = () => {
         )}
       </ScrollView>
 
-      {/* 📷 IN-FRAME MODAL: SCAN ENTRY QR TERMINAL */}
+      {/* 📷 IN-FRAME MODAL: SCAN ENTRY QR TERMINAL (CLONE OF WEBSITE /partner/scan) */}
       {showScanModal && (
         <View style={styles.inFrameModalOverlay}>
           <TouchableOpacity 
             style={styles.inFrameModalBackdrop} 
             activeOpacity={1} 
-            onPress={() => setShowScanModal(false)} 
+            onPress={() => { setShowScanModal(false); setScanResult(null); }} 
           />
-          <View style={styles.inFrameModalBox}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.inFrameModalBox, { maxWidth: 440, padding: 0, overflow: 'hidden' }]}>
+            
+            {/* Top Modal Navigation */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <QrCode size={18} color={THEME.COLORS.primary} />
-                <Text style={styles.modalTitle}>Scan Entry QR Pass</Text>
+                <QrCode size={20} color={THEME.COLORS.primary} />
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', textTransform: 'uppercase', letterSpacing: -0.3 }}>
+                  {activeGym?.name ? `${activeGym.name} Scanner` : 'Entry Scanner'}
+                </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowScanModal(false)} style={{ padding: 4 }}>
-                <X size={18} color="#64748B" />
+              <TouchableOpacity onPress={() => { setShowScanModal(false); setScanResult(null); }} style={{ padding: 6, backgroundColor: '#F1F5F9', borderRadius: 10 }}>
+                <X size={16} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalDesc}>
-              Point camera or enter customer booking ticket code (e.g. 5c321787-651c...).
-            </Text>
-
-            <View style={styles.qrInputRow}>
-              <TextInput 
-                value={terminalInput}
-                onChangeText={(val) => { setTerminalInput(val); setScanResult(null); }}
-                placeholder="Paste code or booking ID"
-                placeholderTextColor="#94A3B8"
-                style={styles.qrTextInput}
-                autoCapitalize="characters"
-              />
-              <TouchableOpacity 
-                style={styles.qrValidateBtn}
-                onPress={handleTerminalScan}
-                disabled={isScanningQR}
-              >
-                {isScanningQR ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.qrValidateBtnText}>VALIDATE</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {scanResult && (
-              <View style={[styles.scanFeedbackCard, scanResult.success ? styles.scanSuccess : styles.scanError]}>
-                <UserCheck size={18} color={scanResult.success ? '#059669' : '#DC2626'} style={{ marginRight: 8 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.scanFeedbackTitle, { color: scanResult.success ? '#065F46' : '#991B1B' }]}>
-                    {scanResult.success ? `Entry Approved: ${scanResult.memberName || 'Member'}` : 'Check-In Denied'}
+            <ScrollView style={{ maxHeight: 540 }} contentContainerStyle={{ padding: 16 }}>
+              {/* STATE 1: DEFAULT / CODE ENTRY */}
+              {!scanResult && (
+                <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                  <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1.5, borderColor: '#FECACA' }}>
+                    <QrCode size={30} color={THEME.COLORS.primary} />
+                  </View>
+                  <Text style={{ fontSize: 17, fontWeight: '900', color: '#0F172A', textAlign: 'center' }}>Scan QR Ticket</Text>
+                  <Text style={{ fontSize: 11.5, color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 16, paddingHorizontal: 10 }}>
+                    Point camera or enter customer booking ticket code (e.g. 5c321787-651c...).
                   </Text>
-                  <Text style={[styles.scanFeedbackDesc, { color: scanResult.success ? '#047857' : '#B91C1C' }]}>
-                    {scanResult.message}
-                  </Text>
+
+                  {/* QR Input Field */}
+                  <View style={{ width: '100%', flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                    <TextInput 
+                      value={terminalInput}
+                      onChangeText={(val) => setTerminalInput(val)}
+                      placeholder="Paste code or booking ID"
+                      placeholderTextColor="#94A3B8"
+                      style={[styles.qrTextInput, { flex: 1 }]}
+                      autoCapitalize="characters"
+                    />
+                    <TouchableOpacity 
+                      style={styles.qrValidateBtn}
+                      onPress={handleTerminalScan}
+                      disabled={isScanningQR}
+                    >
+                      {isScanningQR ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <Text style={styles.qrValidateBtnText}>VALIDATE</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Quick Code Examples for Testing */}
+                  <View style={{ width: '100%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 6 }}>
+                      Active Ticket Codes in System:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {['5c321787-651c-4654-881a-8f3977de1290', '43af27ef-1f74-49bc-9b28-795cd9f8a1a3', '6c368654-cdfd-4650-ba08-d02f1ac321bd'].map((code) => (
+                        <TouchableOpacity 
+                          key={code}
+                          onPress={() => setTerminalInput(code)}
+                          style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}
+                        >
+                          <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155' }}>
+                            {code.substring(0, 16)}...
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            <TouchableOpacity 
-              style={styles.modalCloseBtn}
-              onPress={() => setShowScanModal(false)}
-            >
-              <Text style={styles.modalCloseBtnText}>Close Terminal</Text>
-            </TouchableOpacity>
+              {/* STATE 2: SCAN RESULT - SUCCESS (ACCESS GRANTED) */}
+              {scanResult && scanResult.success && (
+                <View style={{ borderRadius: 20, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  {/* Success Banner */}
+                  <View style={{ backgroundColor: '#10B981', padding: 18, alignItems: 'center' }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                      <ShieldCheck size={28} color="#10B981" />
+                    </View>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Access Granted
+                    </Text>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 }}>
+                      Verified Member Entry
+                    </Text>
+                  </View>
+
+                  {/* Booking Details List */}
+                  <View style={{ padding: 16, gap: 12 }}>
+                    {/* Customer Name */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                        <Users size={20} color="#64748B" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase' }}>Customer Name</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>{scanResult.memberName || 'Gym Member'}</Text>
+                      </View>
+                    </View>
+
+                    {/* Subscribed Gym & Plan */}
+                    <View style={{ backgroundColor: '#F8FAFC', padding: 10, borderRadius: 12, gap: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Building2 size={13} color={THEME.COLORS.primary} />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>Subscribed Gym: </Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#0F172A', flex: 1 }}>{scanResult.booking?.gym_name || activeGym?.name || 'cultfit gym'}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Sparkles size={13} color={THEME.COLORS.primary} />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>Membership Plan: </Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#0F172A', flex: 1 }}>{scanResult.booking?.plan_name || 'Yearly Membership'}</Text>
+                      </View>
+                    </View>
+
+                    {/* Status & Validity */}
+                    <View style={{ backgroundColor: '#F1F5F9', padding: 12, borderRadius: 12, gap: 6 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>Status</Text>
+                        <Text style={{ fontSize: 11, color: '#059669', fontWeight: '900' }}>ACTIVE</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>Start Date</Text>
+                        <Text style={{ fontSize: 11, color: '#0F172A', fontWeight: '800' }}>
+                          {scanResult.booking?.start_date ? new Date(scanResult.booking.start_date).toLocaleDateString('en-IN') : '20 Aug 2026'}
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                        <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>Valid Till</Text>
+                        <Text style={{ fontSize: 11, color: '#0F172A', fontWeight: '800' }}>
+                          {scanResult.booking?.end_date ? new Date(scanResult.booking.end_date).toLocaleDateString('en-IN') : '20 Aug 2027'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Done & Scan Next Button */}
+                    <TouchableOpacity 
+                      style={{ backgroundColor: '#0F172A', paddingVertical: 12, borderRadius: 14, alignItems: 'center', marginTop: 4 }}
+                      onPress={() => { setScanResult(null); setTerminalInput(''); }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Done & Scan Next</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* STATE 3: SCAN RESULT - DENIED */}
+              {scanResult && !scanResult.success && (
+                <View style={{ borderRadius: 20, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#FECACA' }}>
+                  <View style={{ backgroundColor: '#EF4444', padding: 18, alignItems: 'center' }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                      <AlertCircle size={28} color="#EF4444" />
+                    </View>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF', textTransform: 'uppercase' }}>
+                      Access Denied
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#FFFFFF', textAlign: 'center', marginTop: 4 }}>
+                      {scanResult.message}
+                    </Text>
+                  </View>
+
+                  <View style={{ padding: 16 }}>
+                    <TouchableOpacity 
+                      style={{ backgroundColor: '#0F172A', paddingVertical: 12, borderRadius: 14, alignItems: 'center' }}
+                      onPress={() => { setScanResult(null); setTerminalInput(''); }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Try Another Scan</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </View>
       )}
