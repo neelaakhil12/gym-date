@@ -1,4 +1,4 @@
-﻿/**
+/**
  * RazorpayCheckout — Cross-platform Razorpay payment component.
  *
  * - On Web: Injects the Razorpay checkout.js script and opens the native browser checkout.
@@ -69,17 +69,51 @@ function buildRazorpayHTML(order: OrderResponse, options: RazorpayPaymentOptions
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>GymDate Payment</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a0b10;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-    .logo{font-size:22px;font-weight:900;color:#e50914;letter-spacing:-0.5px;margin-bottom:8px}
-    .subtitle{font-size:12px;color:#6b7280;margin-bottom:32px}
-    .card{background:#111827;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:24px;width:100%;max-width:380px;margin-bottom:24px}
-    .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px}
-    .label{color:#6b7280}.val{font-weight:700}.amount{color:#22c55e;font-size:20px;font-weight:900;font-family:monospace}
-    .divider{height:1px;background:rgba(255,255,255,0.06);margin:12px 0}
-    .btn{width:100%;background:#e50914;color:#fff;border:none;border-radius:14px;padding:16px;font-size:14px;font-weight:800;cursor:pointer}
-    .btn:disabled{opacity:0.7}
-    .status{display:none;font-size:12px;color:#6b7280;text-align:center;margin-top:16px}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: #0F172A;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .logo { font-size: 26px; font-weight: 900; color: #FF0000; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; font-weight: 600; color: #64748B; margin-bottom: 28px; }
+    .card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 20px;
+      padding: 22px;
+      width: 100%;
+      max-width: 380px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 14px; }
+    .label { color: #64748B; font-weight: 600; }
+    .val { font-weight: 800; color: #0F172A; }
+    .amount { color: #10B981; font-size: 22px; font-weight: 900; }
+    .divider { height: 1px; background: #E2E8F0; margin: 14px 0; }
+    .btn {
+      width: 100%;
+      max-width: 380px;
+      background: #FF0000;
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(255, 0, 0, 0.25);
+      transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.7; }
+    .status { display: none; font-size: 13px; font-weight: 600; color: #64748B; text-align: center; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -92,7 +126,7 @@ function buildRazorpayHTML(order: OrderResponse, options: RazorpayPaymentOptions
     <div class="row"><span class="label">Total</span><span class="amount">&#8377;${options.amount}</span></div>
   </div>
   <button class="btn" id="payBtn" onclick="startPayment()">Pay &#8377;${options.amount} with Razorpay</button>
-  <div class="status" id="status">Processing...</div>
+  <div class="status" id="status">Processing securely...</div>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     function startPayment(){
@@ -103,7 +137,7 @@ function buildRazorpayHTML(order: OrderResponse, options: RazorpayPaymentOptions
         name:'GymDate',description:'${options.planName} - ${options.gymName}',
         order_id:'${order.orderId}',
         prefill:{name:'${safeName}',email:'${options.customerEmail}',contact:'${options.customerPhone || ''}'},
-        theme:{color:'#e50914'},
+        theme:{color:'#FF0000'},
         modal:{ondismiss:function(){window.ReactNativeWebView.postMessage(JSON.stringify({type:'DISMISS'}))}},
         handler:function(r){window.ReactNativeWebView.postMessage(JSON.stringify({type:'SUCCESS',razorpay_payment_id:r.razorpay_payment_id,razorpay_order_id:r.razorpay_order_id,razorpay_signature:r.razorpay_signature}))}
       };
@@ -202,7 +236,7 @@ export const RazorpayCheckout: React.FC<{
         description: `${options.planName} — ${options.gymName}`,
         order_id: order.orderId,
         prefill: { email: options.customerEmail, name: options.customerName || '', contact: options.customerPhone || '' },
-        theme: { color: '#e50914', backdrop_color: '#0a0a0a' },
+        theme: { color: '#FF0000', backdrop_color: '#ffffff' },
         modal: { ondismiss: () => { options.onDismiss?.(); onClose(); } },
         handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
           await verifyPayment(response);
@@ -235,7 +269,7 @@ export const RazorpayCheckout: React.FC<{
         <View style={s.webviewHeader}>
           <Text style={s.webviewTitle}>Secure Payment</Text>
           <TouchableOpacity onPress={() => { options?.onDismiss?.(); onClose(); }} style={s.closeBtn}>
-            <X size={18} color="#ffffff" />
+            <X size={18} color="#0F172A" />
           </TouchableOpacity>
         </View>
 
@@ -259,14 +293,14 @@ export const RazorpayCheckout: React.FC<{
 
         {isVerifying && (
           <View style={s.verifyOverlay}>
-            <ActivityIndicator color="#ffffff" size="large" />
+            <ActivityIndicator color="#FF0000" size="large" />
             <Text style={s.verifyText}>Verifying payment...</Text>
           </View>
         )}
 
         {order && !isLoading && !error && options && (
           <WebView
-            style={{ flex: 1, backgroundColor: '#0a0b10' }}
+            style={{ flex: 1, backgroundColor: '#ffffff' }}
             source={{ html: buildRazorpayHTML(order, options) }}
             javaScriptEnabled
             domStorageEnabled
@@ -291,20 +325,20 @@ export const RazorpayCheckout: React.FC<{
 };
 
 const s = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
-  loadCard: { backgroundColor: '#111827', borderRadius: 24, padding: 32, alignItems: 'center', gap: 16, minWidth: 200 },
-  loadText: { color: '#9ca3af', fontSize: 13, fontWeight: '600' },
-  webviewContainer: { flex: 1, backgroundColor: '#0a0b10' },
-  webviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14, backgroundColor: '#0a0b10', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  webviewTitle: { color: '#ffffff', fontSize: 15, fontWeight: '900', letterSpacing: 0.3 },
-  closeBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
-  centeredFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
-  statusText: { color: '#6b7280', fontSize: 13, fontWeight: '600', marginTop: 8 },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
+  loadCard: { backgroundColor: '#ffffff', borderRadius: 24, padding: 32, alignItems: 'center', gap: 16, minWidth: 200, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 4 },
+  loadText: { color: '#0F172A', fontSize: 13, fontWeight: '700' },
+  webviewContainer: { flex: 1, backgroundColor: '#ffffff' },
+  webviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  webviewTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 },
+  closeBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  centeredFill: { flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
+  statusText: { color: '#64748B', fontSize: 13, fontWeight: '600', marginTop: 8 },
   errorIcon: { fontSize: 36 },
-  errorTitle: { color: '#ffffff', fontSize: 16, fontWeight: '900' },
-  errorDesc: { color: '#9ca3af', fontSize: 12, textAlign: 'center', lineHeight: 18 },
+  errorTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900' },
+  errorDesc: { color: '#64748B', fontSize: 12, textAlign: 'center', lineHeight: 18 },
   retryBtn: { backgroundColor: THEME.COLORS.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14, marginTop: 8 },
   retryBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 },
-  verifyOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 999 },
-  verifyText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  verifyOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 999 },
+  verifyText: { color: '#0F172A', fontSize: 14, fontWeight: '700' },
 });

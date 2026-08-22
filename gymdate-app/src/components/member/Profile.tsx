@@ -44,6 +44,7 @@ import {
   CheckCircle2,
   Share2
 } from 'lucide-react-native';
+import { getCurrentLocation, reverseGeocode } from '../../utils/location';
 
 export const Profile: React.FC = () => {
   const { 
@@ -297,8 +298,6 @@ export const Profile: React.FC = () => {
     Alert.alert('Success', 'Profile photo updated successfully!');
   };
 
-  const GOOGLE_MAPS_API_KEY = 'AIzaSyA_y5PoTdP0o2MZRDGkTVtFgguLTSaGIEE';
-
   const showAlertSafe = (title: string, msg: string) => {
     if (Platform.OS === 'web') {
       window.alert(`${title}\n${msg}`);
@@ -307,63 +306,43 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const handleGetLocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      showAlertSafe('Not Supported', 'Geolocation is not supported on this browser.');
-      return;
-    }
+  const handleGetLocation = async () => {
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          // Use same Google Maps API key as the website
-          const geoRes = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
-          );
-          const geoData = await geoRes.json();
-
-          let fullAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-          if (geoData.status === 'OK' && geoData.results.length > 0) {
-            fullAddress = geoData.results[0].formatted_address;
-          }
-
-          // Save address + lat/lng to backend so NearbyGyms & HomeDashboard can compute real distances
-          const { getApiUrl } = require('../../config');
-          await fetch(`${getApiUrl()}/api/user/sync-profile`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: userProfile.email,
-              name: userProfile.name,
-              phone: userProfile.phone,
-              lat: latitude,
-              lng: longitude,
-              address: fullAddress,
-            }),
-          });
-
-          // Update local profile state
-          setUserProfile(prev => ({ ...prev, address: fullAddress }));
-          showAlertSafe('✅ Location Updated', `Address set to:\n${fullAddress}`);
-        } catch (e) {
-          // Even if geocoding fails, save raw coordinates
-          const rawAddr = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-          setUserProfile(prev => ({ ...prev, address: rawAddr }));
-          showAlertSafe('Location Saved', 'Saved your GPS coordinates.');
-        } finally {
-          setIsLocating(false);
+    try {
+      const coords = await getCurrentLocation();
+      const { latitude, longitude } = coords;
+      let fullAddress = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+      
+      try {
+        const geo = await reverseGeocode(latitude, longitude);
+        if (geo && geo.address) {
+          fullAddress = geo.address;
         }
-      },
-      (err) => {
-        setIsLocating(false);
-        let msg = 'Could not get your location.';
-        if (err.code === 1) msg = 'Permission denied. Please allow location access in browser settings.';
-        if (err.code === 3) msg = 'Request timed out. Please try again.';
-        showAlertSafe('Location Error', msg);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+      } catch (_) {}
+
+      // Save address + lat/lng to backend so NearbyGyms & HomeDashboard can compute real distances
+      const { getApiUrl } = require('../../config');
+      await fetch(`${getApiUrl()}/api/user/sync-profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userProfile.email,
+          name: userProfile.name,
+          phone: userProfile.phone,
+          lat: latitude,
+          lng: longitude,
+          address: fullAddress,
+        }),
+      });
+
+      // Update local profile state
+      setUserProfile(prev => ({ ...prev, address: fullAddress }));
+      showAlertSafe('✅ Location Updated', `Address set to:\n${fullAddress}`);
+    } catch (err: any) {
+      showAlertSafe('Location Error', err.message || 'Could not get your GPS location. Please ensure location permissions are enabled.');
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   // Active subscription bookings (end_date in future)
@@ -373,7 +352,11 @@ export const Profile: React.FC = () => {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: bg }]}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: bg }]} 
+      contentContainerStyle={{ paddingBottom: 150 }}
+      showsVerticalScrollIndicator={false}
+    >
       
       {/* 1. Header Toolbar */}
       <View style={[styles.headerBar, isLight && { borderBottomColor: '#E5E7EB', backgroundColor: '#ffffff' }]}>
@@ -461,7 +444,7 @@ export const Profile: React.FC = () => {
       </View>
 
       {/* 4. Active Tab Details Content */}
-      <ScrollView style={styles.tabContentArea} contentContainerStyle={styles.scrollContainerStyle}>
+      <View style={styles.tabContentArea}>
         
         {/* ============= PROFILE TAB ============= */}
         {activeTab === 'profile' && (
@@ -872,8 +855,8 @@ export const Profile: React.FC = () => {
           </View>
         )}
 
-      </ScrollView>
-    </View>
+      </View>
+    </ScrollView>
   );
 };
 
