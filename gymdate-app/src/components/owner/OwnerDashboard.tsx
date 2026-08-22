@@ -1101,29 +1101,29 @@ export const OwnerDashboard: React.FC = () => {
         {/* TAB 5: ENTRY QR SCANNER (EXACT CLONE OF /partner/scan)          */}
         {/* ============================================================== */}
         {activeTab === 'scan' && (
-          <View style={{ backgroundColor: '#0F172A', borderRadius: 24, padding: 20, minHeight: 520, marginHorizontal: -4, marginTop: -4 }}>
+          <View style={{ backgroundColor: '#0F172A', borderRadius: 24, padding: 16, minHeight: 500, width: '100%' }}>
             {/* Header with Back Arrow and Gym Name */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <TouchableOpacity 
                 onPress={() => { setActiveTab('overview'); setIsLiveCameraScanning(false); setScanResult(null); }}
-                style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 14 }}
+                style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}
+                activeOpacity={0.8}
               >
-                <ArrowLeft size={20} color="#FFFFFF" />
+                <ArrowLeft size={18} color="#FFFFFF" />
               </TouchableOpacity>
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900', textTransform: 'uppercase', letterSpacing: -0.2 }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '900', textTransform: 'uppercase', flex: 1, letterSpacing: -0.2 }} numberOfLines={1}>
                 {activeGym?.name ? `${activeGym.name} Scanner` : 'Entry Scanner'}
               </Text>
-              <View style={{ width: 36 }} />
             </View>
 
             {/* STATE 1: INITIAL STATE (START SCANNING NOW) */}
             {!isLiveCameraScanning && !scanResult && !isScanningQR && (
-              <View style={{ alignItems: 'center', paddingVertical: 18 }}>
-                <View style={{ width: 88, height: 88, borderRadius: 28, backgroundColor: 'rgba(225, 29, 72, 0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 18, borderWidth: 2, borderColor: 'rgba(225, 29, 72, 0.4)', borderStyle: 'dashed' }}>
-                  <Camera size={40} color={THEME.COLORS.primary} />
+              <View style={{ alignItems: 'center', paddingVertical: 12, width: '100%' }}>
+                <View style={{ width: 80, height: 80, borderRadius: 26, backgroundColor: 'rgba(225, 29, 72, 0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 2, borderColor: 'rgba(225, 29, 72, 0.4)', borderStyle: 'dashed' }}>
+                  <Camera size={36} color={THEME.COLORS.primary} />
                 </View>
-                <Text style={{ fontSize: 22, fontWeight: '900', color: '#FFFFFF', textAlign: 'center' }}>Scan QR Ticket</Text>
-                <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', marginTop: 6, marginBottom: 24, paddingHorizontal: 16 }}>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#FFFFFF', textAlign: 'center' }}>Scan QR Ticket</Text>
+                <Text style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 4, marginBottom: 20, paddingHorizontal: 10 }}>
                   Point your camera at the customer&apos;s digital ticket to verify entry.
                 </Text>
 
@@ -1131,47 +1131,67 @@ export const OwnerDashboard: React.FC = () => {
                   style={{ 
                     width: '100%', 
                     backgroundColor: THEME.COLORS.primary, 
-                    paddingVertical: 15, 
-                    borderRadius: 16, 
+                    paddingVertical: 14, 
+                    borderRadius: 14, 
                     alignItems: 'center',
+                    justifyContent: 'center',
                     ...Platform.select({
-                      web: { boxShadow: '0 8px 25px rgba(225, 29, 72, 0.35)' },
-                      default: { elevation: 6 }
+                      web: { boxShadow: '0 6px 20px rgba(225, 29, 72, 0.35)' },
+                      default: { elevation: 5 }
                     })
                   }}
                   onPress={() => { setIsLiveCameraScanning(true); setScannerKey(k => k + 1); }}
                   activeOpacity={0.85}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900' }}>Start Scanning Now</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '900' }}>Start Scanning Now</Text>
                 </TouchableOpacity>
 
-                <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 18 }}>
+                <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 16 }}>
                   <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Or Enter Code Manually</Text>
+                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Or Enter Code Manually</Text>
                   <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                 </View>
 
                 {/* Manual Code Input Field */}
-                <View style={{ width: '100%', flexDirection: 'row', gap: 8 }}>
+                <View style={{ width: '100%', flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                   <TextInput 
                     value={terminalInput}
                     onChangeText={setTerminalInput}
                     placeholder="Paste code or booking ID"
                     placeholderTextColor="#64748B"
-                    style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: '#FFFFFF', fontSize: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+                    style={{ 
+                      flex: 1, 
+                      height: 44,
+                      backgroundColor: 'rgba(255,255,255,0.06)', 
+                      borderRadius: 12, 
+                      paddingHorizontal: 12, 
+                      color: '#FFFFFF', 
+                      fontSize: 12, 
+                      borderWidth: 1, 
+                      borderColor: 'rgba(255,255,255,0.12)' 
+                    }}
                     autoCapitalize="characters"
                   />
                   <TouchableOpacity 
-                    style={{ backgroundColor: THEME.COLORS.primary, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
+                    style={{ 
+                      backgroundColor: THEME.COLORS.primary, 
+                      height: 44,
+                      paddingHorizontal: 14, 
+                      borderRadius: 12, 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
                     onPress={handleTerminalScan}
+                    activeOpacity={0.85}
                   >
-                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>VALIDATE</Text>
+                    <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' }}>VALIDATE</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Quick Testing Badges */}
-                <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginTop: 16 }}>
-                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 8 }}>
+                <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginTop: 14 }}>
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 6 }}>
                     Active Ticket Codes in System:
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -1179,9 +1199,9 @@ export const OwnerDashboard: React.FC = () => {
                       <TouchableOpacity 
                         key={code}
                         onPress={() => { setTerminalInput(code); handleTerminalScanWithCode(code); }}
-                        style={{ backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}
+                        style={{ backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}
                       >
-                        <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#E2E8F0' }}>
+                        <Text style={{ fontSize: 9.5, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#E2E8F0' }}>
                           {code.substring(0, 16)}...
                         </Text>
                       </TouchableOpacity>
@@ -1193,25 +1213,25 @@ export const OwnerDashboard: React.FC = () => {
 
             {/* STATE 2: ACTIVE CAMERA SCANNING */}
             {isLiveCameraScanning && !scanResult && (
-              <View style={{ alignItems: 'center', gap: 14 }}>
+              <View style={{ alignItems: 'center', gap: 14, width: '100%' }}>
                 {Platform.OS === 'web' && (
                   <div 
                     id="reader" 
                     style={{ 
                       width: '100%', 
-                      maxWidth: '340px', 
-                      borderRadius: '20px', 
+                      maxWidth: '300px', 
+                      borderRadius: '18px', 
                       overflow: 'hidden', 
                       backgroundColor: '#000000',
-                      border: '3px solid rgba(255,255,255,0.15)'
+                      border: '2px solid rgba(255,255,255,0.15)'
                     }} 
                   />
                 )}
                 <TouchableOpacity 
-                  style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 }}
+                  style={{ paddingHorizontal: 18, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}
                   onPress={() => setIsLiveCameraScanning(false)}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Cancel Scan</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Cancel Scan</Text>
                 </TouchableOpacity>
               </View>
             )}
