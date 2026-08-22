@@ -287,7 +287,7 @@ export const HomeDashboard: React.FC = () => {
   };
 
   const pinnedLocationTitle = userProfile.address || 'Hyderabad';
-  const pinnedCoordsText = userCoords ? `${userCoords.lat.toFixed(3)}, ${userCoords.lng.toFixed(3)}` : '17.385, 78.486';
+  const mapUri = `https://gymdate.in/map-view?lat=${userCoords?.lat || userProfile.latitude || 17.385044}&lng=${userCoords?.lng || userProfile.longitude || 78.486671}&radius=${selectedRadius}`;
 
   return (
     <ScrollView style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} contentContainerStyle={{ paddingBottom: 130 }}>
@@ -341,7 +341,7 @@ export const HomeDashboard: React.FC = () => {
                 <Text style={[styles.pinnedTag, isLight && { color: THEME.COLORS.primary }]}>SEARCH NEAR PINNED LOCATION</Text>
               </View>
               <Text style={[styles.pinnedAddress, isLight && { color: '#0F172A' }]} numberOfLines={1}>
-                {pinnedLocationTitle} ({pinnedCoordsText})
+                {pinnedLocationTitle}
               </Text>
             </View>
 
@@ -376,7 +376,7 @@ export const HomeDashboard: React.FC = () => {
       {/* 4. Radius Distance Filter Pills */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.radiusScroll}>
         {[
-          { label: '🌐 All', value: 'all' },
+          { label: '🌐 All', value: 'all' as const },
           { label: '🎯 1 km', value: 1 },
           { label: '🎯 5 km', value: 5 },
           { label: '🎯 10 km', value: 10 },
@@ -386,7 +386,7 @@ export const HomeDashboard: React.FC = () => {
           return (
             <TouchableOpacity
               key={idx}
-              onPress={() => setSelectedRadius(item.value as any)}
+              onPress={() => setSelectedRadius(item.value)}
               style={[
                 styles.radiusChip,
                 isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
@@ -428,14 +428,14 @@ export const HomeDashboard: React.FC = () => {
             style={[
               styles.viewSwitchBtn, 
               isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-              viewMode === 'map' && { backgroundColor: THEME.COLORS.primary, borderColor: THEME.COLORS.primary }
+              viewMode === 'map' && styles.viewSwitchBtnActive
             ]}
             activeOpacity={0.8}
           >
             <Text style={[
               styles.viewSwitchText, 
               isLight && { color: '#475569' },
-              viewMode === 'map' && { color: '#ffffff', fontWeight: '800' }
+              viewMode === 'map' && styles.viewSwitchTextActive
             ]}>
               🗺️ Live Map View ({filteredGyms.length})
             </Text>
@@ -446,14 +446,14 @@ export const HomeDashboard: React.FC = () => {
             style={[
               styles.viewSwitchBtn, 
               isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-              viewMode === 'list' && { backgroundColor: THEME.COLORS.primary, borderColor: THEME.COLORS.primary }
+              viewMode === 'list' && styles.viewSwitchBtnActive
             ]}
             activeOpacity={0.8}
           >
             <Text style={[
               styles.viewSwitchText, 
               isLight && { color: '#475569' },
-              viewMode === 'list' && { color: '#ffffff', fontWeight: '800' }
+              viewMode === 'list' && styles.viewSwitchTextActive
             ]}>
               📋 List View
             </Text>
@@ -467,7 +467,7 @@ export const HomeDashboard: React.FC = () => {
           {Platform.OS === 'web' ? (
             <iframe
               id="gymdate-leaflet-map"
-              srcDoc={generateMapHtml()}
+              src={mapUri}
               style={{
                 width: '100%',
                 height: 380,
@@ -479,8 +479,9 @@ export const HomeDashboard: React.FC = () => {
           ) : (
             <View style={{ height: 380, width: '100%', borderRadius: 20, overflow: 'hidden', backgroundColor: isLight ? '#F1F5F9' : '#0F172A' }}>
               <WebView
+                key={mapUri}
                 originWhitelist={['*']}
-                source={{ html: generateMapHtml() }}
+                source={{ uri: mapUri }}
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
@@ -492,7 +493,6 @@ export const HomeDashboard: React.FC = () => {
                 style={{ flex: 1, backgroundColor: 'transparent' }}
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
-                mixedContentMode="always"
                 scrollEnabled={false}
               />
             </View>
