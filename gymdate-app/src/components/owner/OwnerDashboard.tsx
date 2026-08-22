@@ -1803,66 +1803,36 @@ export const OwnerDashboard: React.FC = () => {
             {/* CARD 4: AMENITIES */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Amenities</Text>
-              <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2, marginBottom: 12 }}>
-                Select standard amenities or add custom tags for your gym.
-              </Text>
 
-              {/* Default Amenities Toggle Chips */}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                {defaultAmenitiesList.map((amenity) => {
-                  const isSelected = editAmenities.includes(amenity);
-                  return (
-                    <TouchableOpacity 
-                      key={amenity}
-                      onPress={() => toggleAmenity(amenity)}
-                      style={{ 
-                        paddingHorizontal: 10, 
-                        paddingVertical: 6, 
-                        borderRadius: 20, 
-                        backgroundColor: isSelected ? '#FEE2E2' : '#F1F5F9',
-                        borderWidth: 1,
-                        borderColor: isSelected ? '#FECACA' : '#E2E8F0'
-                      }}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: isSelected ? '800' : '600', color: isSelected ? THEME.COLORS.primary : '#475569' }}>
-                        {isSelected ? `✓ ${amenity}` : amenity}
-                      </Text>
+              {/* Amenity Tag Chips with X */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, marginBottom: 12 }}>
+                {editAmenities.map((amenity) => (
+                  <View 
+                    key={amenity}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF1F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#FECDD3' }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.COLORS.primary }}>{amenity}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveCustomAmenity(amenity)}>
+                      <X size={13} color={THEME.COLORS.primary} />
                     </TouchableOpacity>
-                  );
-                })}
+                  </View>
+                ))}
               </View>
 
-              {/* Custom Tag Chips with X */}
-              {editAmenities.filter(a => !defaultAmenitiesList.includes(a)).length > 0 && (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                  {editAmenities.filter(a => !defaultAmenitiesList.includes(a)).map((customAmenity) => (
-                    <View 
-                      key={customAmenity}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF1F2', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#FECDD3' }}
-                    >
-                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.COLORS.primary }}>{customAmenity}</Text>
-                      <TouchableOpacity onPress={() => handleRemoveCustomAmenity(customAmenity)}>
-                        <X size={12} color={THEME.COLORS.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-
               {/* Add Custom Amenity Input */}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                 <TextInput 
                   value={newCustomAmenity}
                   onChangeText={setNewCustomAmenity}
-                  placeholder="Add custom amenity tag"
+                  placeholder="Type a custom amenity..."
                   placeholderTextColor="#94A3B8"
                   style={{ flex: 1, height: 40, backgroundColor: '#F8FAFC', borderRadius: 10, paddingHorizontal: 12, fontSize: 12, borderWidth: 1, borderColor: '#E2E8F0' }}
                 />
                 <TouchableOpacity 
-                  style={{ backgroundColor: '#0F172A', paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+                  style={{ backgroundColor: '#F1F5F9', width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
                   onPress={handleAddCustomAmenity}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' }}>Add</Text>
+                  <Plus size={16} color="#475569" />
                 </TouchableOpacity>
               </View>
             </View>
