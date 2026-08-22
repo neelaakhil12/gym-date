@@ -1131,83 +1131,21 @@ export const OwnerDashboard: React.FC = () => {
                   style={{ 
                     width: '100%', 
                     backgroundColor: THEME.COLORS.primary, 
-                    paddingVertical: 14, 
-                    borderRadius: 14, 
+                    paddingVertical: 16, 
+                    borderRadius: 16, 
                     alignItems: 'center',
                     justifyContent: 'center',
+                    marginTop: 8,
                     ...Platform.select({
-                      web: { boxShadow: '0 6px 20px rgba(225, 29, 72, 0.35)' },
-                      default: { elevation: 5 }
+                      web: { boxShadow: '0 8px 24px rgba(225, 29, 72, 0.4)' },
+                      default: { elevation: 6 }
                     })
                   }}
                   onPress={() => { setIsLiveCameraScanning(true); setScannerKey(k => k + 1); }}
                   activeOpacity={0.85}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '900' }}>Start Scanning Now</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 }}>Start Scanning Now</Text>
                 </TouchableOpacity>
-
-                <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 16 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Or Enter Code Manually</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-                </View>
-
-                {/* Manual Code Input Field */}
-                <View style={{ width: '100%', flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                  <TextInput 
-                    value={terminalInput}
-                    onChangeText={setTerminalInput}
-                    placeholder="Paste code or booking ID"
-                    placeholderTextColor="#64748B"
-                    style={{ 
-                      flex: 1, 
-                      height: 44,
-                      backgroundColor: 'rgba(255,255,255,0.06)', 
-                      borderRadius: 12, 
-                      paddingHorizontal: 12, 
-                      color: '#FFFFFF', 
-                      fontSize: 12, 
-                      borderWidth: 1, 
-                      borderColor: 'rgba(255,255,255,0.12)' 
-                    }}
-                    autoCapitalize="characters"
-                  />
-                  <TouchableOpacity 
-                    style={{ 
-                      backgroundColor: THEME.COLORS.primary, 
-                      height: 44,
-                      paddingHorizontal: 14, 
-                      borderRadius: 12, 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}
-                    onPress={handleTerminalScan}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' }}>VALIDATE</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Quick Testing Badges */}
-                <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', marginTop: 14 }}>
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 6 }}>
-                    Active Ticket Codes in System:
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {['5c321787-651c-4654-881a-8f3977de1290', '43af27ef-1f74-49bc-9b28-795cd9f8a1a3', '6c368654-cdfd-4650-ba08-d02f1ac321bd'].map((code) => (
-                      <TouchableOpacity 
-                        key={code}
-                        onPress={() => { setTerminalInput(code); handleTerminalScanWithCode(code); }}
-                        style={{ backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}
-                      >
-                        <Text style={{ fontSize: 9.5, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#E2E8F0' }}>
-                          {code.substring(0, 16)}...
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
               </View>
             )}
 
