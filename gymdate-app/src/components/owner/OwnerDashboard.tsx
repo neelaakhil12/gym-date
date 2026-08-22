@@ -538,6 +538,17 @@ export const OwnerDashboard: React.FC = () => {
                   Referral Rewards
                 </Text>
               </TouchableOpacity>
+
+              {/* 📷 Scan Entry QR Item in Sidebar */}
+              <TouchableOpacity 
+                style={[styles.drawerNavItem, { backgroundColor: '#1E293B' }]}
+                onPress={() => { setShowScanModal(true); setIsSidebarOpen(false); }}
+              >
+                <QrCode size={18} color={THEME.COLORS.primary} />
+                <Text style={[styles.drawerNavText, { color: '#FFFFFF', fontWeight: '800' }]}>
+                  Scan Entry QR Pass
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Drawer Bottom Actions */}
@@ -562,7 +573,7 @@ export const OwnerDashboard: React.FC = () => {
         </View>
       )}
 
-      {/* 🔝 TOP NAVIGATION BAR */}
+      {/* 🔝 TOP NAVIGATION BAR (CLEAN HEADER) */}
       <View style={styles.topNavbar}>
         <TouchableOpacity 
           style={styles.menuToggleBtn} 
@@ -572,55 +583,23 @@ export const OwnerDashboard: React.FC = () => {
           <Menu size={20} color="#1E293B" />
         </TouchableOpacity>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navbarTabsScroll}>
-          <TouchableOpacity 
-            style={[styles.navTabPill, activeTab === 'overview' && styles.navTabPillActive]}
-            onPress={() => setActiveTab('overview')}
-          >
-            <LayoutDashboard size={12} color={activeTab === 'overview' ? '#FFFFFF' : '#64748B'} />
-            <Text style={[styles.navTabPillText, activeTab === 'overview' && styles.navTabPillTextActive]}>
-              Overview
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 }}>
+          <View>
+            <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', textTransform: 'uppercase', letterSpacing: -0.2 }}>
+              {activeGym?.name || 'Partner Admin'}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.navTabPill, activeTab === 'bookings' && styles.navTabPillActive]}
-            onPress={() => setActiveTab('bookings')}
-          >
-            <CreditCard size={12} color={activeTab === 'bookings' ? '#FFFFFF' : '#64748B'} />
-            <Text style={[styles.navTabPillText, activeTab === 'bookings' && styles.navTabPillTextActive]}>
-              Bookings
+            <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748B' }}>
+              {activeTab === 'overview' ? 'Overview' : activeTab === 'bookings' ? 'Bookings & Revenue' : activeTab === 'virtual_wallet' ? 'Virtual Wallet' : 'Referral Rewards'}
             </Text>
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity 
-            style={[styles.navTabPill, activeTab === 'virtual_wallet' && styles.navTabPillActive]}
-            onPress={() => setActiveTab('virtual_wallet')}
-          >
-            <Wallet size={12} color={activeTab === 'virtual_wallet' ? '#FFFFFF' : '#64748B'} />
-            <Text style={[styles.navTabPillText, activeTab === 'virtual_wallet' && styles.navTabPillTextActive]}>
-              Virtual Wallet
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: isOpenStatus ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isOpenStatus ? '#10B981' : '#EF4444' }} />
+            <Text style={{ fontSize: 10, fontWeight: '800', color: isOpenStatus ? '#059669' : '#DC2626' }}>
+              {isOpenStatus ? 'OPEN' : 'CLOSED'}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.navTabPill, activeTab === 'referral_wallet' && styles.navTabPillActive]}
-            onPress={() => setActiveTab('referral_wallet')}
-          >
-            <Gift size={12} color={activeTab === 'referral_wallet' ? '#FFFFFF' : '#64748B'} />
-            <Text style={[styles.navTabPillText, activeTab === 'referral_wallet' && styles.navTabPillTextActive]}>
-              Referral Rewards
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        <TouchableOpacity 
-          style={styles.navQrBtn}
-          onPress={() => setShowScanModal(true)}
-          activeOpacity={0.85}
-        >
-          <QrCode size={15} color="#FFFFFF" />
-        </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {/* 📜 MAIN SCROLLABLE CONTENT */}
