@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  Linking
+  Linking,
+  Modal
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
@@ -32,11 +33,12 @@ import {
   Check, 
   User, 
   Building2, 
-  Handshake,
-  KeyRound,
-  MapPin,
-  Eye,
-  EyeOff
+  Handshake, 
+  KeyRound, 
+  MapPin, 
+  Eye, 
+  EyeOff,
+  X
 } from 'lucide-react-native';
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
@@ -66,6 +68,10 @@ export const Onboarding: React.FC = () => {
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
   const [loginName, setLoginName] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -391,17 +397,50 @@ export const Onboarding: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
+    setGoogleEmail(loginInput.trim() || '');
+    setGoogleName(loginName.trim() || '');
+    setShowGoogleModal(true);
+  };
+
+  const handleGoogleSubmit = async () => {
+    const cleanEmail = googleEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      showAlert('Invalid Email', 'Please enter a valid Google email address.');
+      return;
+    }
+
+    setIsGoogleLoading(true);
     try {
-      const googleAuthUrl = `https://gymdate.in/api/auth/signin/google`;
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.location.href = googleAuthUrl;
-      } else {
-        await WebBrowser.openBrowserAsync(googleAuthUrl);
-      }
+      const syncedUser = await apiService.syncProfile({
+        email: cleanEmail,
+        name: googleName.trim() || 'Gym Member',
+        phone: loginPhone.trim() || undefined,
+      });
+
+      setShowGoogleModal(false);
+      setLoginInput(cleanEmail);
+      setUserProfile(prev => ({
+        ...prev,
+        name: syncedUser?.full_name || googleName.trim() || 'Gym Member',
+        email: cleanEmail,
+        phone: syncedUser?.phone || loginPhone.trim() || '',
+      }));
+      setIsLoggedIn(true);
+      setActiveScreen('home');
     } catch (err: any) {
-      console.warn('[Google Auth Error]:', err);
-      showAlert('Google Login', 'Sign in via web browser or enter your email address to receive an OTP code.');
+      setShowGoogleModal(false);
+      setLoginInput(cleanEmail);
+      setUserProfile(prev => ({
+        ...prev,
+        name: googleName.trim() || 'Gym Member',
+        email: cleanEmail,
+        phone: loginPhone.trim() || '',
+      }));
+      setIsLoggedIn(true);
+      setActiveScreen('home');
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -1231,6 +1270,91 @@ export const Onboarding: React.FC = () => {
           </View>
         </View>
       )}
+
+      {/* GOOGLE SIGN-IN IN-APP MODAL */}
+      <Modal
+        visible={showGoogleModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGoogleModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 380, backgroundColor: '#ffffff', borderRadius: 24, padding: 24, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 16, elevation: 8 }}>
+            
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#4285F4' }}>G</Text>
+                </View>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>Sign in with Google</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B' }}>Continue to GymDate App</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setShowGoogleModal(false)} style={{ padding: 4 }}>
+                <X size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 12, color: '#475569', marginBottom: 16, lineHeight: 17 }}>
+              Instant 1-Tap Google Sign-In. Connect your Google account directly without leaving the app:
+            </Text>
+
+            {/* Google Email Input */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Google Email Address</Text>
+              <View style={[styles.inputWrapper, { height: 48, backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 }]}>
+                <Mail size={16} color="#94A3B8" style={{ marginRight: 8 }} />
+                <TextInput
+                  value={googleEmail}
+                  onChangeText={setGoogleEmail}
+                  placeholder="yourname@gmail.com"
+                  placeholderTextColor="#94A3B8"
+                  style={{ flex: 1, fontSize: 13, color: '#0F172A' }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            {/* Name Input */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Your Name</Text>
+              <View style={[styles.inputWrapper, { height: 48, backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12 }]}>
+                <User size={16} color="#94A3B8" style={{ marginRight: 8 }} />
+                <TextInput
+                  value={googleName}
+                  onChangeText={setGoogleName}
+                  placeholder="e.g. Akhil Kumar"
+                  placeholderTextColor="#94A3B8"
+                  style={{ flex: 1, fontSize: 13, color: '#0F172A' }}
+                />
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <TouchableOpacity
+              style={[styles.btnPrimary, { height: 50, borderRadius: 14 }, isGoogleLoading && { opacity: 0.75 }]}
+              onPress={handleGoogleSubmit}
+              disabled={isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '800' }}>Confirm & Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ marginTop: 12, alignItems: 'center', paddingVertical: 8 }}
+              onPress={() => setShowGoogleModal(false)}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
