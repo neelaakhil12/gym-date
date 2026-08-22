@@ -1087,7 +1087,7 @@ export const Onboarding: React.FC = () => {
                 <TextInput
                   value={referralCodeInput}
                   onChangeText={(val) => setReferralCodeInput(val.toUpperCase())}
-                  placeholder="e.g. 85FC345D"
+                  placeholder="Enter Referral Code"
                   placeholderTextColor={THEME.COLORS.textMuted}
                   autoCapitalize="characters"
                   style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, fontWeight: '700', letterSpacing: 1 }]}

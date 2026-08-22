@@ -227,7 +227,7 @@ export default function LoginPage() {
                         }
                       }}
                       className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-mono font-bold text-secondary text-sm tracking-widest uppercase"
-                      placeholder="e.g. 85FC345D"
+                      placeholder="Enter Referral Code"
                     />
                   </div>
                 </div>
