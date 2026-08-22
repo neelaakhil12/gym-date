@@ -352,39 +352,32 @@ export const apiService = {
     bookings?: any[];
     error?: string;
   }> {
-    const url = `${getApiUrl()}/api/partner/dashboard-data?email=${encodeURIComponent(email.trim().toLowerCase())}`;
+    const url = `${getApiUrl()}/api/partner/bookings?email=${encodeURIComponent(email.trim().toLowerCase())}`;
     try {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.success && data.bookings && data.bookings.length > 0) {
-          return data;
+        if (data && data.success) {
+          return {
+            success: true,
+            stats: {
+              totalRevenue: data.stats?.totalRevenue ?? 0,
+              totalBookings: data.stats?.totalBookings ?? 0,
+              activeMembers: data.stats?.uniqueCustomers ?? 0,
+              payoutPending: data.stats?.totalRevenue ?? 0
+            },
+            bookings: data.bookings || []
+          };
         }
       }
     } catch (err: any) {
-      console.warn("[API WARN] Failed to fetch partner dashboard data:", err);
+      console.warn("[API WARN] Failed to fetch live partner dashboard data from AWS:", err);
     }
-
-    // Live Server Database Bookings matching website gymdate.in/partner/bookings
-    const liveServerBookings = [
-      { id: 'b-101', customer_name: 'Akhil Harish Neela', customer_email: 'neelaakhilharish@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T10:00:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-102', customer_name: 'Neela Santhosh', customer_email: 'santhoshneela887@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:45:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-103', customer_name: 'Dachepally Navatej', customer_email: 'navatejdachepally@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:30:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-104', customer_name: 'Akhil Harish Neela', customer_email: 'neelaakhilharish@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:15:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-105', customer_name: 'Vikram Singh', customer_email: 'vikram.singh@gmail.com', plan_name: 'Yearly', created_at: '2026-08-20T14:20:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-106', customer_name: 'Pooja Verma', customer_email: 'pooja.verma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-20T11:10:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-107', customer_name: 'Rahul Sharma', customer_email: 'rahul.sharma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-19T16:00:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-108', customer_name: 'Ananya Roy', customer_email: 'ananya.roy@gmail.com', plan_name: 'Yearly', created_at: '2026-08-19T13:40:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-109', customer_name: 'Kabir Fernandes', customer_email: 'kabir.f@gmail.com', plan_name: 'Yearly', created_at: '2026-08-18T18:15:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-110', customer_name: 'Riya Sharma', customer_email: 'riya.sharma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-18T10:00:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-111', customer_name: 'Sameer Khan', customer_email: 'sameer.k@gmail.com', plan_name: 'Yearly', created_at: '2026-08-17T15:30:00.000Z', amount: '1', status: 'SUCCESS' },
-      { id: 'b-112', customer_name: 'Divya Patel', customer_email: 'divya.patel@gmail.com', plan_name: 'Yearly', created_at: '2026-08-17T09:00:00.000Z', amount: '1', status: 'SUCCESS' }
-    ];
 
     return {
       success: true,
-      stats: { totalRevenue: 12, totalBookings: 12, activeMembers: 4, payoutPending: 12 },
-      bookings: liveServerBookings
+      stats: { totalRevenue: 0, totalBookings: 0, activeMembers: 0, payoutPending: 0 },
+      bookings: []
     };
   }
 };
