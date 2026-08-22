@@ -9,12 +9,12 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Hide Navbar and Footer on admin and partner sub-pages (login, dashboard, etc.)
-  // But show it on the main landing page /partner
+  // Hide Navbar and Footer on admin, partner, and map-view pages
   const isAuthPage = 
     pathname?.startsWith("/superadmin") ||
     pathname?.startsWith("/admin") || 
     pathname?.startsWith("/operation-admin") ||
+    pathname?.startsWith("/map-view") ||
     (pathname?.startsWith("/partner") && pathname !== "/partner");
 
   if (isAuthPage) {

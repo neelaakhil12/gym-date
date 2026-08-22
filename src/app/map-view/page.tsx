@@ -39,10 +39,11 @@ function MapContent() {
     fetch("/api/gyms")
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          const mapped: GymItem[] = data.map((g: any, idx: number) => {
-            let lat = parseFloat(g.latitude) || (g.coordinates?.lat ? parseFloat(g.coordinates.lat) : 0);
-            let lng = parseFloat(g.longitude) || (g.coordinates?.lng ? parseFloat(g.coordinates.lng) : 0);
+        const rawList = Array.isArray(data) ? data : (data.gyms || []);
+        if (Array.isArray(rawList)) {
+          const mapped: GymItem[] = rawList.map((g: any, idx: number) => {
+            let lat = parseFloat(g.latitude || g.lat) || (g.coordinates?.lat ? parseFloat(g.coordinates.lat) : 0);
+            let lng = parseFloat(g.longitude || g.lng) || (g.coordinates?.lng ? parseFloat(g.coordinates.lng) : 0);
 
             if (!lat || !lng) {
               lat = userLat + (idx % 2 === 0 ? 1 : -1) * (0.008 + idx * 0.006);

@@ -146,8 +146,9 @@ export const HomeDashboard: React.FC = () => {
 
   // Generate interactive Leaflet Map HTML with accurate coordinates
   const generateMapHtml = () => {
-    const lat = userCoords?.lat || userProfile.latitude || 17.385044;
-    const lng = userCoords?.lng || userProfile.longitude || 78.486671;
+    const lat = effectiveUserCoords.lat;
+    const lng = effectiveUserCoords.lng;
+    const radiusMeters = selectedRadius === 'all' ? 0 : selectedRadius * 1000;
 
     // Pluck real coordinates for each gym
     const gymsPayload = filteredGyms.map((g, idx) => {
@@ -160,6 +161,8 @@ export const HomeDashboard: React.FC = () => {
         gLng = lng + ((idx % 3 === 0 ? 1 : -1) * (0.008 + idx * 0.005));
       }
 
+      const dist = haversineKm(lat, lng, gLat, gLng).toFixed(1);
+
       return {
         id: g.id,
         name: (g.name || 'Gym').replace(/'/g, "\\'"),
@@ -167,6 +170,7 @@ export const HomeDashboard: React.FC = () => {
         rating: g.rating || 4.8,
         lat: gLat,
         lng: gLng,
+        distance: dist,
       };
     });
 
@@ -180,7 +184,7 @@ export const HomeDashboard: React.FC = () => {
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body, html, #map { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; }
+          body, html, #map { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; overflow: hidden; }
           
           .user-pulse-marker {
             width: 28px; height: 28px; background: #FF0000; border: 3px solid #ffffff;
@@ -201,20 +205,20 @@ export const HomeDashboard: React.FC = () => {
             cursor: pointer; display: flex; align-items: center; gap: 4px;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           }
-          .gym-price-pill:hover { transform: scale(1.1); background: #059669; }
+          .gym-price-pill:hover { transform: scale(1.08); background: #059669; }
           
           .leaflet-popup-content-wrapper {
-            border-radius: 18px; padding: 4px; box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+            border-radius: 18px; padding: 4px; box-shadow: 0 12px 30px rgba(0,0,0,0.15);
             background: #ffffff; border: 1px solid #e2e8f0;
           }
           .leaflet-popup-content { margin: 10px; }
-          .gym-popup-card { text-align: center; min-width: 155px; }
+          .gym-popup-card { text-align: center; min-width: 160px; }
           .gym-popup-title { font-size: 14px; font-weight: 800; color: #0F172A; margin-bottom: 2px; }
           .gym-popup-rate { font-size: 12px; font-weight: 700; color: #10B981; margin-bottom: 10px; }
           .gym-popup-btn {
             background: #FF0000; color: #ffffff; border: none; padding: 8px 14px;
             border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer;
-            width: 100%; transition: opacity 0.2s;
+            width: 100%; transition: opacity 0.2s; box-shadow: 0 4px 12px rgba(255,0,0,0.25);
           }
           .gym-popup-btn:hover { opacity: 0.9; }
         </style>
@@ -224,11 +228,17 @@ export const HomeDashboard: React.FC = () => {
         <script>
           const userLat = ${lat};
           const userLng = ${lng};
-          const map = L.map('map', { zoomControl: false }).setView([userLat, userLng], 13);
+          const map = L.map('map', { 
+            zoomControl: true,
+            attributionControl: false,
+            dragging: true,
+            touchZoom: true,
+            doubleClickZoom: true,
+            scrollWheelZoom: true
+          }).setView([userLat, userLng], 13);
           
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+            maxZoom: 19
           }).addTo(map);
 
           function selectGym(id) {
@@ -239,7 +249,18 @@ export const HomeDashboard: React.FC = () => {
             }
           }
 
-          L.control.zoom({ position: 'bottomright' }).addTo(map);
+          // Radius Boundary Circle (if not 'all')
+          const radiusMeters = ${radiusMeters};
+          if (radiusMeters > 0) {
+            L.circle([userLat, userLng], {
+              color: '#FF0000',
+              fillColor: '#FF0000',
+              fillOpacity: 0.06,
+              weight: 2,
+              dashArray: '6, 6',
+              radius: radiusMeters
+            }).addTo(map);
+          }
 
           // Pinned User Location
           const userIcon = L.divIcon({
@@ -249,11 +270,15 @@ export const HomeDashboard: React.FC = () => {
             iconAnchor: [14, 14]
           });
           const userMarker = L.marker([userLat, userLng], { icon: userIcon }).addTo(map)
-            .bindPopup('<b style="font-size:12px;">📍 Your Location</b>');
+            .bindPopup('<div style="text-align:center;padding:4px;"><b style="font-size:13px;color:#0F172A;">📍 Your Pinned Location</b></div>');
 
           // Pinned Gym Locations
           const gymsData = ${JSON.stringify(gymsPayload)};
           const allMarkers = [userMarker];
+
+          if (gymsData.length === 0 && radiusMeters > 0) {
+            userMarker.bindPopup('<div style="text-align:center;padding:6px;"><b style="font-size:13px;color:#0F172A;">📍 You are here</b><div style="font-size:11px;color:#EF4444;margin-top:4px;font-weight:700;">No gyms within ${selectedRadius} km.<br>Switch to 5km, 10km, or All!</div></div>').openPopup();
+          }
 
           gymsData.forEach(g => {
             if (g.lat && g.lng) {
@@ -267,7 +292,7 @@ export const HomeDashboard: React.FC = () => {
               marker.bindPopup(
                 '<div class="gym-popup-card">' +
                   '<div class="gym-popup-title">' + g.name + '</div>' +
-                  '<div class="gym-popup-rate">₹' + g.price + '/day • ' + g.rating + ' ★</div>' +
+                  '<div class="gym-popup-rate">₹' + g.price + '/day • ' + g.rating + ' ★ (' + g.distance + ' km)</div>' +
                   '<button class="gym-popup-btn" onclick="selectGym(\'' + g.id + '\')">View Passes & Gym →</button>' +
                 '</div>'
               );
@@ -278,6 +303,8 @@ export const HomeDashboard: React.FC = () => {
           if (allMarkers.length > 1) {
             const group = new L.featureGroup(allMarkers);
             map.fitBounds(group.getBounds().pad(0.2));
+          } else {
+            map.setView([userLat, userLng], 14);
           }
         </script>
       </body>
@@ -466,7 +493,7 @@ export const HomeDashboard: React.FC = () => {
           {Platform.OS === 'web' ? (
             <iframe
               id="gymdate-leaflet-map"
-              src={mapUri}
+              srcDoc={generateMapHtml()}
               style={{
                 width: '100%',
                 height: 380,
@@ -478,16 +505,9 @@ export const HomeDashboard: React.FC = () => {
           ) : (
             <View style={{ height: 380, width: '100%', borderRadius: 20, overflow: 'hidden', backgroundColor: isLight ? '#F1F5F9' : '#0F172A' }}>
               <WebView
-                key={`${selectedRadius}-${effectiveUserCoords.lat}-${effectiveUserCoords.lng}`}
+                key={`${selectedRadius}-${effectiveUserCoords.lat}-${effectiveUserCoords.lng}-${filteredGyms.length}`}
                 originWhitelist={['*']}
-                source={{ uri: mapUri }}
-                onShouldStartLoadWithRequest={(request) => {
-                  // Strictly allow only /map-view. Block external URL navigation in app!
-                  if (request.url.includes('/map-view') || request.url.startsWith('data:') || request.url.startsWith('about:blank')) {
-                    return true;
-                  }
-                  return false;
-                }}
+                source={{ html: generateMapHtml() }}
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
@@ -500,7 +520,6 @@ export const HomeDashboard: React.FC = () => {
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 nestedScrollEnabled={true}
-                scrollEnabled={false}
               />
             </View>
           )}
