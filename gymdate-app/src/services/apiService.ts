@@ -410,9 +410,27 @@ export const apiService = {
    */
   async getPartnerWalletData(email: string): Promise<{
     success: boolean;
+    virtual_wallet?: {
+      balance: number;
+      total_revenue: number;
+      total_withdrawn: number;
+      min_withdrawal: number;
+      history: any[];
+    };
+    referral_wallet?: {
+      balance: number;
+      total_earned: number;
+      total_referred_gyms: number;
+      bonus_per_referral: number;
+      min_withdrawal: number;
+      referral_code: string;
+      referral_link: string;
+      history: any[];
+    };
     referral_code?: string;
     referral_link?: string;
     wallet_balance?: number;
+    virtual_balance?: number;
     referral_earnings?: number;
     total_referred_gyms?: number;
     min_withdrawal?: number;
@@ -430,9 +448,27 @@ export const apiService = {
     }
     return {
       success: true,
+      virtual_wallet: {
+        balance: 0,
+        total_revenue: 0,
+        total_withdrawn: 0,
+        min_withdrawal: 500,
+        history: []
+      },
+      referral_wallet: {
+        balance: 0,
+        total_earned: 0,
+        total_referred_gyms: 0,
+        bonus_per_referral: 100,
+        min_withdrawal: 1500,
+        referral_code: "CULTFIT50",
+        referral_link: "https://gymdate.in/partner?ref=CULTFIT50",
+        history: []
+      },
       referral_code: "CULTFIT50",
       referral_link: "https://gymdate.in/partner?ref=CULTFIT50",
       wallet_balance: 0,
+      virtual_balance: 0,
       referral_earnings: 0,
       total_referred_gyms: 0,
       min_withdrawal: 1500,

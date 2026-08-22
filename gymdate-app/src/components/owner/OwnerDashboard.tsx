@@ -39,15 +39,18 @@ import {
   Copy,
   CreditCard,
   X,
-  Share2,
   Menu,
+  Share2,
   ArrowRight,
   CheckCircle2,
-  Send
+  Send,
+  Eye,
+  ArrowDownLeft,
+  ArrowUpRight
 } from 'lucide-react-native';
 import { apiService } from '../../services/apiService';
 
-type DashboardTab = 'overview' | 'bookings' | 'wallet';
+type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet';
 
 export const OwnerDashboard: React.FC = () => {
   const { 
@@ -85,11 +88,13 @@ export const OwnerDashboard: React.FC = () => {
   const [offerPercentage, setOfferPercentage] = useState('15');
   const [isUpdatingOffer, setIsUpdatingOffer] = useState(false);
 
-  // Referral Wallet State
+  // Referral & Virtual Wallet State
   const [copied, setCopied] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawPayoutType, setWithdrawPayoutType] = useState<'revenue' | 'referral'>('revenue');
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
   const [withdrawMethod, setWithdrawMethod] = useState<'bank' | 'upi'>('bank');
-  const [withdrawAmount, setWithdrawAmount] = useState('1500');
+  const [withdrawAmount, setWithdrawAmount] = useState('500');
   const [withdrawBankName, setWithdrawBankName] = useState('');
   const [withdrawAccountHolder, setWithdrawAccountHolder] = useState('');
   const [withdrawAccountNumber, setWithdrawAccountNumber] = useState('');
@@ -98,6 +103,23 @@ export const OwnerDashboard: React.FC = () => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccessMsg, setWithdrawSuccessMsg] = useState('');
   const [walletData, setWalletData] = useState<any>({
+    virtual_wallet: {
+      balance: 0,
+      total_revenue: 0,
+      total_withdrawn: 0,
+      min_withdrawal: 500,
+      history: []
+    },
+    referral_wallet: {
+      balance: 0,
+      total_earned: 0,
+      total_referred_gyms: 0,
+      bonus_per_referral: 100,
+      min_withdrawal: 1500,
+      referral_code: 'CULTFIT50',
+      referral_link: 'https://gymdate.in/partner?ref=CULTFIT50',
+      history: []
+    },
     wallet_balance: 0,
     referral_code: 'CULTFIT50',
     referral_link: 'https://gymdate.in/partner?ref=CULTFIT50',
@@ -131,6 +153,25 @@ export const OwnerDashboard: React.FC = () => {
       (currentEmail.includes('cult') && g.name.toLowerCase().includes('cult'))
     ) || (currentEmail.includes('sailakshmi') ? gyms.find(g => g.name.toLowerCase().includes('national')) : null)
     || gyms[0];
+
+  const virtualWallet = {
+    balance: walletData?.virtual_wallet?.balance ?? (liveStats.totalRevenue || 0),
+    total_revenue: walletData?.virtual_wallet?.total_revenue ?? (liveStats.totalRevenue || 0),
+    total_withdrawn: walletData?.virtual_wallet?.total_withdrawn ?? 0,
+    min_withdrawal: walletData?.virtual_wallet?.min_withdrawal ?? 500,
+    history: walletData?.virtual_wallet?.history ?? (walletData?.payouts || [])
+  };
+
+  const referralWallet = {
+    balance: walletData?.referral_wallet?.balance ?? (walletData?.wallet_balance ?? 0),
+    total_earned: walletData?.referral_wallet?.total_earned ?? (walletData?.referral_earnings ?? 0),
+    total_referred_gyms: walletData?.referral_wallet?.total_referred_gyms ?? (walletData?.total_referred_gyms ?? 0),
+    bonus_per_referral: walletData?.referral_wallet?.bonus_per_referral ?? 100,
+    min_withdrawal: walletData?.referral_wallet?.min_withdrawal ?? (walletData?.min_withdrawal ?? 1500),
+    referral_code: walletData?.referral_wallet?.referral_code ?? (walletData?.referral_code ?? 'CULTFIT50'),
+    referral_link: walletData?.referral_wallet?.referral_link ?? (walletData?.referral_link ?? 'https://gymdate.in/partner?ref=CULTFIT50'),
+    history: walletData?.referral_wallet?.history ?? []
+  };
 
   const fetchLiveDashboard = async () => {
     setIsLoadingData(true);
@@ -181,8 +222,18 @@ export const OwnerDashboard: React.FC = () => {
     }
   }, [activeGym]);
 
+  const handleToggleStatus = (val: boolean) => {
+    setIsOpenStatus(val);
+  };
+
   const handleTerminalScan = async () => {
-    if (!terminalInput.trim()) return;
+    if (!terminalInput.trim()) {
+      setScanResult({
+        success: false,
+        message: 'Please enter a ticket code or booking reference.'
+      });
+      return;
+    }
 
     setIsScanningQR(true);
     try {
@@ -190,10 +241,10 @@ export const OwnerDashboard: React.FC = () => {
       if (res && res.success) {
         setScanResult({
           success: true,
-          message: res.message || 'Pass verified and approved for entry!',
-          memberName: res.memberName || res.booking?.customer_name || 'Member'
+          message: res.message || 'Pass verified successfully! Member is admitted.',
+          memberName: res.memberName || 'Gym Member'
         });
-        setTerminalInput('');
+        fetchLiveDashboard();
       } else {
         setScanResult({
           success: false,
@@ -233,7 +284,7 @@ export const OwnerDashboard: React.FC = () => {
   };
 
   const handleCopyReferral = () => {
-    const link = walletData?.referral_link || `https://gymdate.in/partner?ref=${walletData?.referral_code || 'CULTFIT50'}`;
+    const link = referralWallet.referral_link;
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(link);
     }
@@ -241,13 +292,35 @@ export const OwnerDashboard: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const openWithdrawModal = (type: 'revenue' | 'referral') => {
+    setWithdrawPayoutType(type);
+    const minVal = type === 'revenue' ? virtualWallet.min_withdrawal : referralWallet.min_withdrawal;
+    setWithdrawAmount(String(minVal));
+    setWithdrawSuccessMsg('');
+    setShowWithdrawModal(true);
+  };
+
   const handleWithdrawSubmit = async () => {
+    const amountNum = parseFloat(withdrawAmount) || 0;
+    const minLimit = withdrawPayoutType === 'revenue' ? virtualWallet.min_withdrawal : referralWallet.min_withdrawal;
+    const maxAvailable = withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance;
+
+    if (amountNum < minLimit) {
+      setWithdrawSuccessMsg(`Minimum withdrawal amount is ₹${minLimit.toLocaleString()}`);
+      return;
+    }
+    if (amountNum > maxAvailable) {
+      setWithdrawSuccessMsg(`Requested amount exceeds available balance of ₹${maxAvailable.toLocaleString()}`);
+      return;
+    }
+
     setIsWithdrawing(true);
     try {
       const payload = {
         email: currentEmail,
-        amount: parseFloat(withdrawAmount) || 1500,
+        amount: amountNum,
         payout_method: withdrawMethod,
+        payout_type: withdrawPayoutType,
         bank_name: withdrawBankName,
         account_holder: withdrawAccountHolder,
         account_number: withdrawAccountNumber,
@@ -328,12 +401,22 @@ export const OwnerDashboard: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.drawerNavItem, activeTab === 'wallet' && styles.drawerNavItemActive]}
-                onPress={() => { setActiveTab('wallet'); setIsSidebarOpen(false); }}
+                style={[styles.drawerNavItem, activeTab === 'virtual_wallet' && styles.drawerNavItemActive]}
+                onPress={() => { setActiveTab('virtual_wallet'); setIsSidebarOpen(false); }}
               >
-                <Wallet size={18} color={activeTab === 'wallet' ? '#FFFFFF' : '#94A3B8'} />
-                <Text style={[styles.drawerNavText, activeTab === 'wallet' && styles.drawerNavTextActive]}>
-                  Virtual Wallet
+                <Wallet size={18} color={activeTab === 'virtual_wallet' ? '#FFFFFF' : '#94A3B8'} />
+                <Text style={[styles.drawerNavText, activeTab === 'virtual_wallet' && styles.drawerNavTextActive]}>
+                  Virtual Wallet (Revenue)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.drawerNavItem, activeTab === 'referral_wallet' && styles.drawerNavItemActive]}
+                onPress={() => { setActiveTab('referral_wallet'); setIsSidebarOpen(false); }}
+              >
+                <Gift size={18} color={activeTab === 'referral_wallet' ? '#FFFFFF' : '#94A3B8'} />
+                <Text style={[styles.drawerNavText, activeTab === 'referral_wallet' && styles.drawerNavTextActive]}>
+                  Referral Rewards
                 </Text>
               </TouchableOpacity>
             </View>
@@ -370,27 +453,47 @@ export const OwnerDashboard: React.FC = () => {
           <Menu size={20} color="#1E293B" />
         </TouchableOpacity>
 
-        <View style={styles.navbarTabsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navbarTabsScroll}>
           <TouchableOpacity 
             style={[styles.navTabPill, activeTab === 'overview' && styles.navTabPillActive]}
             onPress={() => setActiveTab('overview')}
           >
-            <LayoutDashboard size={13} color={activeTab === 'overview' ? '#FFFFFF' : '#64748B'} />
+            <LayoutDashboard size={12} color={activeTab === 'overview' ? '#FFFFFF' : '#64748B'} />
             <Text style={[styles.navTabPillText, activeTab === 'overview' && styles.navTabPillTextActive]}>
               Overview
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.navTabPill, activeTab === 'wallet' && styles.navTabPillActive]}
-            onPress={() => setActiveTab('wallet')}
+            style={[styles.navTabPill, activeTab === 'bookings' && styles.navTabPillActive]}
+            onPress={() => setActiveTab('bookings')}
           >
-            <Gift size={13} color={activeTab === 'wallet' ? '#FFFFFF' : '#64748B'} />
-            <Text style={[styles.navTabPillText, activeTab === 'wallet' && styles.navTabPillTextActive]}>
-              Referral & Wallet
+            <CreditCard size={12} color={activeTab === 'bookings' ? '#FFFFFF' : '#64748B'} />
+            <Text style={[styles.navTabPillText, activeTab === 'bookings' && styles.navTabPillTextActive]}>
+              Bookings
             </Text>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity 
+            style={[styles.navTabPill, activeTab === 'virtual_wallet' && styles.navTabPillActive]}
+            onPress={() => setActiveTab('virtual_wallet')}
+          >
+            <Wallet size={12} color={activeTab === 'virtual_wallet' ? '#FFFFFF' : '#64748B'} />
+            <Text style={[styles.navTabPillText, activeTab === 'virtual_wallet' && styles.navTabPillTextActive]}>
+              Virtual Wallet
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.navTabPill, activeTab === 'referral_wallet' && styles.navTabPillActive]}
+            onPress={() => setActiveTab('referral_wallet')}
+          >
+            <Gift size={12} color={activeTab === 'referral_wallet' ? '#FFFFFF' : '#64748B'} />
+            <Text style={[styles.navTabPillText, activeTab === 'referral_wallet' && styles.navTabPillTextActive]}>
+              Referral Rewards
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         <TouchableOpacity 
           style={styles.navQrBtn}
@@ -659,19 +762,124 @@ export const OwnerDashboard: React.FC = () => {
         )}
 
         {/* ============================================================== */}
-        {/* TAB 3: VIRTUAL WALLET & REFERRALS                               */}
+        {/* TAB 3: VIRTUAL WALLET (REVENUE)                                 */}
         {/* ============================================================== */}
-        {activeTab === 'wallet' && (
+        {activeTab === 'virtual_wallet' && (
           <View style={styles.tabContentWrapper}>
-            <Text style={styles.pageTitle}>Referral & Virtual Wallet</Text>
-            <Text style={styles.pageSubtitle}>Earn commissions by referring fellow gyms to the GymDate network.</Text>
+            <Text style={styles.pageTitle}>Virtual Wallet</Text>
+            <Text style={styles.pageSubtitle}>Live check-in subscription payouts & net gym revenue balance.</Text>
 
-            {/* Referral Wallet Card */}
+            {/* Virtual Revenue Wallet Card */}
             <View style={styles.walletHeroCard}>
               <View style={styles.walletHeaderRow}>
                 <View style={{ flex: 1, minWidth: 100 }}>
-                  <Text style={styles.walletHeroLabel}>AVAILABLE REWARD BALANCE</Text>
-                  <Text style={styles.walletHeroBalance}>₹{(walletData?.wallet_balance ?? 0).toLocaleString()}</Text>
+                  <Text style={styles.walletHeroLabel}>VIRTUAL REVENUE BALANCE</Text>
+                  <Text style={styles.walletHeroBalance}>₹{virtualWallet.balance.toLocaleString()}</Text>
+                </View>
+                <View style={[styles.walletBadge, { backgroundColor: '#1E293B' }]}>
+                  <Wallet size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.walletBadgeText}>Gym Revenue</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 16, marginTop: 10 }}>
+                <View>
+                  <Text style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: '700' }}>Gross Net Earned</Text>
+                  <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '800' }}>₹{virtualWallet.total_revenue.toLocaleString()}</Text>
+                </View>
+                <View>
+                  <Text style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: '700' }}>Total Withdrawn</Text>
+                  <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '800' }}>₹{virtualWallet.total_withdrawn.toLocaleString()}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.walletHeroDesc}>
+                Minimum withdrawal threshold: ₹{virtualWallet.min_withdrawal.toLocaleString()}
+              </Text>
+
+              <TouchableOpacity 
+                style={styles.withdrawBtn}
+                onPress={() => openWithdrawModal('revenue')}
+                activeOpacity={0.85}
+              >
+                <Send size={14} color="#0F172A" style={{ marginRight: 8 }} />
+                <Text style={styles.withdrawBtnText}>Request Revenue Payout</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Revenue Payout Requests History */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Revenue Withdrawal History</Text>
+                <Text style={styles.countBadge}>{virtualWallet.history.length} Total</Text>
+              </View>
+
+              {virtualWallet.history.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                  <Wallet size={26} color="#CBD5E1" style={{ marginBottom: 6 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>No revenue payout requests yet</Text>
+                  <Text style={{ fontSize: 10.5, color: '#94A3B8', marginTop: 2 }}>
+                    Withdrawals from gym membership earnings will appear here.
+                  </Text>
+                </View>
+              ) : (
+                virtualWallet.history.map((p: any, idx: number) => {
+                  const status = (p.status || 'PENDING').toLowerCase();
+                  const isApproved = status === 'approved' || status === 'completed';
+                  return (
+                    <View key={p.id || idx} style={styles.bookingRowItem}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={styles.bookingUserName}>
+                          ₹{parseFloat(p.amount || 0).toLocaleString()} • {p.payout_method === 'upi' ? 'UPI Transfer' : 'Bank Transfer'}
+                        </Text>
+                        <Text style={styles.bookingUserPlan}>{new Date(p.created_at || Date.now()).toLocaleDateString()}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                        <View style={[
+                          styles.confirmedPill,
+                          { backgroundColor: isApproved ? '#DCFCE7' : status === 'rejected' ? '#FEE2E2' : '#FEF3C7' }
+                        ]}>
+                          <Text style={[
+                            styles.confirmedPillText, 
+                            { color: isApproved ? '#059669' : status === 'rejected' ? '#DC2626' : '#D97706' }
+                          ]}>
+                            {(p.status || 'PENDING').toUpperCase()}
+                          </Text>
+                        </View>
+                        {p.payment_proof_url && (
+                          <TouchableOpacity 
+                            style={styles.viewReceiptBtn}
+                            onPress={() => setSelectedProofUrl(p.payment_proof_url)}
+                          >
+                            <Eye size={11} color="#2563EB" style={{ marginRight: 3 }} />
+                            <Text style={styles.viewReceiptBtnText}>Receipt</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB 4: REFERRAL & REWARDS (REFERRAL WALLET)                     */}
+        {/* ============================================================== */}
+        {activeTab === 'referral_wallet' && (
+          <View style={styles.tabContentWrapper}>
+            <Text style={styles.pageTitle}>Referral & Rewards</Text>
+            <Text style={styles.pageSubtitle}>
+              Earn ₹{referralWallet.bonus_per_referral} for every fellow gym owner you invite to GymDate.
+            </Text>
+
+            {/* Referral Wallet Hero Card */}
+            <View style={styles.walletHeroCard}>
+              <View style={styles.walletHeaderRow}>
+                <View style={{ flex: 1, minWidth: 100 }}>
+                  <Text style={styles.walletHeroLabel}>AVAILABLE REFERRAL BONUS</Text>
+                  <Text style={styles.walletHeroBalance}>₹{referralWallet.balance.toLocaleString()}</Text>
                 </View>
                 <View style={styles.walletBadge}>
                   <Gift size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
@@ -682,25 +890,25 @@ export const OwnerDashboard: React.FC = () => {
               <View style={{ flexDirection: 'row', gap: 16, marginTop: 10 }}>
                 <View>
                   <Text style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: '700' }}>Referred Gyms</Text>
-                  <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '800' }}>{walletData?.total_referred_gyms ?? 0}</Text>
+                  <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '800' }}>{referralWallet.total_referred_gyms}</Text>
                 </View>
                 <View>
                   <Text style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: '700' }}>Total Earned</Text>
-                  <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '800' }}>₹{(walletData?.referral_earnings ?? 0).toLocaleString()}</Text>
+                  <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '800' }}>₹{referralWallet.total_earned.toLocaleString()}</Text>
                 </View>
               </View>
 
               <Text style={styles.walletHeroDesc}>
-                Minimum withdrawal threshold: ₹{(walletData?.min_withdrawal ?? 1500).toLocaleString()}
+                Minimum withdrawal threshold: ₹{referralWallet.min_withdrawal.toLocaleString()}
               </Text>
 
               <TouchableOpacity 
                 style={styles.withdrawBtn}
-                onPress={() => setShowWithdrawModal(true)}
+                onPress={() => openWithdrawModal('referral')}
                 activeOpacity={0.85}
               >
                 <Send size={14} color="#0F172A" style={{ marginRight: 8 }} />
-                <Text style={styles.withdrawBtnText}>Request Payout Withdrawal</Text>
+                <Text style={styles.withdrawBtnText}>Request Referral Payout</Text>
               </TouchableOpacity>
             </View>
 
@@ -708,12 +916,12 @@ export const OwnerDashboard: React.FC = () => {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Your Partner Referral Link</Text>
               <Text style={styles.cardDesc}>
-                Share this link with other gym owners in India. Earn ₹200 bonus directly to your wallet for each approved gym!
+                Share this link with other gym owners in India. Earn ₹{referralWallet.bonus_per_referral} bonus directly to your wallet for each approved gym!
               </Text>
 
               <View style={styles.referralLinkBox}>
                 <Text style={styles.referralLinkText} numberOfLines={1}>
-                  {walletData?.referral_link || `https://gymdate.in/partner?ref=${walletData?.referral_code || 'CULTFIT50'}`}
+                  {referralWallet.referral_link}
                 </Text>
                 <TouchableOpacity 
                   style={styles.copyLinkBtn} 
@@ -725,35 +933,66 @@ export const OwnerDashboard: React.FC = () => {
               </View>
             </View>
 
-            {/* Payout Requests History */}
+            {/* Referral Activity & History */}
             <View style={styles.card}>
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Withdrawal Transactions</Text>
-                <Text style={styles.countBadge}>{(walletData?.payouts || []).length} Total</Text>
+                <Text style={styles.cardTitle}>Referral Activity History</Text>
+                <Text style={styles.countBadge}>{referralWallet.history.length} Total</Text>
               </View>
 
-              {(walletData?.payouts || []).length === 0 ? (
-                <View style={{ alignItems: 'center', paddingVertical: 18 }}>
-                  <Wallet size={26} color="#CBD5E1" style={{ marginBottom: 6 }} />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>No withdrawal requests submitted yet</Text>
+              {referralWallet.history.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                  <Gift size={26} color="#CBD5E1" style={{ marginBottom: 6 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>No referral transactions yet</Text>
                   <Text style={{ fontSize: 10.5, color: '#94A3B8', marginTop: 2 }}>
-                    Your withdrawal history and processing status will appear here.
+                    Referral rewards and bonus withdrawals will appear here.
                   </Text>
                 </View>
               ) : (
-                (walletData?.payouts || []).map((p: any, idx: number) => (
-                  <View key={p.id || idx} style={styles.bookingRowItem}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.bookingUserName}>₹{parseFloat(p.amount || 0).toLocaleString()} • {p.payout_method === 'upi' ? 'UPI Transfer' : 'Bank Transfer'}</Text>
-                      <Text style={styles.bookingUserPlan}>{new Date(p.created_at || Date.now()).toLocaleDateString()}</Text>
+                referralWallet.history.map((item: any, idx: number) => {
+                  const isDebit = item.type === 'debit';
+                  const isApproved = item.status === 'approved' || item.status === 'completed' || item.status === 'credited';
+                  return (
+                    <View key={item.id || idx} style={styles.bookingRowItem}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[
+                            styles.bookingUserName,
+                            { color: isDebit ? '#DC2626' : '#059669', fontWeight: '800' }
+                          ]}>
+                            {isDebit ? '-' : '+'}₹{parseFloat(item.amount || 0).toLocaleString()}
+                          </Text>
+                          <Text style={[styles.bookingUserName, { fontSize: 11, color: '#475569', fontWeight: '600' }]}>
+                            • {item.detail || (isDebit ? 'Withdrawal' : 'Gym Referral Bonus')}
+                          </Text>
+                        </View>
+                        <Text style={styles.bookingUserPlan}>{new Date(item.created_at || Date.now()).toLocaleDateString()}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                        <View style={[
+                          styles.confirmedPill,
+                          { backgroundColor: isApproved ? '#DCFCE7' : item.status === 'rejected' ? '#FEE2E2' : '#FEF3C7' }
+                        ]}>
+                          <Text style={[
+                            styles.confirmedPillText, 
+                            { color: isApproved ? '#059669' : item.status === 'rejected' ? '#DC2626' : '#D97706' }
+                          ]}>
+                            {(item.status || 'CREDITED').toUpperCase()}
+                          </Text>
+                        </View>
+                        {item.payment_proof_url && (
+                          <TouchableOpacity 
+                            style={styles.viewReceiptBtn}
+                            onPress={() => setSelectedProofUrl(item.payment_proof_url)}
+                          >
+                            <Eye size={11} color="#2563EB" style={{ marginRight: 3 }} />
+                            <Text style={styles.viewReceiptBtnText}>Receipt</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
-                    <View style={styles.confirmedPill}>
-                      <Text style={[styles.confirmedPillText, { color: p.status === 'approved' ? '#059669' : '#D97706' }]}>
-                        {(p.status || 'PENDING').toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                ))
+                  );
+                })
               )}
             </View>
           </View>
@@ -905,11 +1144,29 @@ export const OwnerDashboard: React.FC = () => {
             <View style={styles.modalHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Wallet size={18} color={THEME.COLORS.primary} />
-                <Text style={styles.modalTitle}>Request Payout</Text>
+                <Text style={styles.modalTitle}>
+                  {withdrawPayoutType === 'revenue' ? 'Withdraw Revenue Payout' : 'Withdraw Referral Bonus'}
+                </Text>
               </View>
               <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={{ padding: 4 }}>
                 <X size={18} color="#64748B" />
               </TouchableOpacity>
+            </View>
+
+            {/* Wallet Info Summary Box */}
+            <View style={styles.withdrawInfoBanner}>
+              <View>
+                <Text style={styles.withdrawInfoLabel}>Available to Withdraw</Text>
+                <Text style={styles.withdrawInfoVal}>
+                  ₹{(withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance).toLocaleString()}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.withdrawInfoLabel}>Min. Limit</Text>
+                <Text style={[styles.withdrawInfoVal, { color: '#64748B' }]}>
+                  ₹{(withdrawPayoutType === 'revenue' ? virtualWallet.min_withdrawal : referralWallet.min_withdrawal).toLocaleString()}
+                </Text>
+              </View>
             </View>
 
             {withdrawSuccessMsg ? (
@@ -919,6 +1176,22 @@ export const OwnerDashboard: React.FC = () => {
               </View>
             ) : (
               <>
+                <View style={styles.formFieldGroup}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <Text style={styles.formLabel}>Withdrawal Amount (₹)</Text>
+                    <TouchableOpacity onPress={() => setWithdrawAmount(String(withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance))}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.COLORS.primary }}>Set Max</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput 
+                    value={withdrawAmount} 
+                    onChangeText={setWithdrawAmount} 
+                    keyboardType="numeric" 
+                    placeholder="Enter amount" 
+                    style={styles.formInput} 
+                  />
+                </View>
+
                 <View style={styles.withdrawTypeTabs}>
                   <TouchableOpacity 
                     style={[styles.withdrawTypeTab, withdrawMethod === 'bank' && styles.withdrawTypeTabActive]}
@@ -976,6 +1249,46 @@ export const OwnerDashboard: React.FC = () => {
           </View>
         </View>
       )}
+
+      {/* 🖼️ IN-FRAME MODAL: PAYMENT PROOF RECEIPT VIEWER */}
+      {selectedProofUrl && (
+        <View style={styles.inFrameModalOverlay}>
+          <TouchableOpacity 
+            style={styles.inFrameModalBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setSelectedProofUrl(null)} 
+          />
+          <View style={styles.receiptModalBox}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <CheckCircle2 size={18} color="#059669" />
+                <Text style={styles.modalTitle}>Payment Receipt</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedProofUrl(null)} style={{ padding: 4 }}>
+                <X size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 12 }}>
+              Official bank / UPI payment transfer screenshot confirmed by Super Admin.
+            </Text>
+
+            <View style={{ borderRadius: 12, overflow: 'hidden', backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' }}>
+              <Image 
+                source={{ uri: selectedProofUrl.startsWith('http') ? selectedProofUrl : `https://gymdate.in${selectedProofUrl}` }} 
+                style={styles.receiptImage} 
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.modalCloseBtn, { marginTop: 14 }]}
+              onPress={() => setSelectedProofUrl(null)}
+            >
+              <Text style={styles.modalCloseBtnText}>Close Receipt</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -990,6 +1303,68 @@ const styles = StyleSheet.create({
   },
   tabContentWrapper: {
     gap: 14,
+  },
+  navbarTabsScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    padding: 3,
+    borderRadius: 12,
+    gap: 4,
+    marginHorizontal: 6,
+  },
+  withdrawInfoBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 10,
+  },
+  withdrawInfoLabel: {
+    fontSize: 9.5,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  withdrawInfoVal: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#059669',
+    marginTop: 1,
+  },
+  viewReceiptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  viewReceiptBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  receiptModalBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    width: '92%',
+    maxWidth: 440,
+    maxHeight: '85%',
+    ...Platform.select({
+      web: { boxShadow: '0 20px 40px rgba(0,0,0,0.25)' },
+      default: { elevation: 10 }
+    })
+  },
+  receiptImage: {
+    width: '100%',
+    height: 320,
+    resizeMode: 'contain',
   },
 
   /* TOP NAVBAR */
