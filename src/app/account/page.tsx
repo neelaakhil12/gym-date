@@ -31,7 +31,8 @@ import {
   Gift,
   Copy,
   Check,
-  TrendingUp
+  TrendingUp,
+  Camera
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -63,6 +64,8 @@ export default function AccountPage() {
   const [editPhone, setEditPhone] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSaveMsg, setProfileSaveMsg] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { data: nextAuthSession, status } = useSession();
   const router = useRouter();
 
@@ -72,6 +75,15 @@ export default function AccountPage() {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Load profile photo from localStorage
+  useEffect(() => {
+    const email = nextAuthSession?.user?.email;
+    if (email) {
+      const stored = localStorage.getItem(`gymdate_photo_${email}`);
+      if (stored) setProfilePhoto(stored);
+    }
+  }, [nextAuthSession?.user?.email]);
 
   useEffect(() => {
     const fetchUserAndGyms = async () => {
@@ -234,6 +246,23 @@ export default function AccountPage() {
     }
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setProfilePhoto(base64);
+      const email = nextAuthSession?.user?.email;
+      if (email) localStorage.setItem(`gymdate_photo_${email}`, base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Search location effect
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
@@ -388,8 +417,20 @@ export default function AccountPage() {
                 </button>
               {/* Profile Card Mini */}
               <div className="flex items-center space-x-4 mb-10 border-b pb-8 border-gray-50">
-                <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center text-white shadow-lg">
-                  <span className="text-lg font-black">{initials}</span>
+                <div className="relative w-14 h-14 shrink-0">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="Profile" className="w-14 h-14 rounded-2xl object-cover shadow-lg" />
+                  ) : (
+                    <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center text-white shadow-lg">
+                      <span className="text-lg font-black">{initials}</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-md"
+                  >
+                    <Camera className="w-2.5 h-2.5 text-white" />
+                  </button>
                 </div>
                 <div className="overflow-hidden">
                   <h3 className="font-black text-secondary truncate">{displayName.split(' ')[0]}</h3>
@@ -605,6 +646,45 @@ export default function AccountPage() {
 
               {activeTab === "profile" && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+                  {/* Profile Photo Upload */}
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                    <div className="relative shrink-0">
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt="Profile" className="w-24 h-24 rounded-3xl object-cover shadow-lg border-4 border-white" />
+                      ) : (
+                        <div className="w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-3xl flex items-center justify-center text-white shadow-lg border-4 border-white">
+                          <span className="text-3xl font-black">{initials}</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary hover:bg-red-700 rounded-full flex items-center justify-center shadow-lg transition-all"
+                      >
+                        <Camera className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-secondary">{displayName}</h3>
+                      <p className="text-xs text-gray-400 font-bold mt-0.5 uppercase tracking-widest">Active Member</p>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-3 px-5 py-2 bg-primary text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-md shadow-primary/20 flex items-center gap-2"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        {profilePhoto ? 'Change Photo' : 'Upload Photo'}
+                      </button>
+                      <p className="text-[10px] text-gray-400 mt-1.5">JPG, PNG or GIF · Max 5MB</p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-xl font-black text-secondary">Personal Information</h3>
