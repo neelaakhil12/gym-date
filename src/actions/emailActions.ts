@@ -46,8 +46,11 @@ export async function sendPasswordResetEmail(email: string, redirectTo: string =
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://gymdate.in');
 
-    // 1. Check if user exists in users, admin_users, or staff_users
+    // 1. Check if user exists in users, admin_users, staff_users, or partner_users
     let userResult = await query("SELECT id FROM users WHERE email = $1", [email]);
+    if (userResult.rows.length === 0) {
+      userResult = await query("SELECT id FROM partner_users WHERE email = $1", [email]);
+    }
     if (userResult.rows.length === 0) {
       userResult = await query("SELECT id FROM admin_users WHERE email = $1", [email]);
     }

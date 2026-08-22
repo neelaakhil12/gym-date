@@ -1,23 +1,43 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
   Text, 
   TouchableOpacity, 
   TextInput, 
-  ScrollView,
-  Image,
-  ImageBackground,
-  Dimensions,
-  Alert,
-  Platform,
-  ActivityIndicator
+  ScrollView, 
+  Image, 
+  Dimensions, 
+  Alert, 
+  Platform, 
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Linking
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
-import { Dumbbell, ArrowRight, ShieldCheck, Mail, Phone, Lock, Sparkles, Goal, ChevronLeft, Check } from 'lucide-react-native';
+import { 
+  Dumbbell, 
+  ArrowRight, 
+  ShieldCheck, 
+  Mail, 
+  Phone, 
+  Lock, 
+  Sparkles, 
+  Goal, 
+  ChevronLeft, 
+  Check, 
+  User, 
+  Building2, 
+  Handshake,
+  KeyRound,
+  MapPin,
+  Eye,
+  EyeOff
+} from 'lucide-react-native';
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
 import { getCurrentLocation, reverseGeocode } from '../../utils/location';
@@ -31,14 +51,18 @@ export const Onboarding: React.FC = () => {
     setActiveScreen, 
     loginInput, 
     setLoginInput, 
-    setIsLoggedIn,
-    userProfile,
-    setUserProfile,
-    themeMode
+    setIsLoggedIn, 
+    userProfile, 
+    setUserProfile, 
+    ownerProfile,
+    setOwnerProfile,
+    gyms,
+    themeMode,
+    setCurrentRole
   } = useGymDate();
   const { isDark, bg } = useTheme();
 
-  const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register'>('intro');
+  const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register' | 'partner-login' | 'partner-register' | 'partner-forgot-password'>('intro');
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
@@ -50,6 +74,79 @@ export const Onboarding: React.FC = () => {
   const [otpCode, setOtpCode] = useState<string[]>(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState<string>('');
 
+  // Partner login fields
+  const [partnerEmail, setPartnerEmail] = useState('');
+  const [partnerPassword, setPartnerPassword] = useState('');
+  const [showPartnerPassword, setShowPartnerPassword] = useState(false);
+  const [isPartnerLoggingIn, setIsPartnerLoggingIn] = useState(false);
+  const [partnerLoginError, setPartnerLoginError] = useState('');
+
+  // Partner forgot password fields
+  const [forgotPartnerEmail, setForgotPartnerEmail] = useState('');
+  const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
+
+  // Partner registration fields
+  const [partnerRegGymName, setPartnerRegGymName] = useState('');
+  const [partnerRegOwnerName, setPartnerRegOwnerName] = useState('');
+  const [partnerRegEmail, setPartnerRegEmail] = useState('');
+  const [partnerRegPhone, setPartnerRegPhone] = useState('');
+  const [partnerRegCity, setPartnerRegCity] = useState('');
+  const [partnerRegAddress, setPartnerRegAddress] = useState('');
+  const [isPartnerRegSubmitting, setIsPartnerRegSubmitting] = useState(false);
+
+  // Splash Screen Animation Values
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.75)).current;
+  const logoTranslateY = useRef(new Animated.Value(0)).current;
+  const buttonsOpacity = useRef(new Animated.Value(0)).current;
+  const buttonsTranslateY = useRef(new Animated.Value(40)).current;
+  const [buttonsReady, setButtonsReady] = useState(false);
+
+  useEffect(() => {
+    // 1. Logo reveals smoothly on splash
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // 2. Short pause to showcase the logo, then reveal the two login buttons
+      setTimeout(() => {
+        setButtonsReady(true);
+        Animated.parallel([
+          Animated.timing(logoTranslateY, {
+            toValue: -15,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(buttonsOpacity, {
+            toValue: 1,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.spring(buttonsTranslateY, {
+            toValue: 0,
+            friction: 7,
+            tension: 50,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, 700);
+    });
+  }, []);
+
   const isLight = themeMode === 'light';
   const inputRefs = useRef<Array<any>>([]);
 
@@ -60,15 +157,184 @@ export const Onboarding: React.FC = () => {
     { title: 'Mind & Body Balance', desc: 'Stretching, yogic flows, & recovery posture', icon: '🧘' }
   ];
 
-  const handleNextIntro = () => {
-    setStep('goals');
+  const handleUserLoginClick = () => {
+    setCurrentRole('member');
+    setStep('login');
+  };
+
+  const handlePartnerLoginClick = () => {
+    setPartnerLoginError('');
+    setStep('partner-login');
+  };
+
+  const handlePartnerLoginSubmit = async () => {
+    const trimmedEmail = partnerEmail.trim().toLowerCase();
+    setPartnerLoginError('');
+
+    if (!trimmedEmail) {
+      setPartnerLoginError('Please enter your registered gym partner email.');
+      return;
+    }
+    if (!partnerPassword) {
+      setPartnerLoginError('Please enter your partner password.');
+      return;
+    }
+
+    setIsPartnerLoggingIn(true);
+    try {
+      const res = await apiService.partnerLogin(trimmedEmail, partnerPassword);
+      if (!res.success) {
+        setPartnerLoginError(res.error || 'Invalid partner email or password.');
+        return;
+      }
+
+      if (res.user) {
+        let detectedGym = res.user.gym;
+        if (!detectedGym) {
+          if (trimmedEmail.includes('sailakshmi') || trimmedEmail.includes('national')) {
+            detectedGym = gyms.find(g => g.name.toLowerCase().includes('national'));
+          } else if (trimmedEmail.includes('neelaakhilkumar50') || trimmedEmail.includes('cult')) {
+            detectedGym = gyms.find(g => g.name.toLowerCase().includes('cult'));
+          } else {
+            detectedGym = gyms.find(g => (g as any).owner_email?.toLowerCase() === trimmedEmail || (g as any).partner_id === res.user.id);
+          }
+        }
+
+        const gymName = detectedGym?.name || (trimmedEmail.includes('sailakshmi') ? 'national' : (trimmedEmail.includes('cult') ? 'cultfit gym' : (gyms[0]?.name || 'Partner Gym')));
+        const partnerName = res.user.name || (gymName.toUpperCase() + ' Partner');
+
+        setOwnerProfile(prev => ({
+          ...prev,
+          ownerName: partnerName,
+          gymName: gymName,
+        }));
+        setUserProfile(prev => ({
+          ...prev,
+          name: partnerName,
+          email: res.user.email || trimmedEmail,
+        }));
+      }
+
+      setLoginInput(trimmedEmail);
+      setCurrentRole('owner');
+      setIsLoggedIn(true);
+      setActiveScreen('home');
+    } catch (err: any) {
+      setPartnerLoginError(err.message || 'Could not connect to authentication server.');
+    } finally {
+      setIsPartnerLoggingIn(false);
+    }
+  };
+
+  const handlePartnerForgotPasswordSubmit = async () => {
+    const trimmedEmail = forgotPartnerEmail.trim().toLowerCase();
+    setForgotError('');
+    setForgotMessage('');
+
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      setForgotError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsForgotSubmitting(true);
+    try {
+      const res = await apiService.partnerForgotPassword(trimmedEmail);
+      if (!res.success && res.error) {
+        setForgotError(res.error || 'Failed to send reset link.');
+        return;
+      }
+      setForgotMessage(res.message || 'Password reset link has been sent to your email!');
+    } catch (err: any) {
+      setForgotError(err.message || 'Failed to send reset link. Please check your connection.');
+    } finally {
+      setIsForgotSubmitting(false);
+    }
+  };
+
+  const handlePartnerRegisterSubmit = async () => {
+    if (!partnerRegGymName.trim()) {
+      showAlert('Required Field', 'Please enter your Gym Name.');
+      return;
+    }
+    if (!partnerRegOwnerName.trim()) {
+      showAlert('Required Field', 'Please enter the Owner Name.');
+      return;
+    }
+    if (!partnerRegEmail.trim() || !partnerRegEmail.includes('@')) {
+      showAlert('Required Field', 'Please enter a valid Email Address.');
+      return;
+    }
+    if (!partnerRegPhone.trim() || partnerRegPhone.trim().replace(/[^0-9]/g, '').length < 10) {
+      showAlert('Required Field', 'Please enter a valid 10-digit Phone Number.');
+      return;
+    }
+    if (!partnerRegCity.trim()) {
+      showAlert('Required Field', 'Please enter the City.');
+      return;
+    }
+    if (!partnerRegAddress.trim()) {
+      showAlert('Required Field', 'Please enter the Full Address.');
+      return;
+    }
+
+    setIsPartnerRegSubmitting(true);
+    try {
+      const res = await apiService.registerPartner({
+        gymName: partnerRegGymName.trim(),
+        ownerName: partnerRegOwnerName.trim(),
+        email: partnerRegEmail.trim(),
+        phone: partnerRegPhone.trim(),
+        city: partnerRegCity.trim(),
+        address: partnerRegAddress.trim(),
+      });
+
+      if (!res.success && res.error) {
+        showAlert('Submission Failed', res.error || 'Failed to submit registration request.');
+        return;
+      }
+
+      showAlert(
+        'Registration Submitted! 🎉',
+        'Your registration request has been submitted successfully to the GymDate partnership network.'
+      );
+
+      // WhatsApp redirection
+      const message = `Hello GymDate! I am ${partnerRegOwnerName.trim()}, owner of ${partnerRegGymName.trim()} in ${partnerRegCity.trim()}. I just submitted my registration request on your mobile app and would like to discuss the onboarding process.`;
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/8143186677?text=${encodedMessage}`;
+      
+      if (Platform.OS === 'web') {
+        window.open(whatsappUrl, '_blank');
+      } else {
+        Linking.openURL(whatsappUrl).catch(() => {});
+      }
+
+      // Reset and return to partner-login
+      setPartnerRegGymName('');
+      setPartnerRegOwnerName('');
+      setPartnerRegEmail('');
+      setPartnerRegPhone('');
+      setPartnerRegCity('');
+      setPartnerRegAddress('');
+      setStep('partner-login');
+    } catch (err: any) {
+      showAlert('Error', err.message || 'An unexpected error occurred.');
+    } finally {
+      setIsPartnerRegSubmitting(false);
+    }
   };
 
   const handleBack = () => {
     if (step === 'goals') {
       setStep('intro');
     } else if (step === 'login') {
-      setStep('goals');
+      setStep('intro');
+    } else if (step === 'partner-login') {
+      setStep('intro');
+    } else if (step === 'partner-register') {
+      setStep('partner-login');
+    } else if (step === 'partner-forgot-password') {
+      setStep('partner-login');
     } else if (step === 'otp') {
       setStep('login');
     } else if (step === 'register') {
@@ -264,30 +530,374 @@ export const Onboarding: React.FC = () => {
 
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, isLight && styles.containerLight]} keyboardShouldPersistTaps="handled">
-      {/* STEP 1: SPLASH INTRO SCREEN */}
+    <ScrollView 
+      contentContainerStyle={[styles.container, isLight && styles.containerLight]} 
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {/* STEP 1: SPLASH INTRO SCREEN - LOGO REVEAL THEN BUTTONS */}
       {step === 'intro' && (
-        <View style={styles.contentWrapper}>
-          <View style={styles.centerBlock}>
-            <Image source={logoImg} style={styles.brandLogoImg} />
-            <Text style={styles.brandSub}>Fitness Freedom Awaits</Text>
-            <Text style={[styles.brandDesc, isLight && styles.textMutedLight]}>
-              Access the largest premium network of top-tier gyms with high-intensity grids, private coaches, and flexible passes.
-            </Text>
-          </View>
+        <View style={styles.cleanIntroWrapper}>
+          <Animated.View 
+            style={[
+              styles.cleanLogoCenter,
+              {
+                opacity: logoOpacity,
+                transform: [
+                  { scale: logoScale },
+                  { translateY: logoTranslateY }
+                ]
+              }
+            ]}
+          >
+            <Image source={logoImg} style={styles.cleanBrandLogo} />
+          </Animated.View>
 
-          <View style={styles.bottomBlock}>
-            <View style={[styles.cardPromo, isLight && styles.cardPromoLight]}>
-              <Text style={styles.promoLabel}>Flexible Passes</Text>
-              <Text style={[styles.promoTitle, isLight && styles.textLight]}>Daily, Weekly, Monthly Passes</Text>
-              <Text style={[styles.promoDesc, isLight && styles.textMutedLight]}>No joining fees. Instant QR checkin.</Text>
+          {buttonsReady && (
+            <Animated.View 
+              style={[
+                styles.cleanActionButtons,
+                {
+                  opacity: buttonsOpacity,
+                  transform: [{ translateY: buttonsTranslateY }]
+                }
+              ]}
+            >
+              {/* 1. GYM PARTNER LOGIN BUTTON */}
+              <TouchableOpacity 
+                style={styles.cleanPartnerBtn} 
+                onPress={handlePartnerLoginClick}
+                activeOpacity={0.85}
+              >
+                <Handshake size={20} color="#ffffff" style={{ marginRight: 10 }} />
+                <Text style={styles.cleanPartnerBtnText}>GymPartner Login</Text>
+                <ArrowRight size={16} color="#ffffff" style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+
+              {/* 2. USER LOGIN BUTTON */}
+              <TouchableOpacity 
+                style={styles.cleanUserBtn} 
+                onPress={handleUserLoginClick}
+                activeOpacity={0.85}
+              >
+                <User size={20} color={THEME.COLORS.primary} style={{ marginRight: 10 }} />
+                <Text style={styles.cleanUserBtnText}>User Login</Text>
+                <ArrowRight size={16} color={THEME.COLORS.primary} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </View>
+      )}
+
+      {/* STEP 1.5: GYM PARTNER LOGIN SCREEN */}
+      {step === 'partner-login' && (
+        <View style={styles.contentWrapper}>
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+              <ChevronLeft size={16} color="#1a1a1a" />
+            </TouchableOpacity>
+            
+            <View style={styles.logoBadgeSmall}>
+              <Handshake size={22} color={THEME.COLORS.primary} />
+            </View>
+            
+            <Text style={[styles.titleText, isLight && styles.textLight]}>Gym Partner Login</Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>
+              Sign in to manage your gym facility, track live member check-ins, and view revenue payouts.
+            </Text>
+
+            {partnerLoginError ? (
+              <View style={[styles.errorBanner, { marginBottom: 16 }]}>
+                <Text style={styles.errorText}>{partnerLoginError}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.formGroup}>
+              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Partner Email</Text>
+              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                <Mail size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  value={partnerEmail}
+                  onChangeText={(val) => { setPartnerEmail(val); setPartnerLoginError(''); }}
+                  placeholder="owner@gym.com"
+                  placeholderTextColor={THEME.COLORS.textMuted}
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
 
-            <TouchableOpacity style={styles.btnPrimary} onPress={handleNextIntro}>
-              <Text style={styles.btnPrimaryText}>Get Started</Text>
-              <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
+            <View style={styles.formGroup}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Password</Text>
+                <TouchableOpacity onPress={() => { setForgotPartnerEmail(partnerEmail); setForgotError(''); setForgotMessage(''); setStep('partner-forgot-password'); }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.COLORS.primary }}>
+                    Forgot password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight, { paddingRight: 10 }]}>
+                <Lock size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  value={partnerPassword}
+                  onChangeText={(val) => { setPartnerPassword(val); setPartnerLoginError(''); }}
+                  placeholder="••••••••"
+                  placeholderTextColor={THEME.COLORS.textMuted}
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, flex: 1, paddingRight: 4 }]}
+                  secureTextEntry={!showPartnerPassword}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPartnerPassword(!showPartnerPassword)}
+                  style={{ padding: 4, cursor: Platform.OS === 'web' ? 'pointer' : undefined }}
+                  activeOpacity={0.7}
+                >
+                  {showPartnerPassword ? (
+                    <EyeOff size={18} color={THEME.COLORS.primary} />
+                  ) : (
+                    <Eye size={18} color={THEME.COLORS.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.btnPrimary, isPartnerLoggingIn && { opacity: 0.75 }]} 
+              onPress={handlePartnerLoginSubmit}
+              disabled={isPartnerLoggingIn}
+            >
+              {isPartnerLoggingIn ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.btnPrimaryText}>Sign In as Gym Partner</Text>
+                  <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.btnSecondary, 
+                { 
+                  marginTop: 14, 
+                  backgroundColor: '#ffffff', 
+                  borderColor: '#E5E7EB', 
+                  borderWidth: 1.5, 
+                  height: 52,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  borderRadius: 16
+                }
+              ]} 
+              onPress={() => setStep('partner-register')}
+            >
+              <Handshake size={18} color={THEME.COLORS.primary} />
+              <Text style={{ color: '#111827', fontWeight: '800', fontSize: 13 }}>
+                Become a Partner
+              </Text>
+              <ArrowRight size={14} color={THEME.COLORS.primary} />
             </TouchableOpacity>
           </View>
+        </View>
+      )}
+
+      {/* STEP 1.55: FORGOT PASSWORD SCREEN (WEBSITE MATCH) */}
+      {step === 'partner-forgot-password' && (
+        <View style={styles.contentWrapper}>
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <TouchableOpacity onPress={() => setStep('partner-login')} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+              <ChevronLeft size={16} color="#1a1a1a" />
+            </TouchableOpacity>
+
+            <View style={styles.logoBadgeSmall}>
+              <Mail size={22} color={THEME.COLORS.primary} />
+            </View>
+
+            <Text style={[styles.titleText, isLight && styles.textLight]}>Reset Password</Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>
+              Enter your email address and we'll send you a link to reset your password.
+            </Text>
+
+            {forgotError ? (
+              <View style={[styles.errorBanner, { marginBottom: 16 }]}>
+                <Text style={styles.errorText}>{forgotError}</Text>
+              </View>
+            ) : null}
+
+            {forgotMessage ? (
+              <View style={[styles.infoBanner, { backgroundColor: 'rgba(0, 199, 88, 0.08)', borderColor: 'rgba(0, 199, 88, 0.2)', marginBottom: 20 }]}>
+                <Check size={16} color={THEME.COLORS.success} style={{ marginRight: 6 }} />
+                <Text style={[styles.infoBannerText, { color: '#065F46', fontWeight: '700' }]}>
+                  {forgotMessage}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.formGroup}>
+                  <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Email Address</Text>
+                  <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                    <Mail size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                    <TextInput
+                      value={forgotPartnerEmail}
+                      onChangeText={(val) => { setForgotPartnerEmail(val); setForgotError(''); }}
+                      placeholder="you@example.com"
+                      placeholderTextColor={THEME.COLORS.textMuted}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.btnPrimary, isForgotSubmitting && { opacity: 0.75 }]} 
+                  onPress={handlePartnerForgotPasswordSubmit}
+                  disabled={isForgotSubmitting}
+                >
+                  {isForgotSubmitting ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Text style={styles.btnPrimaryText}>Send Reset Link</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+
+            <TouchableOpacity 
+              style={[styles.btnSecondary, { marginTop: 16 }]} 
+              onPress={() => setStep('partner-login')}
+            >
+              <Text style={styles.btnSecondaryText}>← Back to Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* STEP 1.6: BECOME A PARTNER REGISTRATION FORM SCREEN */}
+      {step === 'partner-register' && (
+        <View style={styles.contentWrapper}>
+          <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
+            <ChevronLeft size={16} color="#1a1a1a" />
+          </TouchableOpacity>
+
+          <View style={styles.logoBadgeSmall}>
+            <Handshake size={22} color={THEME.COLORS.primary} />
+          </View>
+
+          <Text style={[styles.titleText, isLight && styles.textLight]}>
+            Partner With <Text style={{ color: THEME.COLORS.primary }}>GymDate</Text>
+          </Text>
+          <Text style={[styles.descText, isLight && styles.textMutedLight]}>
+            Grow your gym business with India's largest fitness network. Get more footfall, zero risk, and a powerful dashboard.
+          </Text>
+
+          {/* Form fields matching website */}
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Gym Name</Text>
+            <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+              <TextInput
+                value={partnerRegGymName}
+                onChangeText={setPartnerRegGymName}
+                placeholder="e.g. Gold's Gym Elite"
+                placeholderTextColor={THEME.COLORS.textMuted}
+                style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Owner Name</Text>
+            <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+              <TextInput
+                value={partnerRegOwnerName}
+                onChangeText={setPartnerRegOwnerName}
+                placeholder="Full Name"
+                placeholderTextColor={THEME.COLORS.textMuted}
+                style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Email Address</Text>
+            <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+              <TextInput
+                value={partnerRegEmail}
+                onChangeText={setPartnerRegEmail}
+                placeholder="owner@gym.com"
+                placeholderTextColor={THEME.COLORS.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
+            <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+              <TextInput
+                value={partnerRegPhone}
+                onChangeText={setPartnerRegPhone}
+                placeholder="+91 98765 43210"
+                placeholderTextColor={THEME.COLORS.textMuted}
+                keyboardType="phone-pad"
+                style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>City</Text>
+            <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+              <TextInput
+                value={partnerRegCity}
+                onChangeText={setPartnerRegCity}
+                placeholder="e.g. Bangalore"
+                placeholderTextColor={THEME.COLORS.textMuted}
+                style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Full Address</Text>
+            <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight, { height: 60 }]}>
+              <TextInput
+                value={partnerRegAddress}
+                onChangeText={setPartnerRegAddress}
+                placeholder="Enter complete gym address"
+                placeholderTextColor={THEME.COLORS.textMuted}
+                multiline
+                style={[styles.textInput, isLight && { color: '#1a1a1a' }]}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.btnPrimary, isPartnerRegSubmitting && { opacity: 0.75 }, { marginTop: 10 }]} 
+            onPress={handlePartnerRegisterSubmit}
+            disabled={isPartnerRegSubmitting}
+          >
+            {isPartnerRegSubmitting ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <>
+                <Text style={styles.btnPrimaryText}>Submit Registration</Text>
+                <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.btnSecondary, { marginTop: 12 }]} 
+            onPress={() => setStep('partner-login')}
+          >
+            <Text style={styles.btnSecondaryText}>Already have an account? Sign In</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -572,11 +1182,79 @@ const styles = StyleSheet.create({
   containerLight: {
     backgroundColor: '#ffffff',
   },
+  cleanIntroWrapper: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 70,
+    paddingBottom: 36,
+    justifyContent: 'space-between',
+    minHeight: 560,
+  },
+  cleanLogoCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  cleanBrandLogo: {
+    width: '100%',
+    maxWidth: 400,
+    height: 260,
+    transform: [{ scale: 1.3 }],
+    resizeMode: 'contain',
+  },
+  cleanActionButtons: {
+    gap: 14,
+    width: '100%',
+    paddingBottom: 6,
+  },
+  cleanPartnerBtn: {
+    backgroundColor: THEME.COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 54,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    shadowColor: THEME.COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  cleanPartnerBtnText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+  cleanUserBtn: {
+    backgroundColor: '#ffffff',
+    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 54,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  cleanUserBtnText: {
+    color: '#111827',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
   contentWrapper: {
     flex: 1,
     padding: 24,
     justifyContent: 'space-between',
-    minHeight: 700,
+    minHeight: 600,
   },
   centerBlock: {
     alignItems: 'center',
@@ -637,6 +1315,83 @@ const styles = StyleSheet.create({
   bottomBlock: {
     gap: 16,
     marginBottom: 20,
+  },
+  actionButtonsContainer: {
+    gap: 14,
+    marginBottom: 16,
+  },
+  userLoginBtn: {
+    backgroundColor: THEME.COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    shadowColor: THEME.COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  partnerLoginBtn: {
+    backgroundColor: '#ffffff',
+    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  btnIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  btnIconCircleDark: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(229, 9, 20, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  btnTextCol: {
+    flex: 1,
+  },
+  btnActionTitle: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.3,
+  },
+  btnActionSub: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  partnerBtnActionTitle: {
+    color: '#111827',
+    fontWeight: '800',
+    fontSize: 14,
+    letterSpacing: 0.3,
+  },
+  partnerBtnActionSub: {
+    color: '#6B7280',
+    fontSize: 10,
+    marginTop: 2,
   },
   cardPromo: {
     backgroundColor: '#F3F4F6',

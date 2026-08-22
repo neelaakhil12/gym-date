@@ -194,85 +194,54 @@ export interface GymDateContextType {
 
 const GymDateContext = createContext<GymDateContextType | undefined>(undefined);
 
-// Static Mock Gym Database
+// Live AWS Server Gym Database
 const INITIAL_GYMS: Gym[] = [
   {
-    id: 'gym-1',
-    name: 'Gold\'s Gym Elite',
+    id: '16ae957c-1bd2-450c-85b7-411991dbe41b',
+    name: 'cultfit gym',
     rating: 4.8,
-    reviewsCount: 245,
-    distance: 1.4,
+    reviewsCount: 142,
+    distance: 1.2,
     pricePerDay: 350,
-    location: 'Bandra West, Mumbai',
-    coordinates: { lat: 19.0596, lng: 72.8295 },
-    facilities: ['Locker Room', 'Steam Room', 'Personal Training', 'Air Conditioned', 'Juice Bar', 'Valet Parking'],
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600&auto=format&fit=crop',
+    location: 'Hyderabad, Telangana',
+    coordinates: { lat: 17.3208917, lng: 78.562233 },
+    facilities: ['AC', 'Free Weights', 'Cardio Ring', 'Locker Room', 'Smart Entry System'],
+    image: 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png',
     gallery: [
-      'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600',
-      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=600',
-      'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=600'
-    ],
-    timings: '05:00 AM - 11:00 PM',
-    description: 'Gold\'s Gym Elite offers the standard premium workout experience with top-of-the-line mechanical gear, comprehensive cardio grids, and high-intensity strength environments tailored for champions.',
-    trainers: [
-      { id: 't-1', name: 'Vikram Singh', specialization: 'Strength & Conditioning', rating: 4.9, avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=150', availability: ['07:00 AM - 09:00 AM', '05:00 PM - 07:00 PM'], bio: 'Over 8 years training professional competitive athletes and weightlifting enthusiasts.' },
-      { id: 't-2', name: 'Riya Sharma', specialization: 'HIIT & Weight Management', rating: 4.7, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150', availability: ['08:00 AM - 10:00 AM', '06:00 PM - 08:00 PM'], bio: 'Specialist in dynamic caloric burners, structural tone improvement, and active nutrition integration.' }
-    ],
-    plans: [
-      { name: '1-Day Pass', price: 350, duration: '1 Day', features: ['Full Gym Access', 'Locker Room', 'Group Cardio Intro'] },
-      { name: '7-Day Pass', price: 1800, duration: '7 Days', features: ['Full Gym Access', '1x Personal Trainer Checkin', 'All Group Classes Access'] },
-      { name: 'Monthly Premium', price: 4500, duration: '30 Days', features: ['Unrestricted Gym Access', '3x Personal Trainer Sessions', 'Complimentary Steam Room', '15% Off Juice Bar'] }
-    ]
-  },
-  {
-    id: 'gym-2',
-    name: 'UFC Gym & Octagon Club',
-    rating: 4.9,
-    reviewsCount: 312,
-    distance: 2.7,
-    pricePerDay: 450,
-    location: 'Indiranagar, Bangalore',
-    coordinates: { lat: 12.9719, lng: 77.6412 },
-    facilities: ['MMA Cage', 'Boxing Ring', 'Crossfit Rig', 'Shower Room', 'Locker Room', 'Physiotherapy Center'],
-    image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600&auto=format&fit=crop',
-    gallery: [
-      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=600',
-      'https://images.unsplash.com/photo-1599058917212-d750089bc07e?q=80&w=600',
-      'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?q=80&w=600'
-    ],
-    timings: '06:00 AM - 10:30 PM',
-    description: 'Train like an ultimate fighter. UFC Gym brings elite martial arts routines, heavy bag circuits, structural strength grids, and official octagon cages directly to high-intensity fitness lovers.',
-    trainers: [
-      { id: 't-3', name: 'Kabir Fernandes', specialization: 'MMA & Kickboxing', rating: 5.0, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150', availability: ['06:00 AM - 08:00 AM', '04:00 PM - 06:00 PM'], bio: 'Former professional lightweight fighter. Specializes in strike accuracy and core agility.' }
-    ],
-    plans: [
-      { name: '1-Day Pass', price: 450, duration: '1 Day', features: ['Access to MMA Area', 'Cardio Grid Access', 'Heavy Bag Intro'] },
-      { name: 'Monthly Fighter', price: 5500, duration: '30 Days', features: ['Unlimited UFC Gym Access', 'All Octagon Boxing Classes', '1-on-1 Strike Assessment', 'Lockers & Saunas'] }
-    ]
-  },
-  {
-    id: 'gym-3',
-    name: 'Cult.fit Premium Center',
-    rating: 4.6,
-    reviewsCount: 189,
-    distance: 0.8,
-    pricePerDay: 290,
-    location: 'Gachibowli, Hyderabad',
-    coordinates: { lat: 17.4483, lng: 78.3488 },
-    facilities: ['Group Workouts', 'HRX Training', 'Yoga Shala', 'Locker Room', 'Smart Entry System'],
-    image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?q=80&w=600&auto=format&fit=crop',
-    gallery: [
-      'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?q=80&w=600',
-      'https://images.unsplash.com/photo-1518310383802-640c2de311b2?q=80&w=600'
+      'https://gymdate.in/uploads/gyms/1787212199835-j01we.png',
+      'https://gymdate.in/uploads/gyms/1787212199836-prfgq.png'
     ],
     timings: '06:00 AM - 10:00 PM',
-    description: 'Cult.fit makes fitness simple and extremely fun. Known globally for interactive, highly social group classes incorporating HRX strength, functional cross-training, yoga, dance fitness, and boxing.',
+    description: 'Cultfit gym offers premium training equipment, dedicated strength racks, high-energy group workouts, and expert conditioning coaches.',
     trainers: [
-      { id: 't-4', name: 'Ananya Roy', specialization: 'Yoga & Pilates', rating: 4.8, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150', availability: ['07:00 AM - 09:00 AM', '05:00 PM - 06:30 PM'], bio: 'Specialist in mindful recovery, core balance stability, and physical stress relief.' }
+      { id: 't-1', name: 'Vikram Singh', specialization: 'Strength & Conditioning', rating: 4.9, avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=150', availability: ['07:00 AM - 09:00 AM', '05:00 PM - 07:00 PM'], bio: 'Expert strength conditioning coach.' }
     ],
     plans: [
-      { name: '1-Day Pass', price: 290, duration: '1 Day', features: ['1x Scheduled Group Class', 'Cardio Ring Access', 'Smart Locker Access'] },
-      { name: 'Monthly Unlimited', price: 3800, duration: '30 Days', features: ['Unlimited Group Classes', 'Multi-center Access', 'Cult.fit App Trackers', 'Dedicated Diet Consultation'] }
+      { name: '1-Day Pass', price: 350, duration: '1 Day', features: ['Full Gym Access', 'Locker Room', 'Cardio Grid'] },
+      { name: 'Monthly Unlimited', price: 3500, duration: '30 Days', features: ['Unlimited Gym Access', 'Lockers & Saunas', 'Diet Consultation'] }
+    ]
+  },
+  {
+    id: 'a66bdb3d-cc49-45f6-a547-5df796a51db7',
+    name: 'national',
+    rating: 4.6,
+    reviewsCount: 88,
+    distance: 2.5,
+    pricePerDay: 250,
+    location: 'Hyderabad, Telangana',
+    coordinates: { lat: 17.161922, lng: 78.658058 },
+    facilities: ['Locker Room', 'Steam Room', 'Personal Training', 'Air Conditioned'],
+    image: 'https://gymdate.in/uploads/gyms/1787218281420-bhigjr.png',
+    gallery: [
+      'https://gymdate.in/uploads/gyms/1787218281420-bhigjr.png'
+    ],
+    timings: '06:00 AM - 10:30 PM',
+    description: 'National fitness center provides top mechanical gear, cardio zones, and heavyweight zones.',
+    trainers: [
+      { id: 't-2', name: 'Riya Sharma', specialization: 'HIIT & Weight Loss', rating: 4.7, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150', availability: ['08:00 AM - 10:00 AM', '06:00 PM - 08:00 PM'], bio: 'Specialist in dynamic caloric burners.' }
+    ],
+    plans: [
+      { name: '1-Day Pass', price: 250, duration: '1 Day', features: ['Full Gym Access', 'Locker Room'] }
     ]
   }
 ];
@@ -529,6 +498,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         let savedProfile: string | null = null;
         let savedBookings: string | null = null;
         let savedThemeMode: string | null = null;
+        let savedCurrentRole: string | null = null;
 
         if (Platform.OS === 'web') {
           if (typeof window !== 'undefined' && window.localStorage) {
@@ -537,6 +507,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
             savedProfile = localStorage.getItem('gymdate_user_profile');
             savedBookings = localStorage.getItem('gymdate_bookings');
             savedThemeMode = localStorage.getItem('gymdate_theme_mode_v3');
+            savedCurrentRole = localStorage.getItem('gymdate_current_role');
           }
         } else {
           savedIsLoggedIn = await AsyncStorage.getItem('gymdate_is_logged_in');
@@ -544,8 +515,12 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
           savedProfile = await AsyncStorage.getItem('gymdate_user_profile');
           savedBookings = await AsyncStorage.getItem('gymdate_bookings');
           savedThemeMode = await AsyncStorage.getItem('gymdate_theme_mode_v3');
+          savedCurrentRole = await AsyncStorage.getItem('gymdate_current_role');
         }
 
+        if (savedCurrentRole === 'owner' || savedCurrentRole === 'admin' || savedCurrentRole === 'member') {
+          setCurrentRole(savedCurrentRole as UserRole);
+        }
         if (savedIsLoggedIn === 'true') {
           setIsLoggedIn(true);
           setActiveScreen('home');
@@ -586,6 +561,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
             localStorage.setItem('gymdate_user_profile', JSON.stringify(userProfile));
             localStorage.setItem('gymdate_bookings', JSON.stringify(bookings));
             localStorage.setItem('gymdate_theme_mode_v3', themeMode);
+            localStorage.setItem('gymdate_current_role', currentRole);
           }
         } else {
           await AsyncStorage.setItem('gymdate_is_logged_in', isLoggedIn ? 'true' : 'false');
@@ -593,6 +569,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
           await AsyncStorage.setItem('gymdate_user_profile', JSON.stringify(userProfile));
           await AsyncStorage.setItem('gymdate_bookings', JSON.stringify(bookings));
           await AsyncStorage.setItem('gymdate_theme_mode_v3', themeMode);
+          await AsyncStorage.setItem('gymdate_current_role', currentRole);
         }
       } catch (e) {
         console.warn("[Context] Session save failed:", e);
@@ -600,7 +577,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     saveSession();
-  }, [isLoggedIn, loginInput, userProfile, bookings, themeMode]);
+  }, [isLoggedIn, loginInput, userProfile, bookings, themeMode, currentRole]);
 
 
 
@@ -672,12 +649,12 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Gym Owner Profile & Operations State
   const [ownerProfile, setOwnerProfile] = useState<GymOwnerProfile>({
-    gymName: 'Gold\'s Gym Elite',
-    ownerName: 'Harish Jagtiani',
-    revenue: 124500,
-    totalCheckIns: 489,
-    activeMembers: 142,
-    payoutPending: 28400
+    gymName: 'Partner Gym',
+    ownerName: 'Gym Partner',
+    revenue: 0,
+    totalCheckIns: 0,
+    activeMembers: 0,
+    payoutPending: 0
   });
 
   // Admin Dashboard States

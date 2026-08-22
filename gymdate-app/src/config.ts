@@ -15,20 +15,11 @@ import { Platform } from 'react-native';
 const LOCAL_IP = '192.168.1.100'; // FIXME: Replace with your actual local IP address from ipconfig
 
 export const CONFIG = {
-  API_URL: Platform.select({
-    android: `http://${LOCAL_IP}:3000`,
-    ios: 'http://localhost:3000',
-    default: 'http://localhost:3000',
-  }),
-  
-  // Toggle this to true to force connect to your production website domain
+  API_URL: 'https://gymdate.in',
   USE_PRODUCTION: true,
-  PRODUCTION_API_URL: 'https://gym-date-fqml.vercel.app',
+  PRODUCTION_API_URL: 'https://gymdate.in',
 };
 
 export const getApiUrl = () => {
-  if (CONFIG.USE_PRODUCTION) {
-    return CONFIG.PRODUCTION_API_URL;
-  }
-  return CONFIG.API_URL;
+  return CONFIG.PRODUCTION_API_URL;
 };
