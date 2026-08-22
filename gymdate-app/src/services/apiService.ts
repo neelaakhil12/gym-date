@@ -532,5 +532,23 @@ export const apiService = {
       console.warn('[API Error] uploadPayoutQrCode:', err);
       return { success: false, error: err.message || 'Failed to upload QR code.' };
     }
+  },
+
+  /**
+   * Update full gym profile details (Clone of /partner/gym/edit)
+   */
+  async updateGymProfile(payload: any): Promise<{ success: boolean; gym?: any; message?: string; error?: string }> {
+    const url = `${getApiUrl()}/api/partner/edit-gym`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch (err: any) {
+      console.warn('[API Error] updateGymProfile:', err);
+      return { success: false, error: err.message || 'Failed to update gym profile.' };
+    }
   }
 };

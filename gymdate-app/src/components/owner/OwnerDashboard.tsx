@@ -49,13 +49,16 @@ import {
   Upload,
   Camera,
   ArrowLeft,
-  User
+  User,
+  Plus,
+  Percent,
+  AlignLeft
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { apiService } from '../../services/apiService';
 
-type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet' | 'scan';
+type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet' | 'scan' | 'edit_gym';
 
 export const OwnerDashboard: React.FC = () => {
   const { 
@@ -81,13 +84,24 @@ export const OwnerDashboard: React.FC = () => {
   const [isLiveCameraScanning, setIsLiveCameraScanning] = useState(false);
   const [scannerKey, setScannerKey] = useState(0);
 
-  // Edit Details Modal State
-  const [showEditModal, setShowEditModal] = useState(false);
+  // Edit Details State (Clone of /partner/gym/edit)
   const [editGymName, setEditGymName] = useState('');
   const [editGymLocation, setEditGymLocation] = useState('');
-  const [editGymHours, setEditGymHours] = useState('');
-  const [editGymDescription, setEditGymDescription] = useState('');
+  const [editLat, setEditLat] = useState('17.161922');
+  const [editLng, setEditLng] = useState('78.658058');
+  const [editRating, setEditRating] = useState('4.6');
+  const [editReviews, setEditReviews] = useState('1');
+  const [editHasOffer, setEditHasOffer] = useState(false);
+  const [editOfferPercentage, setEditOfferPercentage] = useState('10');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPrimaryImage, setEditPrimaryImage] = useState('');
+  const [editGallery, setEditGallery] = useState<string[]>([]);
+  const [editPlans, setEditPlans] = useState<{ id?: string; name: string; price: string }[]>([]);
+  const [editAmenities, setEditAmenities] = useState<string[]>([]);
+  const [newCustomAmenity, setNewCustomAmenity] = useState('');
+  const [isLocatingMe, setIsLocatingMe] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editSuccessMsg, setEditSuccessMsg] = useState('');
 
   // Operational & Promotional State
   const [isOpenStatus, setIsOpenStatus] = useState(true);
@@ -226,8 +240,7 @@ export const OwnerDashboard: React.FC = () => {
     if (activeGym) {
       setEditGymName(activeGym.name || 'cultfit gym');
       setEditGymLocation(activeGym.location || 'Hyderabad, Telangana');
-      setEditGymHours(activeGym.timings || activeGym.hours || '06:00 AM - 10:00 PM');
-      setEditGymDescription(activeGym.description || 'Premium fitness facility offering high-energy workouts and state-of-the-art strength gear.');
+      setEditDescription(activeGym.description || 'Premium fitness facility offering high-energy workouts and state-of-the-art strength gear.');
     }
   }, [activeGym]);
 
@@ -326,16 +339,189 @@ export const OwnerDashboard: React.FC = () => {
     }
   }, [activeTab, isLiveCameraScanning, scannerKey]);
 
-  const handleSaveGymDetails = () => {
-    setIsSavingEdit(true);
-    setTimeout(() => {
-      setIsSavingEdit(false);
-      setShowEditModal(false);
-      setOwnerProfile(prev => ({ ...prev, gymName: editGymName }));
-      if (partnerGym) {
-        setPartnerGym({ ...partnerGym, name: editGymName, location: editGymLocation, description: editGymDescription });
+  const defaultAmenitiesList = [
+    'AC', 'Personal Trainer', 'Parking', 'Locker Room', 
+    'WiFi', 'Supplements', 'Steam Room', 'Sauna', 
+    'Yoga Mats', 'Zumba Classes', 'Shower', 'Crossfit Rig'
+  ];
+
+  const openEditGymScreen = () => {
+    if (partnerGym) {
+      setEditGymName(partnerGym.name || '');
+      setEditGymLocation(partnerGym.location || '');
+      setEditLat(partnerGym.lat ? String(partnerGym.lat) : '17.161922');
+      setEditLng(partnerGym.lng ? String(partnerGym.lng) : '78.658058');
+      setEditRating(partnerGym.rating ? String(partnerGym.rating) : '4.6');
+      setEditReviews(partnerGym.reviews ? String(partnerGym.reviews) : '1');
+      setEditHasOffer(Boolean(partnerGym.has_offer));
+      setEditOfferPercentage(partnerGym.offer_percentage ? String(partnerGym.offer_percentage) : '10');
+      setEditDescription(partnerGym.description || '');
+      setEditPrimaryImage(partnerGym.image || '');
+      setEditGallery(partnerGym.gallery || []);
+      setEditAmenities(partnerGym.amenities || ['sdfbg', 'wertyuytrew']);
+      
+      const gymPlans = partnerGym.plans && partnerGym.plans.length > 0 
+        ? partnerGym.plans.map((p: any) => ({ name: p.name, price: String(p.price).replace(/[^0-9.]/g, '') }))
+        : [
+            { name: 'Monthly', price: '1' },
+            { name: 'Weekly Pass', price: '499' },
+            { name: '10-Day Pack', price: '699' },
+            { name: 'Daily Pass', price: '99' }
+          ];
+      setEditPlans(gymPlans);
+    }
+    setActiveTab('edit_gym');
+  };
+
+  const handleLocateMe = () => {
+    setIsLocatingMe(true);
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setEditLat(latitude.toString());
+          setEditLng(longitude.toString());
+          setEditGymLocation(`https://www.google.com/maps?q=${latitude},${longitude}`);
+          setIsLocatingMe(false);
+        },
+        () => {
+          setIsLocatingMe(false);
+        }
+      );
+    } else {
+      setIsLocatingMe(false);
+    }
+  };
+
+  const handlePickPrimaryImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+        base64: true
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          const uploadRes = await apiService.uploadPayoutQrCode(asset.base64);
+          if (uploadRes.success && uploadRes.url) {
+            setEditPrimaryImage(uploadRes.url);
+          } else {
+            setEditPrimaryImage(asset.uri);
+          }
+        } else {
+          setEditPrimaryImage(asset.uri);
+        }
       }
-    }, 700);
+    } catch (e) {
+      console.warn('Image pick error:', e);
+    }
+  };
+
+  const handlePickGalleryImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+        base64: true
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          const uploadRes = await apiService.uploadPayoutQrCode(asset.base64);
+          if (uploadRes.success && uploadRes.url) {
+            setEditGallery(prev => [...prev, uploadRes.url!]);
+          } else {
+            setEditGallery(prev => [...prev, asset.uri]);
+          }
+        } else {
+          setEditGallery(prev => [...prev, asset.uri]);
+        }
+      }
+    } catch (e) {
+      console.warn('Gallery pick error:', e);
+    }
+  };
+
+  const handleAddPlan = () => {
+    setEditPlans(prev => [...prev, { name: 'New Plan', price: '499' }]);
+  };
+
+  const handleRemovePlan = (idx: number) => {
+    setEditPlans(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleUpdatePlan = (idx: number, field: 'name' | 'price', val: string) => {
+    setEditPlans(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
+  };
+
+  const toggleAmenity = (amenityName: string) => {
+    if (editAmenities.includes(amenityName)) {
+      setEditAmenities(prev => prev.filter(a => a !== amenityName));
+    } else {
+      setEditAmenities(prev => [...prev, amenityName]);
+    }
+  };
+
+  const handleAddCustomAmenity = () => {
+    if (newCustomAmenity.trim() && !editAmenities.includes(newCustomAmenity.trim())) {
+      setEditAmenities(prev => [...prev, newCustomAmenity.trim()]);
+      setNewCustomAmenity('');
+    }
+  };
+
+  const handleRemoveCustomAmenity = (amenityName: string) => {
+    setEditAmenities(prev => prev.filter(a => a !== amenityName));
+  };
+
+  const handleSaveGymProfile = async () => {
+    if (!editGymName.trim()) {
+      if (Platform.OS === 'web') alert('Gym name is required');
+      return;
+    }
+    setIsSavingEdit(true);
+    setEditSuccessMsg('');
+
+    try {
+      const payload = {
+        gym_id: partnerGym?.id,
+        email: currentEmail,
+        name: editGymName.trim(),
+        location: editGymLocation.trim(),
+        lat: editLat,
+        lng: editLng,
+        rating: editRating,
+        reviews: editReviews,
+        has_offer: editHasOffer,
+        offer_percentage: editOfferPercentage,
+        description: editDescription.trim(),
+        image: editPrimaryImage,
+        gallery: editGallery,
+        amenities: editAmenities,
+        plans: editPlans
+      };
+
+      const res = await apiService.updateGymProfile(payload);
+      if (res && res.success) {
+        setEditSuccessMsg('Gym profile updated successfully!');
+        setOwnerProfile(prev => ({ ...prev, gymName: editGymName }));
+        if (res.gym) {
+          setPartnerGym(res.gym);
+        }
+        setTimeout(() => {
+          setEditSuccessMsg('');
+          setActiveTab('overview');
+        }, 1200);
+      } else {
+        if (Platform.OS === 'web') alert(res.error || 'Failed to update gym profile');
+      }
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Error updating gym profile');
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const handleSaveOffer = () => {
@@ -635,7 +821,7 @@ export const OwnerDashboard: React.FC = () => {
 
                 <TouchableOpacity 
                   style={styles.btnEditDetails}
-                  onPress={() => setShowEditModal(true)}
+                  onPress={openEditGymScreen}
                   activeOpacity={0.85}
                 >
                   <Edit size={13} color="#334155" style={{ marginRight: 5 }} />
@@ -1317,71 +1503,393 @@ export const OwnerDashboard: React.FC = () => {
             )}
           </View>
         )}
-      </ScrollView>
 
-      {/* ✏️ IN-FRAME MODAL: EDIT GYM DETAILS */}
-      {showEditModal && (
-        <View style={styles.inFrameModalOverlay}>
-          <TouchableOpacity 
-            style={styles.inFrameModalBackdrop} 
-            activeOpacity={1} 
-            onPress={() => setShowEditModal(false)} 
-          />
-          <View style={styles.inFrameModalBox}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Edit size={18} color={THEME.COLORS.primary} />
-                <Text style={styles.modalTitle}>Edit Gym Details</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowEditModal(false)} style={{ padding: 4 }}>
-                <X size={18} color="#64748B" />
+        {/* ============================================================== */}
+        {/* TAB 6: EDIT MY GYM (EXACT CLONE OF /partner/gym/edit)           */}
+        {/* ============================================================== */}
+        {activeTab === 'edit_gym' && (
+          <View style={styles.tabContentWrapper}>
+            {/* Header with Back Arrow, Title and Subtitle */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <TouchableOpacity 
+                onPress={() => setActiveTab('overview')}
+                style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
+                activeOpacity={0.8}
+              >
+                <ArrowLeft size={18} color="#0F172A" />
               </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>Edit My Gym</Text>
+                <Text style={{ fontSize: 11.5, color: '#64748B' }}>Update your public gym profile.</Text>
+              </View>
             </View>
 
-            <View style={styles.formFieldGroup}>
-              <Text style={styles.formLabel}>Gym Name</Text>
-              <TextInput 
-                value={editGymName}
-                onChangeText={setEditGymName}
-                style={styles.formInput}
-              />
+            {/* Success Message Banner */}
+            {editSuccessMsg ? (
+              <View style={{ backgroundColor: '#DCFCE7', padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, borderWidth: 1, borderColor: '#86EFAC' }}>
+                <Check size={16} color="#16A34A" />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#16A34A' }}>{editSuccessMsg}</Text>
+              </View>
+            ) : null}
+
+            {/* CARD 1: GYM PROFILE */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Gym Profile</Text>
+
+              {/* Gym Name */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Gym Name</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12 }}>
+                  <Building2 size={15} color={THEME.COLORS.primary} style={{ marginRight: 8 }} />
+                  <TextInput 
+                    value={editGymName}
+                    onChangeText={setEditGymName}
+                    placeholder="e.g. National Gym"
+                    placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, height: 44, fontSize: 13, color: '#0F172A', fontWeight: '600' }}
+                  />
+                </View>
+              </View>
+
+              {/* Location */}
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Location</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12 }}>
+                  <MapPin size={15} color="#94A3B8" style={{ marginRight: 8 }} />
+                  <TextInput 
+                    value={editGymLocation}
+                    onChangeText={setEditGymLocation}
+                    placeholder="https://maps.app.goo.gl/..."
+                    placeholderTextColor="#94A3B8"
+                    style={{ flex: 1, height: 44, fontSize: 12, color: '#0F172A' }}
+                  />
+                  <TouchableOpacity 
+                    style={{ backgroundColor: '#0F172A', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    onPress={handleLocateMe}
+                    disabled={isLocatingMe}
+                  >
+                    <MapPin size={11} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                      {isLocatingMe ? 'Locating...' : 'Locate Me'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Latitude & Longitude Side by Side */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Latitude (e.g. 17.3132)</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 10 }}>
+                    <MapPin size={13} color="#94A3B8" style={{ marginRight: 6 }} />
+                    <TextInput 
+                      value={editLat}
+                      onChangeText={setEditLat}
+                      placeholder="17.161922"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      style={{ flex: 1, height: 40, fontSize: 12, color: '#0F172A' }}
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Longitude (e.g. 78.5455)</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 10 }}>
+                    <MapPin size={13} color="#94A3B8" style={{ marginRight: 6 }} />
+                    <TextInput 
+                      value={editLng}
+                      onChangeText={setEditLng}
+                      placeholder="78.658058"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      style={{ flex: 1, height: 40, fontSize: 12, color: '#0F172A' }}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Rating & Reviews Side by Side */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Starting Rating (e.g. 4.5)</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 10 }}>
+                    <Star size={13} color="#EAB308" fill="#EAB308" style={{ marginRight: 6 }} />
+                    <TextInput 
+                      value={editRating}
+                      onChangeText={setEditRating}
+                      placeholder="4.6"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      style={{ flex: 1, height: 40, fontSize: 12, color: '#0F172A' }}
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Initial Review Count</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 10 }}>
+                    <AlignLeft size={13} color="#94A3B8" style={{ marginRight: 6 }} />
+                    <TextInput 
+                      value={editReviews}
+                      onChangeText={setEditReviews}
+                      placeholder="1"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                      style={{ flex: 1, height: 40, fontSize: 12, color: '#0F172A' }}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Special Offer / Discount */}
+              <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Special Offer / Discount</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B' }}>Enable a discount badge on your gym profile.</Text>
+                  </View>
+                  <Switch 
+                    value={editHasOffer}
+                    onValueChange={setEditHasOffer}
+                    trackColor={{ false: '#CBD5E1', true: THEME.COLORS.primary }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+
+                {editHasOffer && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, backgroundColor: '#FFF1F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECDD3' }}>
+                    <Percent size={14} color={THEME.COLORS.primary} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#9F1239' }}>Discount Percentage:</Text>
+                    <TextInput 
+                      value={editOfferPercentage}
+                      onChangeText={setEditOfferPercentage}
+                      keyboardType="numeric"
+                      style={{ width: 50, height: 32, backgroundColor: '#FFFFFF', borderRadius: 6, textAlign: 'center', fontWeight: '800', color: THEME.COLORS.primary, borderWidth: 1, borderColor: '#FDA4AF' }}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.COLORS.primary }}>% OFF</Text>
+                  </View>
+                )}
+              </View>
             </View>
 
-            <View style={styles.formFieldGroup}>
-              <Text style={styles.formLabel}>Timings</Text>
-              <TextInput 
-                value={editGymHours}
-                onChangeText={setEditGymHours}
-                placeholder="06:00 AM - 10:00 PM"
-                style={styles.formInput}
-              />
+            {/* CARD 2: PRICING PLANS (₹) */}
+            <View style={styles.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={styles.cardTitle}>Pricing Plans (₹)</Text>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  onPress={handleAddPlan}
+                >
+                  <Plus size={14} color={THEME.COLORS.primary} />
+                  <Text style={{ color: THEME.COLORS.primary, fontSize: 12, fontWeight: '800' }}>+ Add New Plan</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                {editPlans.map((plan, idx) => (
+                  <View key={idx} style={{ width: '48%', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', position: 'relative' }}>
+                    <TouchableOpacity 
+                      onPress={() => handleRemovePlan(idx)}
+                      style={{ position: 'absolute', top: 8, right: 8, padding: 2 }}
+                    >
+                      <X size={13} color="#94A3B8" />
+                    </TouchableOpacity>
+
+                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 }}>PLAN NAME</Text>
+                    <TextInput 
+                      value={plan.name}
+                      onChangeText={(val) => handleUpdatePlan(idx, 'name', val)}
+                      placeholder="Plan name"
+                      style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', padding: 0, marginBottom: 8 }}
+                    />
+
+                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 }}>PRICE (₹)</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', marginRight: 2 }}>₹</Text>
+                      <TextInput 
+                        value={plan.price}
+                        onChangeText={(val) => handleUpdatePlan(idx, 'price', val)}
+                        keyboardType="numeric"
+                        placeholder="Price"
+                        style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', flex: 1, padding: 0 }}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
             </View>
 
-            <View style={styles.formFieldGroup}>
-              <Text style={styles.formLabel}>Description</Text>
+            {/* CARD 3: IMAGES */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Images</Text>
+              <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2, marginBottom: 14 }}>
+                Upload new images to replace existing ones.
+              </Text>
+
+              {/* Primary Cover Image */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Primary Cover Image</Text>
+                {editPrimaryImage ? (
+                  <View style={{ width: '100%', height: 140, borderRadius: 14, overflow: 'hidden', backgroundColor: '#F1F5F9', marginBottom: 8, position: 'relative' }}>
+                    <Image source={{ uri: editPrimaryImage }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                    <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(15, 23, 42, 0.85)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 8.5, fontWeight: '900', color: '#FFFFFF', textTransform: 'uppercase' }}>CURRENT IMAGE</Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 10 }}
+                  onPress={handlePickPrimaryImage}
+                >
+                  <Upload size={14} color={THEME.COLORS.primary} />
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.COLORS.primary }}>Choose Cover Image</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Gallery Images */}
+              <View>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', marginBottom: 6 }}>Gallery Images</Text>
+                {editGallery.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {editGallery.map((img, idx) => (
+                        <View key={idx} style={{ width: 100, height: 75, borderRadius: 10, overflow: 'hidden', position: 'relative' }}>
+                          <Image source={{ uri: img }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                          <View style={{ position: 'absolute', top: 4, left: 4, backgroundColor: 'rgba(15, 23, 42, 0.85)', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                            <Text style={{ fontSize: 7, fontWeight: '900', color: '#FFFFFF' }}>CURRENT</Text>
+                          </View>
+                          <TouchableOpacity 
+                            onPress={() => setEditGallery(prev => prev.filter((_, i) => i !== idx))}
+                            style={{ position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(239, 68, 68, 0.85)', borderRadius: 8, padding: 2 }}
+                          >
+                            <X size={10} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                )}
+
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F8FAFC', borderWidth: 1.5, borderColor: '#E2E8F0', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 10 }}
+                  onPress={handlePickGalleryImage}
+                >
+                  <Plus size={14} color="#64748B" />
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#64748B' }}>+ Choose Gallery Images</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* CARD 4: AMENITIES */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Amenities</Text>
+              <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2, marginBottom: 12 }}>
+                Select standard amenities or add custom tags for your gym.
+              </Text>
+
+              {/* Default Amenities Toggle Chips */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                {defaultAmenitiesList.map((amenity) => {
+                  const isSelected = editAmenities.includes(amenity);
+                  return (
+                    <TouchableOpacity 
+                      key={amenity}
+                      onPress={() => toggleAmenity(amenity)}
+                      style={{ 
+                        paddingHorizontal: 10, 
+                        paddingVertical: 6, 
+                        borderRadius: 20, 
+                        backgroundColor: isSelected ? '#FEE2E2' : '#F1F5F9',
+                        borderWidth: 1,
+                        borderColor: isSelected ? '#FECACA' : '#E2E8F0'
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: isSelected ? '800' : '600', color: isSelected ? THEME.COLORS.primary : '#475569' }}>
+                        {isSelected ? `✓ ${amenity}` : amenity}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Custom Tag Chips with X */}
+              {editAmenities.filter(a => !defaultAmenitiesList.includes(a)).length > 0 && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {editAmenities.filter(a => !defaultAmenitiesList.includes(a)).map((customAmenity) => (
+                    <View 
+                      key={customAmenity}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF1F2', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#FECDD3' }}
+                    >
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.COLORS.primary }}>{customAmenity}</Text>
+                      <TouchableOpacity onPress={() => handleRemoveCustomAmenity(customAmenity)}>
+                        <X size={12} color={THEME.COLORS.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Add Custom Amenity Input */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput 
+                  value={newCustomAmenity}
+                  onChangeText={setNewCustomAmenity}
+                  placeholder="Add custom amenity tag"
+                  placeholderTextColor="#94A3B8"
+                  style={{ flex: 1, height: 40, backgroundColor: '#F8FAFC', borderRadius: 10, paddingHorizontal: 12, fontSize: 12, borderWidth: 1, borderColor: '#E2E8F0' }}
+                />
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#0F172A', paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+                  onPress={handleAddCustomAmenity}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' }}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* CARD 5: DESCRIPTION */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Description / About Gym</Text>
               <TextInput 
-                value={editGymDescription}
-                onChangeText={setEditGymDescription}
+                value={editDescription}
+                onChangeText={setEditDescription}
+                placeholder="Write about equipment, trainers, parking, hygiene..."
+                placeholderTextColor="#94A3B8"
                 multiline
-                numberOfLines={3}
-                style={[styles.formInput, { height: 68, textAlignVertical: 'top' }]}
+                numberOfLines={4}
+                style={{ height: 90, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, fontSize: 12, color: '#0F172A', borderWidth: 1, borderColor: '#E2E8F0', marginTop: 8, textAlignVertical: 'top' }}
               />
             </View>
 
+            {/* SAVE BUTTON */}
             <TouchableOpacity 
-              style={styles.saveDetailsBtn}
-              onPress={handleSaveGymDetails}
+              style={{ 
+                backgroundColor: THEME.COLORS.primary, 
+                paddingVertical: 16, 
+                borderRadius: 16, 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                marginVertical: 12,
+                ...Platform.select({
+                  web: { boxShadow: '0 8px 24px rgba(225, 29, 72, 0.4)' },
+                  default: { elevation: 6 }
+                })
+              }}
+              onPress={handleSaveGymProfile}
               disabled={isSavingEdit}
+              activeOpacity={0.85}
             >
               {isSavingEdit ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.saveDetailsBtnText}>Save Gym Profile</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 }}>Save Gym Profile</Text>
               )}
             </TouchableOpacity>
           </View>
-        </View>
-      )}
+        )}
+      </ScrollView>
 
       {/* 💰 IN-FRAME MODAL: WITHDRAWAL REQUEST */}
       {showWithdrawModal && (
