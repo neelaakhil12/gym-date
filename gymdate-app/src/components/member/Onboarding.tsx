@@ -1037,9 +1037,31 @@ export const Onboarding: React.FC = () => {
               <View style={[styles.dividerLine, isLight && { backgroundColor: '#e5e7eb' }]} />
             </View>
 
-            <TouchableOpacity onPress={handleGoogleLogin} style={[styles.socialBtn, isLight && styles.socialBtnLight, { flexDirection: 'row', gap: 8 }]}>
-              <Sparkles size={16} color={THEME.COLORS.primary} />
-              <Text style={[styles.socialBtnText, isLight && styles.textLight, { fontSize: 13, fontWeight: '700' }]}>Google Account</Text>
+            <TouchableOpacity 
+              onPress={handleGoogleLogin} 
+              style={[
+                styles.socialBtn, 
+                isLight && styles.socialBtnLight, 
+                { 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: 10,
+                  backgroundColor: isLight ? '#ffffff' : '#1e293b',
+                  borderColor: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
+                  borderWidth: 1,
+                  paddingVertical: 12,
+                  borderRadius: 14
+                }
+              ]}
+              activeOpacity={0.85}
+            >
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#4285F4' }}>G</Text>
+              </View>
+              <Text style={[styles.socialBtnText, isLight && styles.textLight, { fontSize: 13, fontWeight: '700' }]}>
+                Continue with Google
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
