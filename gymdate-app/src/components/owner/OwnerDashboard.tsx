@@ -47,7 +47,8 @@ import {
   Eye,
   ArrowDownLeft,
   ArrowUpRight,
-  Upload
+  Upload,
+  Camera
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { apiService } from '../../services/apiService';
@@ -75,6 +76,8 @@ export const OwnerDashboard: React.FC = () => {
   const [showScanModal, setShowScanModal] = useState(false);
   const [terminalInput, setTerminalInput] = useState('');
   const [scanResult, setScanResult] = useState<{ success: boolean; message: string; memberName?: string; booking?: any } | null>(null);
+  const [isLiveCameraScanning, setIsLiveCameraScanning] = useState(false);
+  const [scannerKey, setScannerKey] = useState(0);
 
   // Edit Details Modal State
   const [showEditModal, setShowEditModal] = useState(false);
@@ -230,18 +233,19 @@ export const OwnerDashboard: React.FC = () => {
     setIsOpenStatus(val);
   };
 
-  const handleTerminalScan = async () => {
-    if (!terminalInput.trim()) {
+  const handleTerminalScanWithCode = async (overrideCode?: string) => {
+    const codeToValidate = (overrideCode || terminalInput || '').trim();
+    if (!codeToValidate) {
       setScanResult({
         success: false,
-        message: 'Please enter a ticket code or booking reference.'
+        message: 'Please point camera at a QR pass or enter code.'
       });
       return;
     }
 
     setIsScanningQR(true);
     try {
-      const res = await apiService.verifyPartnerTicket(terminalInput.trim(), currentEmail);
+      const res = await apiService.verifyPartnerTicket(codeToValidate, currentEmail);
       if (res && res.success) {
         setScanResult({
           success: true,
@@ -266,6 +270,60 @@ export const OwnerDashboard: React.FC = () => {
       setIsScanningQR(false);
     }
   };
+
+  const handleTerminalScan = () => handleTerminalScanWithCode();
+
+  useEffect(() => {
+    let scannerInstance: any = null;
+
+    if (showScanModal && isLiveCameraScanning && Platform.OS === 'web') {
+      const timer = setTimeout(async () => {
+        try {
+          const { Html5QrcodeScanner } = await import('html5-qrcode');
+          const element = document.getElementById('qr-reader-container');
+          if (element) {
+            scannerInstance = new Html5QrcodeScanner(
+              'qr-reader-container',
+              { 
+                fps: 10, 
+                qrbox: { width: 220, height: 220 },
+                aspectRatio: 1.0
+              },
+              false
+            );
+
+            scannerInstance.render(
+              async (decodedText: string) => {
+                if (scannerInstance) {
+                  scannerInstance.clear().catch(() => {});
+                }
+                setIsLiveCameraScanning(false);
+                let bookingId = decodedText.trim();
+                if (bookingId.includes('/verify/')) {
+                  bookingId = bookingId.split('/verify/')[1].split('?')[0];
+                } else if (bookingId.includes('://')) {
+                  const urlParts = bookingId.split('/');
+                  bookingId = urlParts[urlParts.length - 1].split('?')[0];
+                }
+                setTerminalInput(bookingId);
+                await handleTerminalScanWithCode(bookingId);
+              },
+              () => {}
+            );
+          }
+        } catch (e) {
+          console.warn('Failed to initialize html5-qrcode scanner:', e);
+        }
+      }, 250);
+
+      return () => {
+        clearTimeout(timer);
+        if (scannerInstance) {
+          scannerInstance.clear().catch(() => {});
+        }
+      };
+    }
+  }, [showScanModal, isLiveCameraScanning, scannerKey]);
 
   const handleSaveGymDetails = () => {
     setIsSavingEdit(true);
@@ -1084,59 +1142,122 @@ export const OwnerDashboard: React.FC = () => {
             </View>
 
             <ScrollView style={{ maxHeight: 540 }} contentContainerStyle={{ padding: 16 }}>
-              {/* STATE 1: DEFAULT / CODE ENTRY */}
+              {/* STATE 1: DEFAULT / CAMERA SCANNER */}
               {!scanResult && (
-                <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-                  <View style={{ width: 64, height: 64, borderRadius: 20, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1.5, borderColor: '#FECACA' }}>
-                    <QrCode size={30} color={THEME.COLORS.primary} />
-                  </View>
-                  <Text style={{ fontSize: 17, fontWeight: '900', color: '#0F172A', textAlign: 'center' }}>Scan QR Ticket</Text>
-                  <Text style={{ fontSize: 11.5, color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 16, paddingHorizontal: 10 }}>
-                    Point camera or enter customer booking ticket code (e.g. 5c321787-651c...).
-                  </Text>
-
-                  {/* QR Input Field */}
-                  <View style={{ width: '100%', flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                    <TextInput 
-                      value={terminalInput}
-                      onChangeText={(val) => setTerminalInput(val)}
-                      placeholder="Paste code or booking ID"
-                      placeholderTextColor="#94A3B8"
-                      style={[styles.qrTextInput, { flex: 1 }]}
-                      autoCapitalize="characters"
-                    />
-                    <TouchableOpacity 
-                      style={styles.qrValidateBtn}
-                      onPress={handleTerminalScan}
-                      disabled={isScanningQR}
-                    >
-                      {isScanningQR ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                      ) : (
-                        <Text style={styles.qrValidateBtnText}>VALIDATE</Text>
+                <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                  {isLiveCameraScanning ? (
+                    <View style={{ width: '100%', alignItems: 'center', marginVertical: 4 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 8 }}>
+                        Point Camera at Member QR Ticket
+                      </Text>
+                      {/* html5-qrcode DOM Target */}
+                      {Platform.OS === 'web' && (
+                        <div 
+                          id="qr-reader-container" 
+                          style={{ 
+                            width: '100%', 
+                            maxWidth: '320px', 
+                            borderRadius: '16px', 
+                            overflow: 'hidden', 
+                            backgroundColor: '#0F172A',
+                            border: '2px solid #E2E8F0'
+                          }} 
+                        />
                       )}
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Quick Code Examples for Testing */}
-                  <View style={{ width: '100%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 6 }}>
-                      Active Ticket Codes in System:
-                    </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {['5c321787-651c-4654-881a-8f3977de1290', '43af27ef-1f74-49bc-9b28-795cd9f8a1a3', '6c368654-cdfd-4650-ba08-d02f1ac321bd'].map((code) => (
-                        <TouchableOpacity 
-                          key={code}
-                          onPress={() => setTerminalInput(code)}
-                          style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}
-                        >
-                          <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155' }}>
-                            {code.substring(0, 16)}...
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                      <TouchableOpacity 
+                        style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#F1F5F9', borderRadius: 10 }}
+                        onPress={() => setIsLiveCameraScanning(false)}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Cancel Camera</Text>
+                      </TouchableOpacity>
                     </View>
-                  </View>
+                  ) : (
+                    <>
+                      <View style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: '#FECACA' }}>
+                        <Camera size={34} color={THEME.COLORS.primary} />
+                      </View>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', textAlign: 'center' }}>Scan QR Ticket</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, marginBottom: 16, paddingHorizontal: 12 }}>
+                        Point your camera at the customer&apos;s digital ticket to verify entry.
+                      </Text>
+
+                      {/* START SCANNING NOW BUTTON (CLONE OF WEBSITE) */}
+                      <TouchableOpacity 
+                        style={{ 
+                          width: '100%', 
+                          backgroundColor: THEME.COLORS.primary, 
+                          paddingVertical: 14, 
+                          borderRadius: 14, 
+                          flexDirection: 'row', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          gap: 8,
+                          marginBottom: 16,
+                          ...Platform.select({
+                            web: { boxShadow: '0 8px 20px rgba(225, 29, 72, 0.25)' },
+                            default: { elevation: 4 }
+                          })
+                        }}
+                        onPress={() => {
+                          setIsLiveCameraScanning(true);
+                          setScannerKey(prev => prev + 1);
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Camera size={18} color="#FFFFFF" />
+                        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900', letterSpacing: 0.3 }}>Start Scanning Now</Text>
+                      </TouchableOpacity>
+
+                      <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 10 }}>
+                        <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase' }}>Or Enter Code Manually</Text>
+                        <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+                      </View>
+
+                      {/* Manual Code Input Field */}
+                      <View style={{ width: '100%', flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                        <TextInput 
+                          value={terminalInput}
+                          onChangeText={(val) => setTerminalInput(val)}
+                          placeholder="Paste code or booking ID"
+                          placeholderTextColor="#94A3B8"
+                          style={[styles.qrTextInput, { flex: 1 }]}
+                          autoCapitalize="characters"
+                        />
+                        <TouchableOpacity 
+                          style={styles.qrValidateBtn}
+                          onPress={handleTerminalScan}
+                          disabled={isScanningQR}
+                        >
+                          {isScanningQR ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                          ) : (
+                            <Text style={styles.qrValidateBtnText}>VALIDATE</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Quick Code Examples for Testing */}
+                      <View style={{ width: '100%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 6 }}>
+                          Active Ticket Codes in System:
+                        </Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                          {['5c321787-651c-4654-881a-8f3977de1290', '43af27ef-1f74-49bc-9b28-795cd9f8a1a3', '6c368654-cdfd-4650-ba08-d02f1ac321bd'].map((code) => (
+                            <TouchableOpacity 
+                              key={code}
+                              onPress={() => setTerminalInput(code)}
+                              style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#CBD5E1' }}
+                            >
+                              <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155' }}>
+                                {code.substring(0, 16)}...
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    </>
+                  )}
                 </View>
               )}
 
