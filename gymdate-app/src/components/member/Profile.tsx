@@ -604,24 +604,21 @@ export const Profile: React.FC = () => {
               {/* Share Button */}
               <TouchableOpacity
                 onPress={handleShareReferral}
-                style={[
-                  styles.copyBtn,
-                  { 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
-                    alignSelf: 'stretch', 
-                    justifyContent: 'center',
-                    paddingVertical: 11,
-                    paddingHorizontal: 16,
-                    borderRadius: 10,
-                    marginTop: 10,
-                    gap: 8,
-                    backgroundColor: THEME.COLORS.primary 
-                  }
-                ]}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: THEME.COLORS.primary,
+                  borderRadius: 10,
+                  paddingVertical: 13,
+                  paddingHorizontal: 20,
+                  marginTop: 10,
+                  width: '100%',
+                  gap: 8,
+                }}
               >
-                <Share2 size={14} color="#ffffff" />
-                <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                <Share2 size={16} color="#ffffff" />
+                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700', letterSpacing: 0.4 }}>
                   Share Referral Link
                 </Text>
               </TouchableOpacity>
