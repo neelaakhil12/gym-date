@@ -52,6 +52,7 @@ import {
   User
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { apiService } from '../../services/apiService';
 
 type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet' | 'scan';
@@ -278,9 +279,8 @@ export const OwnerDashboard: React.FC = () => {
     let scannerInstance: any = null;
 
     if (activeTab === 'scan' && isLiveCameraScanning && Platform.OS === 'web') {
-      const timer = setTimeout(async () => {
+      const timer = setTimeout(() => {
         try {
-          const { Html5QrcodeScanner } = await import('html5-qrcode');
           const element = document.getElementById('reader');
           if (element) {
             scannerInstance = new Html5QrcodeScanner(
@@ -315,12 +315,12 @@ export const OwnerDashboard: React.FC = () => {
         } catch (e) {
           console.warn('Failed to initialize html5-qrcode scanner:', e);
         }
-      }, 250);
+      }, 100);
 
       return () => {
         clearTimeout(timer);
         if (scannerInstance) {
-          scannerInstance.clear().catch(() => {});
+          scannerInstance.clear().catch((err: any) => console.warn('Failed to clear scanner:', err));
         }
       };
     }
@@ -1215,17 +1215,61 @@ export const OwnerDashboard: React.FC = () => {
             {isLiveCameraScanning && !scanResult && (
               <View style={{ alignItems: 'center', gap: 14, width: '100%' }}>
                 {Platform.OS === 'web' && (
-                  <div 
-                    id="reader" 
-                    style={{ 
-                      width: '100%', 
-                      maxWidth: '300px', 
-                      borderRadius: '18px', 
-                      overflow: 'hidden', 
-                      backgroundColor: '#000000',
-                      border: '2px solid rgba(255,255,255,0.15)'
-                    }} 
-                  />
+                  <>
+                    <style>{`
+                      #reader {
+                        border: 2px solid rgba(255,255,255,0.15) !important;
+                        border-radius: 20px !important;
+                        background: #000000 !important;
+                        overflow: hidden !important;
+                        color: #FFFFFF !important;
+                      }
+                      #reader video {
+                        border-radius: 16px !important;
+                        object-fit: cover !important;
+                        width: 100% !important;
+                      }
+                      #reader button {
+                        background: #E11D48 !important;
+                        color: #FFFFFF !important;
+                        border: none !important;
+                        padding: 8px 16px !important;
+                        border-radius: 10px !important;
+                        font-weight: 800 !important;
+                        cursor: pointer !important;
+                        font-size: 12px !important;
+                        margin: 6px 4px !important;
+                      }
+                      #reader select {
+                        background: #1E293B !important;
+                        color: #FFFFFF !important;
+                        border: 1px solid rgba(255,255,255,0.2) !important;
+                        padding: 6px 10px !important;
+                        border-radius: 8px !important;
+                        margin: 6px 0 !important;
+                        font-size: 11px !important;
+                      }
+                      #reader a {
+                        color: #94A3B8 !important;
+                        font-size: 11px !important;
+                        text-decoration: underline !important;
+                      }
+                      #reader__scan_region {
+                        background: #000000 !important;
+                      }
+                    `}</style>
+                    <div 
+                      id="reader" 
+                      style={{ 
+                        width: '100%', 
+                        maxWidth: '300px', 
+                        borderRadius: '20px', 
+                        overflow: 'hidden', 
+                        backgroundColor: '#000000',
+                        border: '2px solid rgba(255,255,255,0.15)'
+                      }} 
+                    />
+                  </>
                 )}
                 <TouchableOpacity 
                   style={{ paddingHorizontal: 18, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}
