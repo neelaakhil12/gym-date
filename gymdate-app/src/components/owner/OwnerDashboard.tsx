@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
-  Modal,
   Switch,
   Linking
 } from 'react-native';
@@ -103,12 +102,25 @@ export const OwnerDashboard: React.FC = () => {
   // Live Data State
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [liveStats, setLiveStats] = useState({
-    totalRevenue: 0,
-    totalBookings: 0,
-    activeMembers: 0,
-    payoutPending: 0
+    totalRevenue: 12,
+    totalBookings: 12,
+    activeMembers: 4,
+    payoutPending: 12
   });
-  const [partnerBookings, setPartnerBookings] = useState<any[]>([]);
+  const [partnerBookings, setPartnerBookings] = useState<any[]>([
+    { id: 'b-101', customer_name: 'Akhil Harish Neela', customer_email: 'neelaakhilharish@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T10:00:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-102', customer_name: 'Neela Santhosh', customer_email: 'santhoshneela887@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:45:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-103', customer_name: 'Dachepally Navatej', customer_email: 'navatejdachepally@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:30:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-104', customer_name: 'Akhil Harish Neela', customer_email: 'neelaakhilharish@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:15:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-105', customer_name: 'Vikram Singh', customer_email: 'vikram.singh@gmail.com', plan_name: 'Yearly', created_at: '2026-08-20T14:20:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-106', customer_name: 'Pooja Verma', customer_email: 'pooja.verma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-20T11:10:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-107', customer_name: 'Rahul Sharma', customer_email: 'rahul.sharma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-19T16:00:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-108', customer_name: 'Ananya Roy', customer_email: 'ananya.roy@gmail.com', plan_name: 'Yearly', created_at: '2026-08-19T13:40:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-109', customer_name: 'Kabir Fernandes', customer_email: 'kabir.f@gmail.com', plan_name: 'Yearly', created_at: '2026-08-18T18:15:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-110', customer_name: 'Riya Sharma', customer_email: 'riya.sharma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-18T10:00:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-111', customer_name: 'Sameer Khan', customer_email: 'sameer.k@gmail.com', plan_name: 'Yearly', created_at: '2026-08-17T15:30:00.000Z', amount: '1', status: 'SUCCESS' },
+    { id: 'b-112', customer_name: 'Divya Patel', customer_email: 'divya.patel@gmail.com', plan_name: 'Yearly', created_at: '2026-08-17T09:00:00.000Z', amount: '1', status: 'SUCCESS' }
+  ]);
   const [partnerGym, setPartnerGym] = useState<any>(null);
 
   const currentEmail = (loginInput || userProfile.email || '').toLowerCase();
@@ -128,10 +140,12 @@ export const OwnerDashboard: React.FC = () => {
       const email = loginInput || userProfile.email || 'neelaakhilkumar50@gmail.com';
       const data = await apiService.getPartnerDashboardData(email);
       
-      let serverBookings: any[] = [];
       if (data && data.success) {
         if (data.bookings && data.bookings.length > 0) {
-          serverBookings = data.bookings;
+          setPartnerBookings(data.bookings);
+        }
+        if (data.stats) {
+          setLiveStats(data.stats);
         }
         if (data.gym) {
           setPartnerGym(data.gym);
@@ -142,42 +156,6 @@ export const OwnerDashboard: React.FC = () => {
           }
         }
       }
-
-      // Sync member bookings from app state for this gym
-      const localGymBookings = (userBookings || [])
-        .filter(b => !activeGym?.id || b.gymId === activeGym?.id || (b.gymName && activeGym?.name && b.gymName.toLowerCase() === activeGym.name.toLowerCase()))
-        .map(b => ({
-          id: b.id,
-          customer_name: b.userName || userProfile.name || 'Member',
-          plan_name: b.planName || 'Gym Pass',
-          amount: String(b.price || b.planPrice || 350),
-          created_at: b.date || b.bookingDate || new Date().toISOString(),
-          status: b.status || 'Confirmed'
-        }));
-
-      // Combine unique bookings
-      const allBookings = [...serverBookings];
-      localGymBookings.forEach(lb => {
-        if (!allBookings.some(sb => sb.id === lb.id)) {
-          allBookings.push(lb);
-        }
-      });
-
-      setPartnerBookings(allBookings);
-
-      const netRev = allBookings.reduce((sum, b) => sum + (Number(b.amount || 0) * 0.9), 0);
-      setLiveStats({
-        totalRevenue: data?.stats?.totalRevenue || netRev,
-        totalBookings: allBookings.length,
-        activeMembers: allBookings.filter(b => (b.status || '').toLowerCase() !== 'cancelled').length,
-        payoutPending: data?.stats?.payoutPending || netRev
-      });
-      setOwnerProfile(prev => ({
-        ...prev,
-        revenue: netRev,
-        activeMembers: allBookings.length,
-        payoutPending: netRev
-      }));
     } catch (err) {
       console.warn('[OwnerDashboard] Failed to fetch live stats:', err);
     } finally {
@@ -187,7 +165,7 @@ export const OwnerDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchLiveDashboard();
-  }, [loginInput, userProfile.email, userBookings?.length, activeGym?.id]);
+  }, [loginInput, userProfile.email, activeGym?.id]);
 
   useEffect(() => {
     if (activeGym) {
@@ -260,7 +238,7 @@ export const OwnerDashboard: React.FC = () => {
 
   return (
     <View style={styles.outerContainer}>
-      {/* 📱 SIDEBAR DRAWER OVERLAY (MOBILE RESPONSIVE MATCHING WEBSITE) */}
+      {/* 📱 SIDEBAR DRAWER OVERLAY (MATCHING WEBSITE) */}
       {isSidebarOpen && (
         <View style={styles.drawerOverlay}>
           <TouchableOpacity 
@@ -347,7 +325,7 @@ export const OwnerDashboard: React.FC = () => {
           onPress={() => setIsSidebarOpen(true)}
           activeOpacity={0.8}
         >
-          <Menu size={22} color="#1E293B" />
+          <Menu size={20} color="#1E293B" />
         </TouchableOpacity>
 
         <View style={styles.navbarTabsRow}>
@@ -355,7 +333,7 @@ export const OwnerDashboard: React.FC = () => {
             style={[styles.navTabPill, activeTab === 'overview' && styles.navTabPillActive]}
             onPress={() => setActiveTab('overview')}
           >
-            <LayoutDashboard size={14} color={activeTab === 'overview' ? '#FFFFFF' : '#64748B'} />
+            <LayoutDashboard size={13} color={activeTab === 'overview' ? '#FFFFFF' : '#64748B'} />
             <Text style={[styles.navTabPillText, activeTab === 'overview' && styles.navTabPillTextActive]}>
               Overview
             </Text>
@@ -365,7 +343,7 @@ export const OwnerDashboard: React.FC = () => {
             style={[styles.navTabPill, activeTab === 'wallet' && styles.navTabPillActive]}
             onPress={() => setActiveTab('wallet')}
           >
-            <Gift size={14} color={activeTab === 'wallet' ? '#FFFFFF' : '#64748B'} />
+            <Gift size={13} color={activeTab === 'wallet' ? '#FFFFFF' : '#64748B'} />
             <Text style={[styles.navTabPillText, activeTab === 'wallet' && styles.navTabPillTextActive]}>
               Referral & Wallet
             </Text>
@@ -377,7 +355,7 @@ export const OwnerDashboard: React.FC = () => {
           onPress={() => setShowScanModal(true)}
           activeOpacity={0.85}
         >
-          <QrCode size={16} color="#FFFFFF" />
+          <QrCode size={15} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -407,7 +385,7 @@ export const OwnerDashboard: React.FC = () => {
                   onPress={() => setShowScanModal(true)}
                   activeOpacity={0.85}
                 >
-                  <QrCode size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <QrCode size={14} color="#FFFFFF" style={{ marginRight: 5 }} />
                   <Text style={styles.btnScanEntryText}>Scan Entry QR</Text>
                 </TouchableOpacity>
 
@@ -416,7 +394,7 @@ export const OwnerDashboard: React.FC = () => {
                   onPress={() => setShowEditModal(true)}
                   activeOpacity={0.85}
                 >
-                  <Edit size={14} color="#334155" style={{ marginRight: 6 }} />
+                  <Edit size={13} color="#334155" style={{ marginRight: 5 }} />
                   <Text style={styles.btnEditDetailsText}>Edit Details</Text>
                 </TouchableOpacity>
               </View>
@@ -431,7 +409,7 @@ export const OwnerDashboard: React.FC = () => {
                   resizeMode="cover"
                 />
                 <View style={styles.ratingBadge}>
-                  <Star size={13} color="#EAB308" fill="#EAB308" style={{ marginRight: 4 }} />
+                  <Star size={12} color="#EAB308" fill="#EAB308" style={{ marginRight: 3 }} />
                   <Text style={styles.ratingBadgeText}>{activeGym?.rating || '4.5'} ({activeGym?.reviews || '0'} reviews)</Text>
                 </View>
               </View>
@@ -442,7 +420,7 @@ export const OwnerDashboard: React.FC = () => {
                   style={styles.locationLinkRow}
                   onPress={() => activeGym?.location && activeGym.location.startsWith('http') ? Linking.openURL(activeGym.location) : null}
                 >
-                  <MapPin size={14} color="#EF4444" style={{ marginRight: 5 }} />
+                  <MapPin size={13} color="#EF4444" style={{ marginRight: 4 }} />
                   <Text style={styles.locationLinkText} numberOfLines={1}>
                     {activeGym?.location || 'Hyderabad, Telangana'}
                   </Text>
@@ -464,7 +442,7 @@ export const OwnerDashboard: React.FC = () => {
                 <Text style={styles.sideCardTitle}>Operational Status</Text>
                 <View style={styles.statusBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <CheckCircle2 size={18} color={isOpenStatus ? '#059669' : '#DC2626'} />
+                    <CheckCircle2 size={16} color={isOpenStatus ? '#059669' : '#DC2626'} />
                     <View>
                       <Text style={[styles.statusText, { color: isOpenStatus ? '#059669' : '#DC2626' }]}>
                         {isOpenStatus ? 'Open' : 'Closed'}
@@ -647,7 +625,7 @@ export const OwnerDashboard: React.FC = () => {
                 onPress={() => setShowWithdrawModal(true)}
                 activeOpacity={0.85}
               >
-                <Send size={15} color="#0F172A" style={{ marginRight: 8 }} />
+                <Send size={14} color="#0F172A" style={{ marginRight: 8 }} />
                 <Text style={styles.withdrawBtnText}>Request Payout Withdrawal</Text>
               </TouchableOpacity>
             </View>
@@ -909,8 +887,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
@@ -923,16 +901,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     padding: 3,
-    borderRadius: 14,
-    gap: 4,
+    borderRadius: 12,
+    gap: 3,
   },
   navTabPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
   navTabPillActive: {
     backgroundColor: '#0F172A',
@@ -941,7 +919,7 @@ const styles = StyleSheet.create({
     })
   },
   navTabPillText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#64748B',
   },
@@ -949,8 +927,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   navQrBtn: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     backgroundColor: '#0F172A',
     alignItems: 'center',
@@ -1069,32 +1047,32 @@ const styles = StyleSheet.create({
 
   /* OVERVIEW HEADER */
   overviewHeaderRow: {
-    gap: 10,
+    gap: 8,
     marginTop: 4,
     marginBottom: 4,
   },
   pageTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
     color: '#0F172A',
   },
   pageSubtitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 1,
   },
   actionButtonsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 6,
+    marginTop: 4,
   },
   btnScanEntry: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0F172A',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   btnScanEntryText: {
     fontSize: 11,
@@ -1107,9 +1085,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   btnEditDetailsText: {
     fontSize: 11,
@@ -1120,7 +1098,7 @@ const styles = StyleSheet.create({
   /* HERO GYM CARD */
   gymHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     overflow: 'hidden',
@@ -1129,7 +1107,7 @@ const styles = StyleSheet.create({
     })
   },
   gymHeroImageContainer: {
-    height: 160,
+    height: 150,
     backgroundColor: '#F1F5F9',
     position: 'relative',
   },
@@ -1139,25 +1117,25 @@ const styles = StyleSheet.create({
   },
   ratingBadge: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
+    bottom: 8,
+    left: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 16,
   },
   ratingBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#1E293B',
   },
   gymHeroDetails: {
-    padding: 16,
+    padding: 14,
   },
   gymTitleText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
     color: '#0F172A',
   },
@@ -1167,7 +1145,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   locationLinkText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#64748B',
     flex: 1,
@@ -1175,41 +1153,41 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#F1F5F9',
-    marginVertical: 12,
+    marginVertical: 10,
   },
   sectionHeading: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#0F172A',
     marginBottom: 4,
   },
   descriptionText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#64748B',
-    lineHeight: 18,
+    lineHeight: 17,
   },
 
   /* CARDS GRID */
   cardsGrid: {
-    gap: 12,
+    gap: 10,
   },
   sideCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   sideCardTitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '900',
     color: '#0F172A',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   statusBox: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     flexDirection: 'row',
@@ -1217,24 +1195,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '900',
   },
   statusSubText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '600',
     color: '#64748B',
   },
   statusToggleBtn: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   statusToggleText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#DC2626',
   },
@@ -1246,12 +1224,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   offerLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#1E293B',
   },
   offerSub: {
-    fontSize: 10,
+    fontSize: 9.5,
     color: '#64748B',
   },
   offerInputWrapper: {
@@ -1259,14 +1237,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 10,
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   offerInputLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#64748B',
   },
@@ -1274,22 +1252,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    width: 60,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    width: 50,
     textAlign: 'center',
     fontWeight: '800',
   },
   saveOfferBtn: {
     backgroundColor: '#0F172A',
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
   },
   saveOfferBtnText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1299,22 +1277,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   quickStatLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#64748B',
   },
   quickStatVal: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '900',
     color: '#0F172A',
   },
   quickStatValGreen: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '900',
     color: '#059669',
   },
@@ -1322,8 +1300,8 @@ const styles = StyleSheet.create({
   /* GENERIC CARD */
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -1331,82 +1309,82 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '900',
     color: '#0F172A',
   },
   cardDesc: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#64748B',
-    lineHeight: 18,
-    marginTop: 4,
-    marginBottom: 12,
+    lineHeight: 16,
+    marginTop: 3,
+    marginBottom: 10,
   },
   countBadge: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#64748B',
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 5,
   },
 
   /* STATS ROW */
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   statMetricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   statMetricIconBoxGreen: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: 'rgba(5, 150, 105, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statMetricIconBoxBlue: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: 'rgba(37, 99, 235, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statMetricLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#64748B',
   },
   statMetricValGreen: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: '#059669',
     marginTop: 2,
   },
   statMetricValDark: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: '#0F172A',
     marginTop: 2,
   },
   statMetricSub: {
-    fontSize: 10,
+    fontSize: 9.5,
     color: '#94A3B8',
-    marginTop: 2,
+    marginTop: 1,
   },
 
   /* BOOKINGS ITEMS */
@@ -1414,12 +1392,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   bookingUserName: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#0F172A',
   },
@@ -1429,24 +1407,24 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   bookingUserPlan: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 1,
   },
   bookingAmountText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '900',
     color: '#059669',
   },
   confirmedPill: {
     backgroundColor: 'rgba(5, 150, 105, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginTop: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+    marginTop: 1,
   },
   confirmedPillText: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '800',
     color: '#059669',
   },
@@ -1454,8 +1432,8 @@ const styles = StyleSheet.create({
   /* WALLET TAB */
   walletHeroCard: {
     backgroundColor: '#0F172A',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 18,
+    padding: 14,
   },
   walletHeaderRow: {
     flexDirection: 'row',
@@ -1471,7 +1449,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   walletHeroBalance: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
     color: '#FFFFFF',
     marginTop: 2,
@@ -1480,31 +1458,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3.5,
+    borderRadius: 7,
   },
   walletBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   walletHeroDesc: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#94A3B8',
-    marginTop: 10,
+    marginTop: 8,
   },
   withdrawBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 12,
-    marginTop: 14,
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 12,
   },
   withdrawBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '900',
     color: '#0F172A',
   },
@@ -1512,32 +1490,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 6,
-    paddingLeft: 12,
+    borderRadius: 10,
+    padding: 5,
+    paddingLeft: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   referralLinkText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#64748B',
   },
   copyLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EF4444',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   copyLinkBtnText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '900',
     color: '#FFFFFF',
   },
 
-  /* IN-FRAME MODALS (STAYS STRICTLY INSIDE MOBILE SHELL) */
+  /* IN-FRAME MODALS */
   inFrameModalOverlay: {
     position: 'absolute',
     top: 0,
@@ -1559,11 +1537,11 @@ const styles = StyleSheet.create({
   },
   inFrameModalBox: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 18,
+    padding: 14,
     width: '100%',
-    maxWidth: 360,
-    gap: 12,
+    maxWidth: 350,
+    gap: 10,
     zIndex: 1001,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1577,48 +1555,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '900',
     color: '#0F172A',
   },
   modalDesc: {
     fontSize: 11,
     color: '#64748B',
-    lineHeight: 16,
+    lineHeight: 15,
   },
   qrInputRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   qrTextInput: {
     flex: 1,
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    fontSize: 12,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#0F172A',
   },
   qrValidateBtn: {
     backgroundColor: '#EF4444',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   qrValidateBtnText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '900',
     color: '#FFFFFF',
   },
   scanFeedbackCard: {
     flexDirection: 'row',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
   },
   scanSuccess: {
     backgroundColor: 'rgba(5, 150, 105, 0.1)',
@@ -1627,31 +1605,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(220, 38, 38, 0.1)',
   },
   scanFeedbackTitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   scanFeedbackDesc: {
-    fontSize: 11,
+    fontSize: 10.5,
     marginTop: 1,
   },
   modalCloseBtn: {
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: 10,
+    borderRadius: 10,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   modalCloseBtnText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
     color: '#475569',
   },
 
   /* EDIT DETAILS FORM */
   formFieldGroup: {
-    gap: 4,
+    gap: 3,
   },
   formLabel: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#475569',
   },
@@ -1659,21 +1637,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
-    fontSize: 12,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 38,
+    fontSize: 11.5,
     color: '#0F172A',
   },
   saveDetailsBtn: {
     backgroundColor: '#EF4444',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
     marginTop: 4,
   },
   saveDetailsBtnText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '900',
     color: '#FFFFFF',
   },
@@ -1682,21 +1660,21 @@ const styles = StyleSheet.create({
   withdrawTypeTabs: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    padding: 3,
-    gap: 4,
+    borderRadius: 8,
+    padding: 2.5,
+    gap: 3,
   },
   withdrawTypeTab: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 6,
   },
   withdrawTypeTabActive: {
     backgroundColor: '#FFFFFF',
   },
   withdrawTypeTabText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#64748B',
   },
@@ -1706,13 +1684,13 @@ const styles = StyleSheet.create({
   },
   submitWithdrawBtn: {
     backgroundColor: '#0F172A',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
     marginTop: 4,
   },
   submitWithdrawBtnText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '900',
     color: '#FFFFFF',
   },
@@ -1720,11 +1698,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(5, 150, 105, 0.1)',
-    padding: 12,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
   },
   successBannerText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
     color: '#065F46',
     flex: 1,
