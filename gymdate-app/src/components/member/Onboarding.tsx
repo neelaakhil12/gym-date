@@ -79,60 +79,6 @@ export const Onboarding: React.FC = () => {
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId: GOOGLE_WEB_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { authentication } = googleResponse;
-      const fetchUserInfo = async () => {
-        setIsGoogleLoading(true);
-        try {
-          const userRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-            headers: { Authorization: `Bearer ${authentication?.accessToken}` },
-          });
-          const googleUser = await userRes.json();
-          if (googleUser?.email) {
-            const cleanEmail = googleUser.email.toLowerCase();
-            const cleanName = googleUser.name || 'Gym Member';
-
-            const syncedUser = await apiService.syncProfile({
-              email: cleanEmail,
-              name: cleanName,
-              phone: loginPhone.trim() || undefined,
-            });
-
-            if (referralCodeInput.trim()) {
-              try {
-                await apiService.applyReferral(cleanEmail, referralCodeInput.trim());
-              } catch (e) {
-                console.warn('[Referral Apply] Error:', e);
-              }
-            }
-
-            setLoginInput(cleanEmail);
-            setUserProfile(prev => ({
-              ...prev,
-              name: syncedUser?.full_name || cleanName,
-              email: cleanEmail,
-              phone: syncedUser?.phone || loginPhone.trim() || '',
-            }));
-            setIsLoggedIn(true);
-            setActiveScreen('home');
-          }
-        } catch (err: any) {
-          console.warn('[Google Auth] fetch user error:', err);
-          showAlert('Google Login', 'Could not complete Google authentication.');
-        } finally {
-          setIsGoogleLoading(false);
-        }
-      };
-      fetchUserInfo();
-    }
-  }, [googleResponse]);
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -462,7 +408,7 @@ export const Onboarding: React.FC = () => {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      const authUrl = `https://gymdate.in/api/auth/signin/google?callbackUrl=/auth/app-callback`;
+      const authUrl = `https://gymdate.in/api/auth/google/start`;
       const returnUrl = 'gymdate://auth';
 
       const result = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);

@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Menu
 } from 'lucide-react-native';
+import { WebView } from 'react-native-webview';
 import { getCurrentLocation, reverseGeocode } from '../../utils/location';
 
 // ── Haversine distance helper ─────────────────────
@@ -231,6 +232,14 @@ export const HomeDashboard: React.FC = () => {
             attribution: '© OpenStreetMap'
           }).addTo(map);
 
+          function selectGym(id) {
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_GYM', id: id }));
+            } else if (window.parent && window.parent.postMessage) {
+              window.parent.postMessage({ type: 'OPEN_GYM', id: id }, '*');
+            }
+          }
+
           L.control.zoom({ position: 'bottomright' }).addTo(map);
 
           // Pinned User Location
@@ -260,7 +269,7 @@ export const HomeDashboard: React.FC = () => {
                 '<div class="gym-popup-card">' +
                   '<div class="gym-popup-title">' + g.name + '</div>' +
                   '<div class="gym-popup-rate">₹' + g.price + '/day • ' + g.rating + ' ★</div>' +
-                  '<button class="gym-popup-btn" onclick="window.parent.postMessage({ type: \\'OPEN_GYM\\', id: \\'' + g.id + '\\' }, \\'*\\')">View Passes & Gym →</button>' +
+                  '<button class="gym-popup-btn" onclick="selectGym(\'' + g.id + '\')">View Passes & Gym →</button>' +
                 '</div>'
               );
               allMarkers.push(marker);
@@ -468,12 +477,24 @@ export const HomeDashboard: React.FC = () => {
               }}
             />
           ) : (
-            <View style={{ height: 320, backgroundColor: isLight ? '#F8FAFC' : '#1E293B', borderRadius: 20, alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-              <MapPin size={32} color={THEME.COLORS.primary} style={{ marginBottom: 8 }} />
-              <Text style={{ color: isLight ? '#0F172A' : '#ffffff', fontWeight: '800', fontSize: 13 }}>Nearby Pinned Gyms ({filteredGyms.length})</Text>
-              <Text style={{ color: '#64748B', fontSize: 11, textAlign: 'center', marginTop: 4 }}>
-                Explore live gym pins around {pinnedLocationTitle}
-              </Text>
+            <View style={{ height: 380, width: '100%', borderRadius: 20, overflow: 'hidden', backgroundColor: isLight ? '#F1F5F9' : '#0F172A' }}>
+              <WebView
+                originWhitelist={['*']}
+                source={{ html: generateMapHtml() }}
+                onMessage={(event) => {
+                  try {
+                    const data = JSON.parse(event.nativeEvent.data);
+                    if (data?.type === 'OPEN_GYM' && data.id) {
+                      handleGymClick(data.id);
+                    }
+                  } catch (e) {}
+                }}
+                style={{ flex: 1, backgroundColor: 'transparent' }}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                mixedContentMode="always"
+                scrollEnabled={false}
+              />
             </View>
           )}
 
