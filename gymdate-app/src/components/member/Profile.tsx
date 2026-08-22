@@ -10,8 +10,10 @@ import {
   Alert,
   Platform,
   Linking,
-  ActivityIndicator
+  ActivityIndicator,
+  Share
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
@@ -39,7 +41,8 @@ import {
   ChevronLeft,
   QrCode,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  Share2
 } from 'lucide-react-native';
 
 export const Profile: React.FC = () => {
@@ -138,10 +141,35 @@ export const Profile: React.FC = () => {
 
   // Copy referral link (real from API or fallback)
   const referralLink = walletData?.referralLink || `https://gymdate.in/login?ref=${userProfile.name.toLowerCase().replace(/ /g, '-')}`;
-  const handleCopyReferral = () => {
-    setCopied(true);
-    Alert.alert('Referral Copied', 'Your custom sharing link was successfully copied to your clipboard!');
-    setTimeout(() => setCopied(false), 2000);
+
+  const handleCopyReferral = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(referralLink);
+        }
+      } else {
+        await Clipboard.setStringAsync(referralLink);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (e) {
+      Alert.alert('Copy failed', 'Could not copy link. Please copy it manually.');
+    }
+  };
+
+  const handleShareReferral = async () => {
+    try {
+      await Share.share({
+        message: `🏋️ Join GymDate and get access to premium gyms across India! Use my referral link to sign up and we both earn ₹${walletData?.bonusPerReferral ?? 30} wallet cash!\n\n${referralLink}`,
+        url: referralLink,
+        title: 'Join GymDate — Premium Gym Access',
+      });
+    } catch (e: any) {
+      if (e.message !== 'User did not share') {
+        Alert.alert('Share failed', 'Unable to open share sheet.');
+      }
+    }
   };
 
   const handleLogout = () => {
@@ -569,9 +597,34 @@ export const Profile: React.FC = () => {
                   {referralLink}
                 </Text>
                 <TouchableOpacity onPress={handleCopyReferral} style={styles.copyBtn}>
-                  <Copy size={12} color="#ffffff" />
+                  {copied ? <Check size={12} color="#ffffff" /> : <Copy size={12} color="#ffffff" />}
                 </TouchableOpacity>
               </View>
+
+              {/* Share Button */}
+              <TouchableOpacity
+                onPress={handleShareReferral}
+                style={[
+                  styles.copyBtn,
+                  { 
+                    flexDirection: 'row', 
+                    alignItems: 'center', 
+                    alignSelf: 'stretch', 
+                    justifyContent: 'center',
+                    paddingVertical: 11,
+                    paddingHorizontal: 16,
+                    borderRadius: 10,
+                    marginTop: 10,
+                    gap: 8,
+                    backgroundColor: THEME.COLORS.primary 
+                  }
+                ]}
+              >
+                <Share2 size={14} color="#ffffff" />
+                <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                  Share Referral Link
+                </Text>
+              </TouchableOpacity>
 
               {/* Share Steps */}
               <View style={[styles.dividerLine, isLight && { backgroundColor: '#E5E7EB' }]} />

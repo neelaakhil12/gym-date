@@ -11,8 +11,11 @@ import {
   RefreshControl,
   Platform,
   Switch,
-  Linking
+  Linking,
+  Share,
+  Alert
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { 
@@ -552,13 +555,36 @@ export const OwnerDashboard: React.FC = () => {
     }, 600);
   };
 
-  const handleCopyReferral = () => {
+  const handleCopyReferral = async () => {
     const link = referralWallet.referral_link;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(link);
+    try {
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(link);
+        }
+      } else {
+        await Clipboard.setStringAsync(link);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (e) {
+      Alert.alert('Copy failed', 'Could not copy link. Please copy it manually.');
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareReferral = async () => {
+    const link = referralWallet.referral_link;
+    try {
+      await Share.share({
+        message: `🏋️ I'm listing my gym on GymDate — the premium gym-day-pass platform! Join us and earn ₹${referralWallet.bonus_per_referral} per gym you refer.\n\nRegister here: ${link}`,
+        url: link,
+        title: 'Join GymDate as a Gym Partner',
+      });
+    } catch (e: any) {
+      if (e.message !== 'User did not share') {
+        Alert.alert('Share failed', 'Unable to open share sheet.');
+      }
+    }
   };
 
   const handlePickQrImage = async () => {
@@ -1230,10 +1256,31 @@ export const OwnerDashboard: React.FC = () => {
                   style={styles.copyLinkBtn} 
                   onPress={handleCopyReferral}
                 >
-                  <Copy size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  {copied ? <Check size={13} color="#FFFFFF" style={{ marginRight: 4 }} /> : <Copy size={13} color="#FFFFFF" style={{ marginRight: 4 }} />}
                   <Text style={styles.copyLinkBtnText}>{copied ? 'COPIED!' : 'COPY'}</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Share Button */}
+              <TouchableOpacity
+                onPress={handleShareReferral}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#EF4444',
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  marginTop: 10,
+                  gap: 8,
+                }}
+              >
+                <Share2 size={14} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
+                  Share Partner Referral Link
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Referral Activity & History */}
