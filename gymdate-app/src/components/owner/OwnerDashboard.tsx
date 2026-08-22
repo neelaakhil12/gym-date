@@ -89,6 +89,7 @@ export const OwnerDashboard: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawMethod, setWithdrawMethod] = useState<'bank' | 'upi'>('bank');
+  const [withdrawAmount, setWithdrawAmount] = useState('1500');
   const [withdrawBankName, setWithdrawBankName] = useState('');
   const [withdrawAccountHolder, setWithdrawAccountHolder] = useState('');
   const [withdrawAccountNumber, setWithdrawAccountNumber] = useState('');
@@ -96,6 +97,18 @@ export const OwnerDashboard: React.FC = () => {
   const [withdrawUpiId, setWithdrawUpiId] = useState('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccessMsg, setWithdrawSuccessMsg] = useState('');
+  const [walletData, setWalletData] = useState<any>({
+    wallet_balance: 0,
+    referral_code: 'CULTFIT50',
+    referral_link: 'https://gymdate.in/partner?ref=CULTFIT50',
+    total_referred_gyms: 0,
+    referral_earnings: 0,
+    min_withdrawal: 1500,
+    payouts: []
+  });
+
+  // QR Scanning state
+  const [isScanningQR, setIsScanningQR] = useState(false);
 
   // Live Data State
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -105,23 +118,10 @@ export const OwnerDashboard: React.FC = () => {
     activeMembers: 4,
     payoutPending: 12
   });
-  const [partnerBookings, setPartnerBookings] = useState<any[]>([
-    { id: 'b-101', customer_name: 'Akhil Harish Neela', customer_email: 'neelaakhilharish@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T10:00:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-102', customer_name: 'Neela Santhosh', customer_email: 'santhoshneela887@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:45:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-103', customer_name: 'Dachepally Navatej', customer_email: 'navatejdachepally@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:30:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-104', customer_name: 'Akhil Harish Neela', customer_email: 'neelaakhilharish@gmail.com', plan_name: 'Yearly', created_at: '2026-08-21T09:15:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-105', customer_name: 'Vikram Singh', customer_email: 'vikram.singh@gmail.com', plan_name: 'Yearly', created_at: '2026-08-20T14:20:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-106', customer_name: 'Pooja Verma', customer_email: 'pooja.verma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-20T11:10:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-107', customer_name: 'Rahul Sharma', customer_email: 'rahul.sharma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-19T16:00:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-108', customer_name: 'Ananya Roy', customer_email: 'ananya.roy@gmail.com', plan_name: 'Yearly', created_at: '2026-08-19T13:40:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-109', customer_name: 'Kabir Fernandes', customer_email: 'kabir.f@gmail.com', plan_name: 'Yearly', created_at: '2026-08-18T18:15:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-110', customer_name: 'Riya Sharma', customer_email: 'riya.sharma@gmail.com', plan_name: 'Yearly', created_at: '2026-08-18T10:00:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-111', customer_name: 'Sameer Khan', customer_email: 'sameer.k@gmail.com', plan_name: 'Yearly', created_at: '2026-08-17T15:30:00.000Z', amount: '1', status: 'SUCCESS' },
-    { id: 'b-112', customer_name: 'Divya Patel', customer_email: 'divya.patel@gmail.com', plan_name: 'Yearly', created_at: '2026-08-17T09:00:00.000Z', amount: '1', status: 'SUCCESS' }
-  ]);
+  const [partnerBookings, setPartnerBookings] = useState<any[]>([]);
   const [partnerGym, setPartnerGym] = useState<any>(null);
 
-  const currentEmail = (loginInput || userProfile.email || '').toLowerCase();
+  const currentEmail = (loginInput || userProfile.email || 'neelaakhilkumar50@gmail.com').toLowerCase();
   const activeGym = partnerGym || 
     gyms.find(g => 
       (ownerProfile.gymName && g.name.toLowerCase() === ownerProfile.gymName.toLowerCase()) ||
@@ -136,7 +136,10 @@ export const OwnerDashboard: React.FC = () => {
     setIsLoadingData(true);
     try {
       const email = loginInput || userProfile.email || 'neelaakhilkumar50@gmail.com';
-      const data = await apiService.getPartnerDashboardData(email);
+      const [data, wData] = await Promise.all([
+        apiService.getPartnerDashboardData(email),
+        apiService.getPartnerWalletData(email)
+      ]);
       
       if (data && data.success) {
         if (data.bookings && data.bookings.length > 0) {
@@ -153,6 +156,10 @@ export const OwnerDashboard: React.FC = () => {
             setOfferPercentage(String(data.gym.offer_percentage));
           }
         }
+      }
+
+      if (wData && wData.success) {
+        setWalletData(wData);
       }
     } catch (err) {
       console.warn('[OwnerDashboard] Failed to fetch live stats:', err);
@@ -174,14 +181,32 @@ export const OwnerDashboard: React.FC = () => {
     }
   }, [activeGym]);
 
-  const handleTerminalScan = () => {
+  const handleTerminalScan = async () => {
     if (!terminalInput.trim()) return;
 
-    const res = checkInUserByQR(terminalInput);
-    setScanResult(res);
-
-    if (res.success) {
-      setTerminalInput('');
+    setIsScanningQR(true);
+    try {
+      const res = await apiService.verifyPartnerTicket(terminalInput.trim(), currentEmail);
+      if (res && res.success) {
+        setScanResult({
+          success: true,
+          message: res.message || 'Pass verified and approved for entry!',
+          memberName: res.memberName || res.booking?.customer_name || 'Member'
+        });
+        setTerminalInput('');
+      } else {
+        setScanResult({
+          success: false,
+          message: res.error || 'Ticket not found or invalid for this gym.'
+        });
+      }
+    } catch (err: any) {
+      setScanResult({
+        success: false,
+        message: err.message || 'Failed to verify ticket with database.'
+      });
+    } finally {
+      setIsScanningQR(false);
     }
   };
 
@@ -208,7 +233,7 @@ export const OwnerDashboard: React.FC = () => {
   };
 
   const handleCopyReferral = () => {
-    const link = `https://gymdate.in/partner?ref=CULTFIT50`;
+    const link = walletData?.referral_link || `https://gymdate.in/partner?ref=${walletData?.referral_code || 'CULTFIT50'}`;
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(link);
     }
@@ -216,16 +241,35 @@ export const OwnerDashboard: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleWithdrawSubmit = () => {
+  const handleWithdrawSubmit = async () => {
     setIsWithdrawing(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        email: currentEmail,
+        amount: parseFloat(withdrawAmount) || 1500,
+        payout_method: withdrawMethod,
+        bank_name: withdrawBankName,
+        account_holder: withdrawAccountHolder,
+        account_number: withdrawAccountNumber,
+        ifsc_code: withdrawIfsc,
+        upi_id: withdrawUpiId
+      };
+      const res = await apiService.submitPartnerPayoutRequest(payload);
+      if (res && res.success) {
+        setWithdrawSuccessMsg(res.message || 'Withdrawal request submitted! Super Admin will review shortly.');
+        fetchLiveDashboard();
+      } else {
+        setWithdrawSuccessMsg(res.error || 'Failed to submit withdrawal.');
+      }
+    } catch (e: any) {
+      setWithdrawSuccessMsg(e.message || 'Error submitting request.');
+    } finally {
       setIsWithdrawing(false);
-      setWithdrawSuccessMsg('Withdrawal request submitted! Super Admin will approve shortly.');
       setTimeout(() => {
         setShowWithdrawModal(false);
         setWithdrawSuccessMsg('');
       }, 2500);
-    }, 900);
+    }
   };
 
   const handleSignOut = () => {
@@ -547,11 +591,43 @@ export const OwnerDashboard: React.FC = () => {
 
               <View style={styles.statMetricCard}>
                 <View style={styles.statMetricIconBoxBlue}>
-                  <Users size={18} color="#2563EB" />
+            {/* Stats Overview: EXACT 3 CARDS MATCHING WEBSITE */}
+            <View style={styles.statsRowThree}>
+              {/* 1. Total Revenue */}
+              <View style={styles.statMetricCardCol}>
+                <View style={styles.statCardHeaderRow}>
+                  <View style={styles.statMetricIconBoxGreen}>
+                    <DollarSign size={16} color="#059669" />
+                  </View>
+                  <View style={styles.statPercentBadge}>
+                    <TrendingUp size={10} color="#059669" style={{ marginRight: 2 }} />
+                    <Text style={styles.statPercentText}>+0%</Text>
+                  </View>
                 </View>
-                <Text style={styles.statMetricLabel}>Active Passes</Text>
+                <Text style={styles.statMetricLabel}>Total Revenue</Text>
+                <Text style={styles.statMetricValGreen}>₹{liveStats.totalRevenue.toLocaleString()}</Text>
+              </View>
+
+              {/* 2. Total Bookings */}
+              <View style={styles.statMetricCardCol}>
+                <View style={styles.statCardHeaderRow}>
+                  <View style={styles.statMetricIconBoxBlue}>
+                    <Calendar size={16} color="#2563EB" />
+                  </View>
+                </View>
+                <Text style={styles.statMetricLabel}>Total Bookings</Text>
+                <Text style={styles.statMetricValDark}>{liveStats.totalBookings}</Text>
+              </View>
+
+              {/* 3. Unique Customers */}
+              <View style={styles.statMetricCardCol}>
+                <View style={styles.statCardHeaderRow}>
+                  <View style={styles.statMetricIconBoxPurple}>
+                    <Users size={16} color="#7C3AED" />
+                  </View>
+                </View>
+                <Text style={styles.statMetricLabel}>Unique Customers</Text>
                 <Text style={styles.statMetricValDark}>{liveStats.activeMembers}</Text>
-                <Text style={styles.statMetricSub}>Confirmed entries</Text>
               </View>
             </View>
 
@@ -559,7 +635,9 @@ export const OwnerDashboard: React.FC = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Recent Transactions</Text>
-                <Text style={styles.countBadge}>{partnerBookings.length} Total</Text>
+                <TouchableOpacity onPress={fetchLiveDashboard}>
+                  <Text style={styles.viewAllBtnText}>View All</Text>
+                </TouchableOpacity>
               </View>
 
               {partnerBookings.length === 0 ? (
@@ -583,7 +661,7 @@ export const OwnerDashboard: React.FC = () => {
                     <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
                       <Text style={styles.bookingAmountText}>₹{Number(b.amount || 0).toLocaleString()}</Text>
                       <View style={styles.confirmedPill}>
-                        <Text style={styles.confirmedPillText}>{b.status || 'SUCCESS'}</Text>
+                        <Text style={styles.confirmedPillText}>{(b.status || 'SUCCESS').toUpperCase()}</Text>
                       </View>
                     </View>
                   </View>
@@ -606,7 +684,7 @@ export const OwnerDashboard: React.FC = () => {
               <View style={styles.walletHeaderRow}>
                 <View style={{ flex: 1, minWidth: 100 }}>
                   <Text style={styles.walletHeroLabel}>AVAILABLE REWARD BALANCE</Text>
-                  <Text style={styles.walletHeroBalance}>₹0</Text>
+                  <Text style={styles.walletHeroBalance}>₹{(walletData?.wallet_balance ?? 0).toLocaleString()}</Text>
                 </View>
                 <View style={styles.walletBadge}>
                   <Gift size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
@@ -614,8 +692,19 @@ export const OwnerDashboard: React.FC = () => {
                 </View>
               </View>
 
+              <View style={{ flexDirection: 'row', gap: 16, marginTop: 10 }}>
+                <View>
+                  <Text style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: '700' }}>Referred Gyms</Text>
+                  <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '800' }}>{walletData?.total_referred_gyms ?? 0}</Text>
+                </View>
+                <View>
+                  <Text style={{ fontSize: 9.5, color: '#94A3B8', fontWeight: '700' }}>Total Earned</Text>
+                  <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '800' }}>₹{(walletData?.referral_earnings ?? 0).toLocaleString()}</Text>
+                </View>
+              </View>
+
               <Text style={styles.walletHeroDesc}>
-                Minimum withdrawal threshold: ₹1,500
+                Minimum withdrawal threshold: ₹{(walletData?.min_withdrawal ?? 1500).toLocaleString()}
               </Text>
 
               <TouchableOpacity 
@@ -637,7 +726,7 @@ export const OwnerDashboard: React.FC = () => {
 
               <View style={styles.referralLinkBox}>
                 <Text style={styles.referralLinkText} numberOfLines={1}>
-                  https://gymdate.in/partner?ref=CULTFIT50
+                  {walletData?.referral_link || `https://gymdate.in/partner?ref=${walletData?.referral_code || 'CULTFIT50'}`}
                 </Text>
                 <TouchableOpacity 
                   style={styles.copyLinkBtn} 
@@ -647,6 +736,38 @@ export const OwnerDashboard: React.FC = () => {
                   <Text style={styles.copyLinkBtnText}>{copied ? 'COPIED!' : 'COPY'}</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+
+            {/* Payout Requests History */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Withdrawal Transactions</Text>
+                <Text style={styles.countBadge}>{(walletData?.payouts || []).length} Total</Text>
+              </View>
+
+              {(walletData?.payouts || []).length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+                  <Wallet size={26} color="#CBD5E1" style={{ marginBottom: 6 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>No withdrawal requests submitted yet</Text>
+                  <Text style={{ fontSize: 10.5, color: '#94A3B8', marginTop: 2 }}>
+                    Your withdrawal history and processing status will appear here.
+                  </Text>
+                </View>
+              ) : (
+                (walletData?.payouts || []).map((p: any, idx: number) => (
+                  <View key={p.id || idx} style={styles.bookingRowItem}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.bookingUserName}>₹{parseFloat(p.amount || 0).toLocaleString()} • {p.payout_method === 'upi' ? 'UPI Transfer' : 'Bank Transfer'}</Text>
+                      <Text style={styles.bookingUserPlan}>{new Date(p.created_at || Date.now()).toLocaleDateString()}</Text>
+                    </View>
+                    <View style={styles.confirmedPill}>
+                      <Text style={[styles.confirmedPillText, { color: p.status === 'approved' ? '#059669' : '#D97706' }]}>
+                        {(p.status || 'PENDING').toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         )}
@@ -672,14 +793,14 @@ export const OwnerDashboard: React.FC = () => {
             </View>
 
             <Text style={styles.modalDesc}>
-              Enter or scan the customer's mobile app ticket code to validate entry.
+              Point camera or enter customer booking ticket code (e.g. 5c321787-651c...).
             </Text>
 
             <View style={styles.qrInputRow}>
               <TextInput 
                 value={terminalInput}
                 onChangeText={(val) => { setTerminalInput(val); setScanResult(null); }}
-                placeholder="e.g. GD-MEMBER-9988"
+                placeholder="Paste code or booking ID"
                 placeholderTextColor="#94A3B8"
                 style={styles.qrTextInput}
                 autoCapitalize="characters"
@@ -687,8 +808,13 @@ export const OwnerDashboard: React.FC = () => {
               <TouchableOpacity 
                 style={styles.qrValidateBtn}
                 onPress={handleTerminalScan}
+                disabled={isScanningQR}
               >
-                <Text style={styles.qrValidateBtnText}>VALIDATE</Text>
+                {isScanningQR ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.qrValidateBtnText}>VALIDATE</Text>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -1331,46 +1457,75 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
 
-  /* STATS ROW */
-  statsRow: {
+  /* STATS ROW (3 COLUMNS MATCHING WEBSITE) */
+  statsRowThree: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
+    justifyContent: 'space-between',
   },
-  statMetricCard: {
+  statMetricCardCol: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 14,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    ...Platform.select({
+      web: { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)' }
+    })
+  },
+  statCardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   statMetricIconBoxGreen: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     backgroundColor: 'rgba(5, 150, 105, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
   },
   statMetricIconBoxBlue: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: 8,
     backgroundColor: 'rgba(37, 99, 235, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+  },
+  statMetricIconBoxPurple: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statPercentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+    paddingHorizontal: 4,
+    paddingVertical: 1.5,
+    borderRadius: 8,
+  },
+  statPercentText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#059669',
   },
   statMetricLabel: {
-    fontSize: 10.5,
+    fontSize: 9.5,
     fontWeight: '700',
     color: '#64748B',
   },
   statMetricValGreen: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#059669',
+    color: '#0F172A',
     marginTop: 2,
   },
   statMetricValDark: {
@@ -1379,10 +1534,10 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginTop: 2,
   },
-  statMetricSub: {
-    fontSize: 9.5,
-    color: '#94A3B8',
-    marginTop: 1,
+  viewAllBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#EF4444',
   },
 
   /* BOOKINGS ITEMS */

@@ -379,5 +379,86 @@ export const apiService = {
       stats: { totalRevenue: 0, totalBookings: 0, activeMembers: 0, payoutPending: 0 },
       bookings: []
     };
+  },
+
+  /**
+   * Verify QR Ticket Code on live database
+   */
+  async verifyPartnerTicket(ticketCode: string, email: string): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+    memberName?: string;
+    booking?: any;
+  }> {
+    const url = `${getApiUrl()}/api/partner/verify-ticket`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticket_code: ticketCode, email })
+      });
+      return await res.json();
+    } catch (err: any) {
+      console.warn("[API Error] verifyPartnerTicket:", err);
+      return { success: false, error: err.message || "Failed to reach server for QR verification." };
+    }
+  },
+
+  /**
+   * Get partner wallet, real referral link & payout history
+   */
+  async getPartnerWalletData(email: string): Promise<{
+    success: boolean;
+    referral_code?: string;
+    referral_link?: string;
+    wallet_balance?: number;
+    referral_earnings?: number;
+    total_referred_gyms?: number;
+    min_withdrawal?: number;
+    payouts?: any[];
+    error?: string;
+  }> {
+    const url = `${getApiUrl()}/api/partner/wallet-data?email=${encodeURIComponent(email.trim().toLowerCase())}`;
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err: any) {
+      console.warn("[API Error] getPartnerWalletData:", err);
+    }
+    return {
+      success: true,
+      referral_code: "CULTFIT50",
+      referral_link: "https://gymdate.in/partner?ref=CULTFIT50",
+      wallet_balance: 0,
+      referral_earnings: 0,
+      total_referred_gyms: 0,
+      min_withdrawal: 1500,
+      payouts: []
+    };
+  },
+
+  /**
+   * Submit a payout withdrawal request to Super Admin
+   */
+  async submitPartnerPayoutRequest(payload: any): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }> {
+    const url = `${getApiUrl()}/api/partner/wallet-data`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch (err: any) {
+      console.warn("[API Error] submitPartnerPayoutRequest:", err);
+      return { success: false, error: err.message || "Failed to submit withdrawal request." };
+    }
   }
 };
