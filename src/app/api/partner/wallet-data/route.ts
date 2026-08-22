@@ -65,8 +65,8 @@ export async function GET(req: NextRequest) {
     let revenuePayouts: any[] = [];
     if (gym?.id) {
       try {
-        const bookingsRes = await query("SELECT amount, total_price FROM bookings WHERE gym_id::text = $1::text", [gym.id]);
-        const grossRevenue = (bookingsRes.rows || []).reduce((sum: number, b: any) => sum + (Number(b.amount) || Number(b.total_price) || 0), 0);
+        const bookingsRes = await query("SELECT amount FROM bookings WHERE gym_id::text = $1::text", [gym.id]);
+        const grossRevenue = (bookingsRes.rows || []).reduce((sum: number, b: any) => sum + (Number(b.amount) || 0), 0);
         netRevenue = grossRevenue * (1 - (commissionRate / 100));
 
         const pRes = await query(

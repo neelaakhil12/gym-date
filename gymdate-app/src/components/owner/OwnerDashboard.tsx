@@ -46,8 +46,10 @@ import {
   Send,
   Eye,
   ArrowDownLeft,
-  ArrowUpRight
+  ArrowUpRight,
+  Upload
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { apiService } from '../../services/apiService';
 
 type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet';
@@ -100,6 +102,8 @@ export const OwnerDashboard: React.FC = () => {
   const [withdrawAccountNumber, setWithdrawAccountNumber] = useState('');
   const [withdrawIfsc, setWithdrawIfsc] = useState('');
   const [withdrawUpiId, setWithdrawUpiId] = useState('');
+  const [qrCodeFile, setQrCodeFile] = useState<any>(null);
+  const [qrCodePreview, setQrCodePreview] = useState<string>('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccessMsg, setWithdrawSuccessMsg] = useState('');
   const [walletData, setWalletData] = useState<any>({
@@ -292,11 +296,55 @@ export const OwnerDashboard: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handlePickQrImage = async () => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e: any) => {
+        const file = e.target?.files?.[0];
+        if (file) {
+          setQrCodeFile(file);
+          const reader = new FileReader();
+          reader.onload = () => {
+            setQrCodePreview(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      try {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          alert('Permission to access photos is required to upload QR screenshot.');
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+          base64: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets[0]) {
+          const asset = result.assets[0];
+          setQrCodePreview(asset.uri);
+          setQrCodeFile(asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
+        }
+      } catch (err) {
+        console.warn('Image picker error:', err);
+      }
+    }
+  };
+
   const openWithdrawModal = (type: 'revenue' | 'referral') => {
     setWithdrawPayoutType(type);
     const minVal = type === 'revenue' ? virtualWallet.min_withdrawal : referralWallet.min_withdrawal;
     setWithdrawAmount(String(minVal));
     setWithdrawSuccessMsg('');
+    setQrCodeFile(null);
+    setQrCodePreview('');
     setShowWithdrawModal(true);
   };
 
@@ -316,6 +364,14 @@ export const OwnerDashboard: React.FC = () => {
 
     setIsWithdrawing(true);
     try {
+      let uploadedQrUrl: string | undefined = undefined;
+      if (qrCodeFile) {
+        const upRes = await apiService.uploadPayoutQrCode(qrCodeFile);
+        if (upRes && upRes.url) {
+          uploadedQrUrl = upRes.url;
+        }
+      }
+
       const payload = {
         email: currentEmail,
         amount: amountNum,
@@ -325,7 +381,8 @@ export const OwnerDashboard: React.FC = () => {
         account_holder: withdrawAccountHolder,
         account_number: withdrawAccountNumber,
         ifsc_code: withdrawIfsc,
-        upi_id: withdrawUpiId
+        upi_id: withdrawUpiId,
+        qr_code_url: uploadedQrUrl
       };
       const res = await apiService.submitPartnerPayoutRequest(payload);
       if (res && res.success) {
@@ -341,6 +398,8 @@ export const OwnerDashboard: React.FC = () => {
       setTimeout(() => {
         setShowWithdrawModal(false);
         setWithdrawSuccessMsg('');
+        setQrCodeFile(null);
+        setQrCodePreview('');
       }, 2500);
     }
   };
@@ -1227,9 +1286,42 @@ export const OwnerDashboard: React.FC = () => {
                     </View>
                   </View>
                 ) : (
-                  <View style={styles.formFieldGroup}>
-                    <Text style={styles.formLabel}>UPI ID / Mobile</Text>
-                    <TextInput value={withdrawUpiId} onChangeText={setWithdrawUpiId} placeholder="partner@upi or 9876543210" style={styles.formInput} />
+                  <View style={{ gap: 10 }}>
+                    <View style={styles.formFieldGroup}>
+                      <Text style={styles.formLabel}>UPI ID / Mobile Number</Text>
+                      <TextInput 
+                        value={withdrawUpiId} 
+                        onChangeText={setWithdrawUpiId} 
+                        placeholder="partner@upi or 9876543210" 
+                        style={styles.formInput} 
+                      />
+                    </View>
+
+                    {/* QR Code / Payment Screenshot Upload */}
+                    <View style={styles.formFieldGroup}>
+                      <Text style={styles.formLabel}>QR Code / Scanner Screenshot (Optional)</Text>
+                      {qrCodePreview ? (
+                        <View style={styles.qrPreviewBox}>
+                          <Image source={{ uri: qrCodePreview }} style={styles.qrPreviewImg} />
+                          <TouchableOpacity 
+                            style={styles.removeQrBtn} 
+                            onPress={() => { setQrCodePreview(''); setQrCodeFile(null); }}
+                          >
+                            <X size={14} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity 
+                          style={styles.uploadQrBox}
+                          onPress={handlePickQrImage}
+                          activeOpacity={0.7}
+                        >
+                          <Upload size={20} color={THEME.COLORS.primary} style={{ marginBottom: 6 }} />
+                          <Text style={styles.uploadQrTitle}>Upload QR Code / Scanner Screenshot</Text>
+                          <Text style={styles.uploadQrSub}>Super Admin will scan and transfer payout directly to your bank</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                 )}
 
@@ -1333,6 +1425,52 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#059669',
     marginTop: 1,
+  },
+  uploadQrBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+  },
+  uploadQrTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    textAlign: 'center',
+  },
+  uploadQrSub: {
+    fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  qrPreviewBox: {
+    position: 'relative',
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    padding: 8,
+  },
+  qrPreviewImg: {
+    width: 140,
+    height: 140,
+    borderRadius: 10,
+    resizeMode: 'contain',
+  },
+  removeQrBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    padding: 4,
   },
   viewReceiptBtn: {
     flexDirection: 'row',
