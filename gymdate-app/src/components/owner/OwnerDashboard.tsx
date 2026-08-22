@@ -43,8 +43,7 @@ import {
   Menu,
   ArrowRight,
   CheckCircle2,
-  Send,
-  Upload
+  Send
 } from 'lucide-react-native';
 import { apiService } from '../../services/apiService';
 
@@ -56,7 +55,6 @@ export const OwnerDashboard: React.FC = () => {
     setOwnerProfile, 
     checkInUserByQR, 
     gyms, 
-    userBookings,
     userProfile, 
     loginInput, 
     setCurrentRole, 

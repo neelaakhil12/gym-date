@@ -75,8 +75,8 @@ export async function POST(req: Request) {
     let gymData = null;
     try {
       const gymRes = await query(
-        "SELECT id, name, location, price_per_day, hours, image FROM gyms WHERE partner_id = $1 OR owner_email = $2 LIMIT 1",
-        [user.id, trimmedEmail]
+        "SELECT id, name, location, price_per_day, hours, image FROM gyms WHERE partner_id::text = $1::text LIMIT 1",
+        [user.id]
       );
       if (gymRes.rows.length > 0) {
         gymData = gymRes.rows[0];
