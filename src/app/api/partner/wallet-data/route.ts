@@ -41,24 +41,38 @@ export async function GET(req: NextRequest) {
       gym = firstGym.rows[0] || null;
     }
 
-    // 3. Referral code
-    let referralCode = "GYMDATE50";
+    // 3. Referral code & Wallet balance from users_extra
+    let referralCode = "CULTFIT50";
+    let walletBalance = 0;
     if (partnerId) {
-      const refRes = await query("SELECT code FROM referral_codes WHERE user_id::text = $1::text LIMIT 1", [partnerId]);
-      if (refRes.rows.length > 0) {
-        referralCode = refRes.rows[0].code;
-      } else {
-        referralCode = `PARTNER${partnerId.substring(0, 4).toUpperCase()}`;
-      }
+      try {
+        const extraRes = await query("SELECT referral_code, wallet_balance FROM users_extra WHERE user_id::text = $1::text LIMIT 1", [partnerId]);
+        if (extraRes.rows.length > 0) {
+          if (extraRes.rows[0].referral_code) referralCode = extraRes.rows[0].referral_code;
+          if (extraRes.rows[0].wallet_balance !== null && extraRes.rows[0].wallet_balance !== undefined) {
+            walletBalance = parseFloat(extraRes.rows[0].wallet_balance);
+          }
+        } else {
+          referralCode = `PARTNER${partnerId.substring(0, 4).toUpperCase()}`;
+        }
+      } catch (_) {}
     }
 
-    // 4. Referral bonuses & stats
+    // 4. Referral bonuses & stats from referral_transactions
     let totalReferredGyms = 0;
     let referralEarnings = 0;
     try {
-      const refCount = await query("SELECT COUNT(*) as cnt FROM gym_referrals WHERE referrer_id::text = $1::text AND status = 'approved'", [partnerId || 'none']);
-      totalReferredGyms = parseInt(refCount.rows[0]?.cnt || '0');
-      referralEarnings = totalReferredGyms * 200;
+      const statsRes = await query(
+        `SELECT 
+           COUNT(CASE WHEN status = 'credited' AND type != 'debit' THEN 1 END) as total, 
+           COALESCE(SUM(CASE WHEN status = 'credited' AND type != 'debit' THEN amount ELSE 0 END), 0) as total_earned
+         FROM referral_transactions WHERE referrer_id::text = $1::text`,
+        [partnerId || 'none']
+      );
+      if (statsRes.rows.length > 0) {
+        totalReferredGyms = parseInt(statsRes.rows[0].total || '0');
+        referralEarnings = parseFloat(statsRes.rows[0].total_earned || '0');
+      }
     } catch (_) {}
 
     // 5. Payout requests history
