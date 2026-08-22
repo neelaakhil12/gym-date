@@ -210,11 +210,13 @@ export const apiService = {
   },
 
   /**
-   * Fetch wallet balance, referral code, and referral stats for a user by userId
+   * Fetch wallet balance, referral code, and referral transactions for a user by userId or email
    */
-  async getWalletData(userId: string): Promise<ApiWalletData | null> {
-    const url = `${getApiUrl()}/api/referral/generate?userId=${encodeURIComponent(userId)}&type=user`;
-    console.log(`[API] Fetching wallet/referral data for userId ${userId} from: ${url}`);
+  async getWalletData(identifier: string): Promise<ApiWalletData | null> {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    const queryParam = isUuid ? `userId=${encodeURIComponent(identifier)}` : `email=${encodeURIComponent(identifier)}`;
+    const url = `${getApiUrl()}/api/referral/generate?${queryParam}&type=user`;
+    console.log(`[API] Fetching wallet/referral data from: ${url}`);
 
     try {
       const res = await fetch(url);

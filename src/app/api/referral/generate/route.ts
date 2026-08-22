@@ -2,13 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import crypto from 'crypto';
 
-// GET /api/referral/generate?userId=xxx&type=user|partner
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// GET /api/referral/generate?userId=xxx&email=xxx&type=user|partner
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-    const type = searchParams.get('type'); // 'user' or 'partner'
-    if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    const userIdParam = searchParams.get('userId');
+    const emailParam = searchParams.get('email');
+    const type = searchParams.get('type') || 'user'; // 'user' or 'partner'
+
+    if (!userIdParam && !emailParam) {
+      return NextResponse.json({ error: 'Missing userId or email' }, { status: 400, headers: CORS_HEADERS });
+    }
 
     // 1. Ensure users_extra table exists with all required columns
     try {
@@ -29,11 +39,20 @@ export async function GET(req: NextRequest) {
       await query("ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(10,2) DEFAULT 0");
     } catch (e) {}
 
-    // 2. Check if user exists in users table
-    const existing = await query('SELECT * FROM users WHERE id::text = $1::text', [userId]);
-    if (existing.rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // 2. Check if user exists in users table (by ID or Email)
+    let existing;
+    if (userIdParam) {
+      existing = await query('SELECT * FROM users WHERE id::text = $1::text', [userIdParam]);
+    } else {
+      existing = await query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [emailParam]);
+    }
+
+    if (!existing || existing.rows.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404, headers: CORS_HEADERS });
+    }
 
     const user = existing.rows[0];
+    const userId = user.id;
 
     // 3. Fetch permanent referral code and wallet balance from users_extra
     let code: string | null = null;
@@ -202,9 +221,13 @@ export async function GET(req: NextRequest) {
       partnerReferralMinWithdrawal: parseFloat(configMap['partner_referral_min_withdrawal'] || '1500'),
       partnerVirtualMinWithdrawal: parseFloat(configMap['partner_virtual_min_withdrawal'] || '500'),
       isPartner: isPartnerContext,
-      history: history.slice(0, 10)
-    });
+      history: history.slice(0, 20)
+    }, { headers: CORS_HEADERS });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500, headers: CORS_HEADERS });
   }
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: CORS_HEADERS });
 }

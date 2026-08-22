@@ -627,25 +627,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   ]);
 
-  // Notifications State
-  const [notifications, setNotifications] = useState<GymDateNotification[]>([
-    {
-      id: 'n-1',
-      title: 'Booking Confirmed!',
-      message: 'Your personal training session with Vikram Singh at Gold\'s Gym Elite is scheduled for tomorrow at 08:00 AM.',
-      timestamp: '3 hours ago',
-      unread: true,
-      type: 'booking'
-    },
-    {
-      id: 'n-2',
-      title: 'Active Promo Offer!',
-      message: 'Unlock 20% off all Gold\'s Gym Weekly & Monthly passes. Valid only until this Sunday! Use code GDGOLD20.',
-      timestamp: '1 day ago',
-      unread: true,
-      type: 'promo'
-    }
-  ]);
+  // Notifications State (real user alerts and booking updates)
+  const [notifications, setNotifications] = useState<GymDateNotification[]>([]);
 
   // Gym Owner Profile & Operations State
   const [ownerProfile, setOwnerProfile] = useState<GymOwnerProfile>({
