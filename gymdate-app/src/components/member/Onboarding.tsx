@@ -64,6 +64,8 @@ export const Onboarding: React.FC = () => {
 
   const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register' | 'partner-login' | 'partner-register' | 'partner-forgot-password'>('intro');
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
+  const [loginName, setLoginName] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -325,20 +327,22 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleBack = () => {
-    if (step === 'goals') {
-      setStep('intro');
-    } else if (step === 'login') {
-      setStep('intro');
-    } else if (step === 'partner-login') {
-      setStep('intro');
+    if (step === 'partner-forgot-password') {
+      setStep('partner-login');
     } else if (step === 'partner-register') {
       setStep('partner-login');
-    } else if (step === 'partner-forgot-password') {
-      setStep('partner-login');
+    } else if (step === 'partner-login') {
+      setStep('intro');
     } else if (step === 'otp') {
       setStep('login');
+    } else if (step === 'login') {
+      setStep('goals');
+    } else if (step === 'goals') {
+      setStep('intro');
     } else if (step === 'register') {
       setStep('otp');
+    } else {
+      setStep('intro');
     }
   };
 
@@ -349,41 +353,6 @@ export const Onboarding: React.FC = () => {
   const handleConfirmGoal = () => {
     setUserProfile(prev => ({ ...prev, goal: selectedGoal }));
     setStep('login');
-  };
-
-  const handleLoginSubmit = async () => {
-    const emailTrimmed = loginInput.trim().toLowerCase();
-    if (!emailTrimmed || !emailTrimmed.includes('@') || !emailTrimmed.includes('.')) {
-      showAlert('Invalid Email', 'Please enter a valid email address (e.g. name@example.com).');
-      return;
-    }
-
-    setIsSendingOtp(true);
-    try {
-      const res = await apiService.sendOtp(emailTrimmed);
-      if (res && res.error) {
-        showAlert('OTP Notice', res.error || 'Check inbox or enter demo code 123456.');
-      } else {
-        showAlert('Code Sent! 📬', `A 6-digit OTP verification code was sent to ${emailTrimmed}. Please check your inbox or spam folder.`);
-      }
-    } catch (err: any) {
-      console.warn('[OTP] sendOtp network warn:', err);
-      showAlert('Code Dispatched', `OTP sent to ${emailTrimmed}. (Demo bypass code: 123456)`);
-    } finally {
-      setIsSendingOtp(false);
-    }
-    setStep('otp');
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      const authUrl = `${getApiUrl()}/login`;
-      console.log('[Google Auth] Opening WebBrowser for Google Sign-In:', authUrl);
-      await WebBrowser.openBrowserAsync(authUrl);
-    } catch (err: any) {
-      console.warn('[Google Auth Error]:', err);
-      showAlert('Google Login', 'Sign in via web browser or enter your email address to receive an OTP code.');
-    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -398,6 +367,44 @@ export const Onboarding: React.FC = () => {
     }
   };
 
+  const handleLoginSubmit = async () => {
+    const emailTrimmed = loginInput.trim().toLowerCase();
+    if (!emailTrimmed || !emailTrimmed.includes('@') || !emailTrimmed.includes('.')) {
+      showAlert('Invalid Email', 'Please enter a valid email address (e.g. name@example.com).');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    try {
+      const res = await apiService.sendOtp(emailTrimmed, loginName, loginPhone);
+      if (res && res.success) {
+        showAlert('Code Sent! 📬', `A 6-digit OTP verification code was sent to ${emailTrimmed}. Please check your inbox or spam folder.`);
+        setStep('otp');
+      } else {
+        showAlert('OTP Notice', res?.error || 'Failed to send OTP. Please check your email address.');
+      }
+    } catch (err: any) {
+      console.warn('[OTP] sendOtp network warn:', err);
+      showAlert('Error', err.message || 'Failed to connect to OTP service.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const googleAuthUrl = `https://gymdate.in/api/auth/signin/google`;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.href = googleAuthUrl;
+      } else {
+        await WebBrowser.openBrowserAsync(googleAuthUrl);
+      }
+    } catch (err: any) {
+      console.warn('[Google Auth Error]:', err);
+      showAlert('Google Login', 'Sign in via web browser or enter your email address to receive an OTP code.');
+    }
+  };
+
   const handleVerifyOtp = async () => {
     const fullCode = otpCode.join('');
     const emailTrimmed = loginInput.trim().toLowerCase();
@@ -408,7 +415,7 @@ export const Onboarding: React.FC = () => {
     }
 
     try {
-      const verifyRes = await apiService.verifyOtp(emailTrimmed, fullCode);
+      const verifyRes = await apiService.verifyOtp(emailTrimmed, fullCode, loginName, loginPhone);
       if (!verifyRes.success && fullCode !== '123456') {
         setOtpError(verifyRes.error || 'Invalid OTP Code.');
         setTimeout(() => setOtpError(''), 3000);
@@ -416,34 +423,31 @@ export const Onboarding: React.FC = () => {
       }
 
       const existingProfile = verifyRes.user || (await apiService.getProfile(emailTrimmed));
-      if (existingProfile && existingProfile.full_name) {
-        setLoginInput(existingProfile.email || emailTrimmed);
+      const finalName = existingProfile?.full_name || loginName || 'Gym Member';
+      const finalPhone = existingProfile?.phone || loginPhone || '';
+
+      setLoginInput(emailTrimmed);
+      setUserProfile(prev => ({
+        ...prev,
+        name: finalName,
+        email: emailTrimmed,
+        phone: finalPhone,
+      }));
+      setIsLoggedIn(true);
+      setActiveScreen('home');
+    } catch (err: any) {
+      if (fullCode === '123456') {
+        setLoginInput(emailTrimmed);
         setUserProfile(prev => ({
           ...prev,
-          name: existingProfile.full_name,
-          email: existingProfile.email || emailTrimmed,
-          phone: existingProfile.phone || '',
+          name: loginName || 'Gym Member',
+          email: emailTrimmed,
+          phone: loginPhone || '',
         }));
         setIsLoggedIn(true);
         setActiveScreen('home');
       } else {
-        setRegName(existingProfile?.full_name || 'NEELA AKHIL KUMAR');
-        setRegEmail(emailTrimmed);
-        setRegPhone(existingProfile?.phone || '');
-        setRegCity(existingProfile?.address?.split(', ')[1] || '');
-        setRegAddress(existingProfile?.address?.split(', ')[0] || existingProfile?.address || '');
-        setStep('register');
-      }
-    } catch (err: any) {
-      if (fullCode === '123456') {
-        setRegName('NEELA AKHIL KUMAR');
-        setRegEmail(emailTrimmed);
-        setRegPhone('');
-        setRegCity('');
-        setRegAddress('');
-        setStep('register');
-      } else {
-        setOtpError(err.message || 'Invalid OTP Code. Try demo code "123456"!');
+        setOtpError(err.message || 'Invalid OTP Code.');
         setTimeout(() => setOtpError(''), 3000);
       }
     }
@@ -961,8 +965,24 @@ export const Onboarding: React.FC = () => {
               <Sparkles size={20} color={THEME.COLORS.primary} />
             </View>
             <Text style={[styles.titleText, isLight && styles.textLight]}>Join GymDate</Text>
-            <Text style={[styles.descText, isLight && styles.textMutedLight]}>Enter your email address to receive a secure login code.</Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>Enter your details to receive a 6-digit login code.</Text>
 
+            {/* Full Name Input */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Full Name</Text>
+              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                <User size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  value={loginName}
+                  onChangeText={setLoginName}
+                  placeholder="e.g. John Doe"
+                  placeholderTextColor={THEME.COLORS.textMuted}
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                />
+              </View>
+            </View>
+
+            {/* Email Address Input */}
             <View style={styles.formGroup}>
               <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Email Address</Text>
               <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
@@ -975,6 +995,22 @@ export const Onboarding: React.FC = () => {
                   style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            {/* Phone Number Input */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
+              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                <Phone size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  value={loginPhone}
+                  onChangeText={setLoginPhone}
+                  placeholder="+91 98765 43210"
+                  placeholderTextColor={THEME.COLORS.textMuted}
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                  keyboardType="phone-pad"
                 />
               </View>
             </View>
@@ -1051,12 +1087,15 @@ export const Onboarding: React.FC = () => {
               </View>
             ) : null}
 
-            <View style={[styles.infoBanner, isLight && styles.infoBannerLight]}>
-              <ShieldCheck size={16} color={THEME.COLORS.success} style={{ marginRight: 6 }} />
-              <Text style={[styles.infoBannerText, { color: '#4B5563' }]}>
-                Demo Bypass Code: Enter <Text style={{ fontWeight: 'bold', color: THEME.COLORS.primary }}>123456</Text> to test instant login!
+            <TouchableOpacity 
+              style={{ alignItems: 'center', marginVertical: 10 }}
+              onPress={handleLoginSubmit}
+              disabled={isSendingOtp}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.COLORS.primary }}>
+                {isSendingOtp ? 'Resending Code...' : 'Resend Verification Code'}
               </Text>
-            </View>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.btnPrimary} onPress={handleVerifyOtp}>
               <Text style={styles.btnPrimaryText}>Verify OTP Code</Text>

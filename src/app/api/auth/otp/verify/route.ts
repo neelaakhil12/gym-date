@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 import { otpCache } from "@/lib/otpCache";
 import { query } from "@/lib/db";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req: Request) {
   try {
     const { email, otp, name, phone } = await req.json();
 
     if (!email) {
-      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Email is required" }, { status: 400, headers: corsHeaders });
     }
 
     const cleanEmail = email.trim().toLowerCase();
@@ -70,21 +80,27 @@ export async function POST(req: Request) {
 
     const user = userResult.rows[0];
 
-    return NextResponse.json({
-      success: true,
-      message: "OTP verified successfully",
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        address: user.address,
-        role_id: user.role_id,
-        wallet_balance: user.wallet_balance
-      }
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "OTP verified successfully",
+        user: {
+          id: user.id,
+          email: user.email,
+          full_name: user.full_name,
+          phone: user.phone,
+          address: user.address,
+          role_id: user.role_id,
+          wallet_balance: user.wallet_balance
+        }
+      },
+      { headers: corsHeaders }
+    );
   } catch (error: any) {
     console.error("OTP Verification Error:", error);
-    return NextResponse.json({ success: false, error: error.message || "Failed to verify OTP" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to verify OTP" },
+      { status: 500, headers: corsHeaders }
+    );
   }
 }

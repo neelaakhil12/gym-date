@@ -101,7 +101,7 @@ export const apiService = {
   /**
    * Send 6-digit OTP to user email address via backend SMTP
    */
-  async sendOtp(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async sendOtp(email: string, name?: string, phone?: string): Promise<{ success: boolean; message?: string; error?: string }> {
     const url = `${getApiUrl()}/api/auth/otp/send`;
     console.log(`[API] Sending OTP email to ${email} via ${url}`);
 
@@ -109,20 +109,23 @@ export const apiService = {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(),
+          name: name ? name.trim() : undefined,
+          phone: phone ? phone.trim() : undefined
+        }),
       });
       return await res.json();
     } catch (err: any) {
       console.warn('[API WARN] Failed to dispatch OTP email:', err);
-      // Return success flag fallback so demo code 123456 can still be used offline
-      return { success: true, message: 'OTP sent (Demo code: 123456)' };
+      return { success: false, error: err.message || 'Network error sending OTP' };
     }
   },
 
   /**
    * Verify 6-digit OTP against backend
    */
-  async verifyOtp(email: string, otp: string): Promise<{ success: boolean; user?: ApiProfile; error?: string }> {
+  async verifyOtp(email: string, otp: string, name?: string, phone?: string): Promise<{ success: boolean; user?: ApiProfile; error?: string }> {
     const url = `${getApiUrl()}/api/auth/otp/verify`;
     console.log(`[API] Verifying OTP for ${email} via ${url}`);
 
@@ -130,7 +133,12 @@ export const apiService = {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() }),
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), 
+          otp: otp.trim(),
+          name: name ? name.trim() : undefined,
+          phone: phone ? phone.trim() : undefined
+        }),
       });
       return await res.json();
     } catch (err: any) {
@@ -138,7 +146,7 @@ export const apiService = {
       if (otp.trim() === '123456') {
         return { success: true };
       }
-      return { success: false, error: err.message || 'Verification failed. Try demo code 123456.' };
+      return { success: false, error: err.message || 'Verification failed.' };
     }
   },
 
