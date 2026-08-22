@@ -460,19 +460,53 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
     try {
-      if (promptGoogleAsync) {
-        await promptGoogleAsync();
-      } else {
-        setGoogleEmail(loginInput.trim() || '');
-        setGoogleName(loginName.trim() || '');
-        setShowGoogleModal(true);
+      const authUrl = `https://gymdate.in/api/auth/signin/google?callbackUrl=/auth/app-callback`;
+      const returnUrl = 'gymdate://auth';
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);
+
+      if (result.type === 'success' && result.url) {
+        const queryPart = result.url.includes('?') ? result.url.split('?')[1] : '';
+        const urlParams = new URLSearchParams(queryPart);
+        const cleanEmail = decodeURIComponent(urlParams.get('email') || '').toLowerCase();
+        const cleanName = decodeURIComponent(urlParams.get('name') || 'Gym Member');
+
+        if (cleanEmail && cleanEmail.includes('@')) {
+          const syncedUser = await apiService.syncProfile({
+            email: cleanEmail,
+            name: cleanName,
+            phone: loginPhone.trim() || undefined,
+          });
+
+          if (referralCodeInput.trim()) {
+            try {
+              await apiService.applyReferral(cleanEmail, referralCodeInput.trim());
+            } catch (e) {
+              console.warn('[Referral Apply] Error:', e);
+            }
+          }
+
+          setLoginInput(cleanEmail);
+          setUserProfile(prev => ({
+            ...prev,
+            name: syncedUser?.full_name || cleanName,
+            email: cleanEmail,
+            phone: syncedUser?.phone || loginPhone.trim() || '',
+          }));
+          setIsLoggedIn(true);
+          setActiveScreen('home');
+          return;
+        }
       }
     } catch (err: any) {
-      console.warn('Google prompt error:', err);
+      console.warn('[Google Auth Error]:', err);
       setGoogleEmail(loginInput.trim() || '');
       setGoogleName(loginName.trim() || '');
       setShowGoogleModal(true);
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -1145,14 +1179,9 @@ export const Onboarding: React.FC = () => {
 
             {/* Referral Code (Optional) */}
             <View style={styles.formGroup}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={[styles.inputLabel, isLight && styles.textMutedLight, { marginBottom: 0 }]}>
-                  Referral Code (Optional)
-                </Text>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.COLORS.primary }}>
-                  🎁 Earn Wallet Bonus
-                </Text>
-              </View>
+              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>
+                Referral Code (Optional)
+              </Text>
               <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
                 <Gift size={16} color={THEME.COLORS.primary} style={styles.inputIcon} />
                 <TextInput
