@@ -35,9 +35,7 @@ export async function GET(req: Request) {
     // 2. Locate gym
     let gymRes: any = { rows: [] };
     if (partnerId) {
-      gymRes = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text OR LOWER(owner_email) = $2 LIMIT 1", [partnerId, email]);
-    } else {
-      gymRes = await query("SELECT * FROM gyms WHERE LOWER(owner_email) = $1 LIMIT 1", [email]);
+      gymRes = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [partnerId]);
     }
 
     let gym = gymRes.rows[0] || null;

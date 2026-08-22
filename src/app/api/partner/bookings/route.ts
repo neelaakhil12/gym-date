@@ -27,10 +27,7 @@ export async function GET(req: NextRequest) {
       const partnerId = userRes.rows[0]?.id;
 
       if (partnerId) {
-        const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text OR LOWER(owner_email) = $2 LIMIT 1", [partnerId, email]);
-        targetGymId = gymRes.rows[0]?.id;
-      } else {
-        const gymRes = await query("SELECT id FROM gyms WHERE LOWER(owner_email) = $1 LIMIT 1", [email]);
+        const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [partnerId]);
         targetGymId = gymRes.rows[0]?.id;
       }
     }
