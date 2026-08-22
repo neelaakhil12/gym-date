@@ -11,7 +11,8 @@ import {
   Fingerprint,
   CheckCircle2,
   AlertCircle,
-  User
+  User,
+  Gift
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -27,11 +29,12 @@ export default function LoginPage() {
 
   // Save referral code from URL to localStorage, sessionStorage & cookie
   useEffect(() => {
-    const ref = searchParams.get("ref");
+    const ref = searchParams.get("ref") || localStorage.getItem("referral_code") || sessionStorage.getItem("referral_code");
     if (ref) {
-      localStorage.setItem("referral_code", ref);
-      sessionStorage.setItem("referral_code", ref);
-      document.cookie = `gymdate_ref=${encodeURIComponent(ref)}; path=/; max-age=2592000; SameSite=Lax`;
+      setReferralCode(ref.toUpperCase());
+      localStorage.setItem("referral_code", ref.toUpperCase());
+      sessionStorage.setItem("referral_code", ref.toUpperCase());
+      document.cookie = `gymdate_ref=${encodeURIComponent(ref.toUpperCase())}; path=/; max-age=2592000; SameSite=Lax`;
     }
   }, [searchParams]);
 
@@ -78,9 +81,10 @@ export default function LoginPage() {
         throw new Error(res.error);
       }
 
-      // Apply referral code if present in storage or cookie
+      // Apply referral code if present in state, storage or cookie
       const cookieMatch = document.cookie.match(/gymdate_ref=([^;]+)/);
-      const refCode = localStorage.getItem("referral_code") || 
+      const refCode = referralCode.trim() || 
+                      localStorage.getItem("referral_code") || 
                       sessionStorage.getItem("referral_code") || 
                       (cookieMatch ? decodeURIComponent(cookieMatch[1]) : null);
       if (refCode) {
@@ -200,6 +204,30 @@ export default function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm"
                       placeholder="name@example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Referral Code (Optional)</label>
+                    <span className="text-[10px] font-bold text-primary">🎁 Get Wallet Bonus</span>
+                  </div>
+                  <div className="relative group">
+                    <Gift className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="text"
+                      value={referralCode}
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        setReferralCode(val);
+                        if (val) {
+                          localStorage.setItem("referral_code", val);
+                          sessionStorage.setItem("referral_code", val);
+                        }
+                      }}
+                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-mono font-bold text-secondary text-sm tracking-widest uppercase"
+                      placeholder="e.g. 85FC345D"
                     />
                   </div>
                 </div>

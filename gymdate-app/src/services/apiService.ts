@@ -230,6 +230,24 @@ export const apiService = {
   },
 
   /**
+   * Apply referral code during member registration/login
+   */
+  async applyReferral(email: string, referralCode: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const res = await fetch(`${getApiUrl()}/api/referral/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), referralCode: referralCode.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      console.warn('[API WARN] Failed to apply referral code:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
+  /**
    * Register a new gym partner request
    */
   async registerPartner(params: {

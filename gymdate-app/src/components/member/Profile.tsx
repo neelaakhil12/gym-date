@@ -139,31 +139,30 @@ export const Profile: React.FC = () => {
 
   const initials = getInitials(userProfile.name);
 
-  // Copy referral link (real from API or fallback)
-  const referralLink = walletData?.referralLink || `https://gymdate.in/login?ref=${userProfile.name.toLowerCase().replace(/ /g, '-')}`;
+  // Referral code from API or fallback
+  const referralCode = walletData?.referralCode || (walletData as any)?.referral_code || (userProfile.name ? userProfile.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) : 'GYMDATE');
 
   const handleCopyReferral = async () => {
     try {
       if (Platform.OS === 'web') {
         if (typeof navigator !== 'undefined' && navigator.clipboard) {
-          await navigator.clipboard.writeText(referralLink);
+          await navigator.clipboard.writeText(referralCode);
         }
       } else {
-        await Clipboard.setStringAsync(referralLink);
+        await Clipboard.setStringAsync(referralCode);
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch (e) {
-      Alert.alert('Copy failed', 'Could not copy link. Please copy it manually.');
+      Alert.alert('Copy failed', 'Could not copy referral code.');
     }
   };
 
   const handleShareReferral = async () => {
     try {
       await Share.share({
-        message: `🏋️ Join GymDate and get access to premium gyms across India! Use my referral link to sign up and we both earn ₹${walletData?.bonusPerReferral ?? 30} wallet cash!\n\n${referralLink}`,
-        url: referralLink,
-        title: 'Join GymDate — Premium Gym Access',
+        message: `🏋️ Join me on the GymDate app! Use my Referral Code: ${referralCode} when logging in to claim ₹${walletData?.bonusPerReferral ?? 30} bonus in your wallet!\n\nDownload GymDate: https://gymdate.in`,
+        title: 'GymDate Referral Code',
       });
     } catch (e: any) {
       if (e.message !== 'User did not share') {
@@ -585,16 +584,16 @@ export const Profile: React.FC = () => {
               </View>
             </View>
 
-            {/* Referral Link Card */}
+            {/* Referral Code Card */}
             <View style={[styles.infoBlock, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
-              <Text style={[styles.blockTitleText, isLight && { color: '#111827' }]}>Your Referral Link</Text>
+              <Text style={[styles.blockTitleText, isLight && { color: '#111827' }]}>Your Referral Code</Text>
               <Text style={[styles.blockDescText, isLight && { color: '#6B7280' }]}>
-                Share your personal link to earn benefits! When a friend joins and purchases any pass, you automatically earn ₹{walletData?.bonusPerReferral ?? 30} wallet cash!
+                Share your referral code with friends! When they enter this code on login and purchase any gym pass, you automatically earn ₹{walletData?.bonusPerReferral ?? 30} wallet cash!
               </Text>
               
               <View style={[styles.copyBox, isLight && { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' }]}>
-                <Text style={[styles.copyText, isLight && { color: '#374151' }]} numberOfLines={1}>
-                  {referralLink}
+                <Text style={[styles.copyText, isLight && { color: '#111827' }, { fontSize: 16, fontWeight: '900', letterSpacing: 2 }]}>
+                  {referralCode}
                 </Text>
                 <TouchableOpacity onPress={handleCopyReferral} style={styles.copyBtn}>
                   {copied ? <Check size={12} color="#ffffff" /> : <Copy size={12} color="#ffffff" />}
@@ -619,7 +618,7 @@ export const Profile: React.FC = () => {
               >
                 <Share2 size={16} color="#ffffff" />
                 <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700', letterSpacing: 0.4 }}>
-                  Share Referral Link
+                  {copied ? 'Code Copied! Tap to Share' : 'Share Referral Code'}
                 </Text>
               </TouchableOpacity>
 
@@ -629,9 +628,9 @@ export const Profile: React.FC = () => {
               
               <View style={styles.stepsColumn}>
                 {[
-                  { step: '1', title: 'Send Invitation Link', desc: 'Copy and send code' },
-                  { step: '2', title: 'Friend Signs Up', desc: 'Friend joins pass group' },
-                  { step: '3', title: `Get ₹${walletData?.bonusPerReferral ?? 30} Bonus`, desc: 'Credited to your wallet' }
+                  { step: '1', title: 'Share Referral Code', desc: 'Send your code to friends' },
+                  { step: '2', title: 'Friend Enters on Login', desc: 'Enters your code during app login' },
+                  { step: '3', title: `Get ₹${walletData?.bonusPerReferral ?? 30} Bonus`, desc: 'Credited when they buy a gym pass' }
                 ].map((s, idx) => (
                   <View key={idx} style={styles.stepRow}>
                     <View style={styles.stepCircle}>

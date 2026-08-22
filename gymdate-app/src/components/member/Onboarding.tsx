@@ -38,7 +38,8 @@ import {
   MapPin, 
   Eye, 
   EyeOff,
-  X
+  X,
+  Gift
 } from 'lucide-react-native';
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
@@ -79,6 +80,7 @@ export const Onboarding: React.FC = () => {
   const [regAddress, setRegAddress] = useState('');
   const [isLocating, setIsLocating] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [referralCodeInput, setReferralCodeInput] = useState('');
   const [otpCode, setOtpCode] = useState<string[]>(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState<string>('');
 
@@ -418,6 +420,14 @@ export const Onboarding: React.FC = () => {
         phone: loginPhone.trim() || undefined,
       });
 
+      if (referralCodeInput.trim()) {
+        try {
+          await apiService.applyReferral(cleanEmail, referralCodeInput.trim());
+        } catch (e) {
+          console.warn('[Referral Apply] Error:', e);
+        }
+      }
+
       setShowGoogleModal(false);
       setLoginInput(cleanEmail);
       setUserProfile(prev => ({
@@ -464,6 +474,14 @@ export const Onboarding: React.FC = () => {
       const existingProfile = verifyRes.user || (await apiService.getProfile(emailTrimmed));
       const finalName = existingProfile?.full_name || loginName || 'Gym Member';
       const finalPhone = existingProfile?.phone || loginPhone || '';
+
+      if (referralCodeInput.trim()) {
+        try {
+          await apiService.applyReferral(emailTrimmed, referralCodeInput.trim());
+        } catch (e) {
+          console.warn('[Referral Apply] Error:', e);
+        }
+      }
 
       setLoginInput(emailTrimmed);
       setUserProfile(prev => ({
@@ -1050,6 +1068,29 @@ export const Onboarding: React.FC = () => {
                   placeholderTextColor={THEME.COLORS.textMuted}
                   style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
                   keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+
+            {/* Referral Code (Optional) */}
+            <View style={styles.formGroup}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight, { marginBottom: 0 }]}>
+                  Referral Code (Optional)
+                </Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.COLORS.primary }}>
+                  🎁 Earn Wallet Bonus
+                </Text>
+              </View>
+              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                <Gift size={16} color={THEME.COLORS.primary} style={styles.inputIcon} />
+                <TextInput
+                  value={referralCodeInput}
+                  onChangeText={(val) => setReferralCodeInput(val.toUpperCase())}
+                  placeholder="e.g. 85FC345D"
+                  placeholderTextColor={THEME.COLORS.textMuted}
+                  autoCapitalize="characters"
+                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, fontWeight: '700', letterSpacing: 1 }]}
                 />
               </View>
             </View>

@@ -528,34 +528,61 @@ export default function AccountPage() {
                     </div>
                   </div>
 
-                  {/* Referral Link */}
-                  <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-gray-100 shadow-sm p-5 sm:p-6 space-y-4">
+                  {/* Referral Code & Link */}
+                  <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-gray-100 shadow-sm p-5 sm:p-6 space-y-5">
                     <div>
-                      <h3 className="font-black text-secondary text-base sm:text-lg">Your Referral Link</h3>
-                      <p className="text-xs sm:text-sm text-gray-400 mt-1">Share this unique link. When a friend joins and takes a subscription using your link, you earn ₹{walletData?.bonusPerReferral || 10} in your wallet!</p>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-black text-secondary text-base sm:text-lg">Your Referral Code</h3>
+                        {walletData?.referralCode && (
+                          <span className="px-3 py-1 bg-red-50 text-primary border border-red-100 rounded-full text-xs font-black tracking-widest uppercase">
+                            {walletData.referralCode}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs sm:text-sm text-gray-400 mt-1">Share this code or link with friends. When they join and purchase any gym pass, you automatically earn ₹{walletData?.bonusPerReferral || 10} in your wallet!</p>
                     </div>
 
-                    {walletData?.referralLink ? (
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                        <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 font-mono text-xs sm:text-sm text-gray-600 truncate select-all">
-                          {walletData.referralLink}
+                    {walletData?.referralCode ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-red-50/80 to-orange-50/50 rounded-2xl border border-red-100">
+                          <div className="flex-1">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Referral Code</span>
+                            <span className="text-xl sm:text-2xl font-black text-secondary tracking-widest font-mono">{walletData.referralCode}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(walletData.referralCode);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            }}
+                            className={`shrink-0 flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
+                              copied
+                                ? "bg-green-500 text-white"
+                                : "bg-primary text-white hover:bg-red-700 shadow-md shadow-primary/10"
+                            }`}
+                          >
+                            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            <span>{copied ? "Code Copied!" : "Copy Code"}</span>
+                          </button>
                         </div>
-                        <button
-                          onClick={handleCopyReferral}
-                          className={`shrink-0 flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-                            copied
-                              ? "bg-green-500 text-white"
-                              : "bg-primary text-white hover:bg-red-700 shadow-md shadow-primary/10"
-                          }`}
-                        >
-                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          <span>{copied ? "Copied!" : "Copy Link"}</span>
-                        </button>
+
+                        {walletData?.referralLink && (
+                          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs">
+                            <span className="font-bold text-gray-400 shrink-0">Link:</span>
+                            <span className="font-mono text-gray-600 truncate flex-1">{walletData.referralLink}</span>
+                            <button
+                              onClick={handleCopyReferral}
+                              className="text-primary hover:text-red-700 font-bold shrink-0 ml-2"
+                            >
+                              Copy Link
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center space-x-3 bg-gray-50 rounded-xl p-4">
                         <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                        <span className="text-xs sm:text-sm text-gray-400">Generating your referral link...</span>
+                        <span className="text-xs sm:text-sm text-gray-400">Generating your referral code...</span>
                       </div>
                     )}
 

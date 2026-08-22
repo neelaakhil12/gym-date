@@ -88,9 +88,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Referral linked! Bonus will be credited when ${cleanEmail} takes their first subscription.`
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
     });
   } catch (err: any) {
     console.error("[Referral Apply Error]:", err);
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
+  });
 }
