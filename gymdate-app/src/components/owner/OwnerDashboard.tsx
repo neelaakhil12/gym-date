@@ -74,7 +74,7 @@ export const OwnerDashboard: React.FC = () => {
   // QR Checkin Terminal State
   const [showScanModal, setShowScanModal] = useState(false);
   const [terminalInput, setTerminalInput] = useState('');
-  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; memberName?: string } | null>(null);
+  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; memberName?: string; booking?: any } | null>(null);
 
   // Edit Details Modal State
   const [showEditModal, setShowEditModal] = useState(false);
@@ -246,13 +246,15 @@ export const OwnerDashboard: React.FC = () => {
         setScanResult({
           success: true,
           message: res.message || 'Pass verified successfully! Member is admitted.',
-          memberName: res.memberName || 'Gym Member'
+          memberName: res.memberName || 'Gym Member',
+          booking: res.booking
         });
         fetchLiveDashboard();
       } else {
         setScanResult({
           success: false,
-          message: res.error || 'Ticket not found or invalid for this gym.'
+          message: res.error || 'Ticket not found or invalid for this gym.',
+          booking: res.booking
         });
       }
     } catch (err: any) {
