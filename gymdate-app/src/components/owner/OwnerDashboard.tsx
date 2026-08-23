@@ -850,7 +850,9 @@ export const OwnerDashboard: React.FC = () => {
       {/* 📜 MAIN SCROLLABLE CONTENT */}
       <ScrollView 
         style={styles.mainScrollView}
-        contentContainerStyle={{ paddingBottom: 90, paddingHorizontal: 16, paddingTop: 10 }}
+        contentContainerStyle={{ paddingBottom: 220, paddingHorizontal: 16, paddingTop: 10, flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isLoadingData} onRefresh={fetchLiveDashboard} tintColor={THEME.COLORS.primary} />
         }

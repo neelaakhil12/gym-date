@@ -664,7 +664,7 @@ export const Onboarding: React.FC = () => {
         contentContainerStyle={[
           styles.container, 
           isLight && styles.containerLight,
-          { paddingBottom: step === 'intro' ? 36 : 140 }
+          { paddingBottom: step === 'intro' ? 36 : 320, flexGrow: 1 }
         ]} 
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -1548,8 +1548,7 @@ const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
     padding: 24,
-    justifyContent: 'space-between',
-    minHeight: 600,
+    paddingBottom: 40,
   },
   centerBlock: {
     alignItems: 'center',

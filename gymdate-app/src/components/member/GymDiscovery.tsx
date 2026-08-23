@@ -499,7 +499,12 @@ export const GymDiscovery: React.FC = () => {
               <Text style={[styles.modalTitle, { color: textPrimary }]}>Pass Order Summary</Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 12 }}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              style={{ maxHeight: 420 }} 
+              contentContainerStyle={{ gap: 12, paddingBottom: 60 }}
+              keyboardShouldPersistTaps="handled"
+            >
               
               {/* Gym and Plan details */}
               {selectedPlan && activeGym && (
