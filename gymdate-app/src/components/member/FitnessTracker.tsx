@@ -55,7 +55,12 @@ export const FitnessTracker: React.FC = () => {
   const weightRange = maxWeight - minWeight || 1;
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: bg }]} contentContainerStyle={{ paddingBottom: 80 }}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: bg }]} 
+      contentContainerStyle={{ paddingBottom: 160, flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {/* Title */}
       <View style={styles.headerBlock}>
         <View style={styles.headerTitleRow}>

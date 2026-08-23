@@ -414,8 +414,9 @@ export const Profile: React.FC = () => {
   return (
     <ScrollView 
       style={[styles.container, { backgroundColor: bg }]} 
-      contentContainerStyle={{ paddingBottom: 150 }}
+      contentContainerStyle={{ paddingBottom: 260, flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       
       {/* 1. Header Toolbar */}
