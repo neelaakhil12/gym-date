@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +21,7 @@ const partnerSchema = z.object({
 
 type PartnerFormValues = z.infer<typeof partnerSchema>;
 
-export default function PartnerPage() {
+function PartnerContent() {
   const searchParams = useSearchParams();
   const [refCode, setRefCode] = React.useState<string | null>(null);
   const [referrerName, setReferrerName] = React.useState<string | null>(null);
@@ -218,5 +218,17 @@ export default function PartnerPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PartnerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <PartnerContent />
+    </Suspense>
   );
 }
