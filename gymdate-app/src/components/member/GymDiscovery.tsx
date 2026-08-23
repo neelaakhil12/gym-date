@@ -92,6 +92,7 @@ export const GymDiscovery: React.FC = () => {
 
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRadius, setSelectedRadius] = useState<'all' | number>('all');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number; duration: string } | null>(null);
   // Real Razorpay payment options state — null = closed
@@ -109,9 +110,26 @@ export const GymDiscovery: React.FC = () => {
 
   const filteredGyms = gyms.filter(gym => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return gym.name.toLowerCase().includes(q) || 
-           gym.location.toLowerCase().includes(q);
+    const matchesSearch = !q || gym.name.toLowerCase().includes(q) || gym.location.toLowerCase().includes(q);
+    if (!matchesSearch) return false;
+
+    if (selectedRadius === 'all') return true;
+
+    const gymLat = gym.coordinates?.lat || 0;
+    const gymLng = gym.coordinates?.lng || 0;
+    if (!gymLat || !gymLng) return true;
+
+    const uLat = userCoords?.lat || 17.385044;
+    const uLng = userCoords?.lng || 78.486671;
+    const dist = (() => {
+      const R = 6371;
+      const dLat = (gymLat - uLat) * Math.PI / 180;
+      const dLng = (gymLng - uLng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(uLat*Math.PI/180) * Math.cos(gymLat*Math.PI/180) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    })();
+
+    return dist <= selectedRadius;
   });
 
   const activeGym = gyms.find(g => g.id === selectedGymId);
@@ -210,6 +228,48 @@ export const GymDiscovery: React.FC = () => {
                 />
               </View>
             </View>
+
+            {/* Distance Filter Chips (All, 1km, 5km, 10km, 25km) */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginTop: 4, marginBottom: 14 }}
+            >
+              {[
+                { label: '🌐 All', value: 'all' as const },
+                { label: '🎯 1 km', value: 1 },
+                { label: '🎯 5 km', value: 5 },
+                { label: '🎯 10 km', value: 10 },
+                { label: '🎯 25 km', value: 25 },
+              ].map((item, idx) => {
+                const isSelected = selectedRadius === item.value;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => setSelectedRadius(item.value)}
+                    style={[
+                      {
+                        paddingHorizontal: 14,
+                        paddingVertical: 7,
+                        borderRadius: 20,
+                        backgroundColor: inputBg,
+                        borderWidth: 1,
+                        borderColor: inputBorder,
+                      },
+                      isSelected && { backgroundColor: THEME.COLORS.primary, borderColor: THEME.COLORS.primary }
+                    ]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[
+                      { fontSize: 11, fontWeight: '700', color: textSecondary },
+                      isSelected && { color: '#ffffff', fontWeight: '800' }
+                    ]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
 
             {/* Gyms cards render feed */}
             <View style={styles.gymGrid}>
