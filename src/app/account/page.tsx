@@ -156,8 +156,11 @@ export default function AccountPage() {
             localStorage.removeItem('pending_name');
             localStorage.removeItem('pending_phone');
           }
-          // 1. Fetch profile
-          const profileRes = await fetch(`/api/user/get-profile?email=${email}`);
+          // 1. Fetch profile with fresh timestamp to ensure real-time photo sync
+          const profileRes = await fetch(`/api/user/get-profile?email=${encodeURIComponent(email)}&_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          });
           const profileResult = await profileRes.json();
           if (profileResult.success && profileResult.profile) {
             setSupabaseUser(profileResult.profile);
@@ -165,6 +168,9 @@ export default function AccountPage() {
             if (dbImg) {
               setProfilePhoto(dbImg);
               localStorage.setItem(`gymdate_photo_${email}`, dbImg);
+            } else {
+              setProfilePhoto(null);
+              localStorage.removeItem(`gymdate_photo_${email}`);
             }
             setEditName(profileResult.profile.full_name || nextAuthSession?.user?.name || "");
             const rawP = profileResult.profile.phone || "";

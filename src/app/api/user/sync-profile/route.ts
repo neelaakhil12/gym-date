@@ -4,13 +4,52 @@ import { query } from "@/lib/db";
 export async function POST(req: Request) {
   try {
     const { email, name, phone, lat, lng, address, image, avatar } = await req.json();
-    const profileImg = image || avatar || null;
+    const normEmail = email.trim().toLowerCase();
+    const profileImg = image !== undefined ? image : (avatar !== undefined ? avatar : undefined);
 
-    if (!email) {
+    if (!normEmail) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
     }
 
     const formattedPhone = phone && phone.startsWith('+91') ? phone : (phone ? `+91${phone}` : null);
+
+    // 1. Dedicated user_profiles table to guarantee profile photo and details persistence
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS user_profiles (
+          email VARCHAR(255) PRIMARY KEY,
+          image TEXT,
+          avatar TEXT,
+          full_name TEXT,
+          phone TEXT,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS image TEXT;
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar TEXT;
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS phone TEXT;
+      `);
+
+      if (profileImg !== undefined || name || formattedPhone) {
+        await query(`
+          INSERT INTO user_profiles (email, image, avatar, full_name, phone, updated_at)
+          VALUES ($1, $2, $2, $3, $4, CURRENT_TIMESTAMP)
+          ON CONFLICT (email) DO UPDATE SET
+            image = CASE WHEN $2 IS NOT NULL THEN $2 ELSE user_profiles.image END,
+            avatar = CASE WHEN $2 IS NOT NULL THEN $2 ELSE user_profiles.avatar END,
+            full_name = COALESCE(EXCLUDED.full_name, user_profiles.full_name),
+            phone = COALESCE(EXCLUDED.phone, user_profiles.phone),
+            updated_at = CURRENT_TIMESTAMP
+        `, [
+          normEmail, 
+          profileImg !== undefined ? (profileImg || '') : null, 
+          name || null, 
+          formattedPhone || null
+        ]);
+      }
+    } catch (profErr) {
+      console.warn("user_profiles table error:", profErr);
+    }
 
     // Ensure image and avatar columns exist on users table
     try {
@@ -28,7 +67,7 @@ export async function POST(req: Request) {
     const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
 
     // Check if user already exists
-    const existing = await query("SELECT * FROM users WHERE email = $1", [email]);
+    const existing = await query("SELECT * FROM users WHERE LOWER(email) = $1", [normEmail]);
 
     let user;
     if (existing.rows.length > 0) {
@@ -39,13 +78,13 @@ export async function POST(req: Request) {
         updateVals.push(name);
         updateParts.push(`full_name = $${updateVals.length}`);
       }
-      if (profileImg) {
+      if (profileImg !== undefined) {
         if (userCols.has("image")) {
-          updateVals.push(profileImg);
+          updateVals.push(profileImg || null);
           updateParts.push(`image = $${updateVals.length}`);
         }
         if (userCols.has("avatar")) {
-          updateVals.push(profileImg);
+          updateVals.push(profileImg || null);
           updateParts.push(`avatar = $${updateVals.length}`);
         }
       }
@@ -93,6 +132,16 @@ export async function POST(req: Request) {
       const insertCols = ["email", "full_name", "role_id"];
       const insertVals: any[] = [email, name || "Gym Member", "user"];
 
+      if (profileImg) {
+        if (userCols.has("image")) {
+          insertVals.push(profileImg);
+          insertCols.push("image");
+        }
+        if (userCols.has("avatar")) {
+          insertVals.push(profileImg);
+          insertCols.push("avatar");
+        }
+      }
       if (formattedPhone && userCols.has("phone")) {
         insertVals.push(formattedPhone);
         insertCols.push("phone");
@@ -126,14 +175,12 @@ export async function POST(req: Request) {
       }
 
       const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(", ");
-      const insertRes = await query(
-        `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
-        insertVals
-      );
+      const insertSql = `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`;
+      const insertRes = await query(insertSql, insertVals);
       user = insertRes.rows[0];
     }
 
-    // Also persist in users_extra table to guarantee address and GPS coordinates are always stored
+    // Also persist in users_extra table to guarantee address, GPS coordinates and photo are always stored
     if (user?.id) {
       try {
         await query(`
@@ -142,19 +189,25 @@ export async function POST(req: Request) {
             address TEXT,
             latitude DOUBLE PRECISION,
             longitude DOUBLE PRECISION,
+            image TEXT,
+            avatar TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
+          );
+          ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS image TEXT;
+          ALTER TABLE users_extra ADD COLUMN IF NOT EXISTS avatar TEXT;
         `);
-        if (address || lat || lng) {
+        if (address || lat || lng || profileImg !== undefined) {
           await query(`
-            INSERT INTO users_extra (user_id, address, latitude, longitude, updated_at)
-            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+            INSERT INTO users_extra (user_id, address, latitude, longitude, image, avatar, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $5, CURRENT_TIMESTAMP)
             ON CONFLICT (user_id) DO UPDATE SET
               address = COALESCE(EXCLUDED.address, users_extra.address),
               latitude = COALESCE(EXCLUDED.latitude, users_extra.latitude),
               longitude = COALESCE(EXCLUDED.longitude, users_extra.longitude),
+              image = CASE WHEN EXCLUDED.image IS NOT NULL THEN EXCLUDED.image ELSE users_extra.image END,
+              avatar = CASE WHEN EXCLUDED.avatar IS NOT NULL THEN EXCLUDED.avatar ELSE users_extra.avatar END,
               updated_at = CURRENT_TIMESTAMP
-          `, [user.id, address || null, lat || null, lng || null]);
+          `, [user.id, address || null, lat || null, lng || null, profileImg || null]);
         }
       } catch (extraErr) {
         console.warn("users_extra error:", extraErr);

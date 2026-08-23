@@ -99,11 +99,25 @@ export const Profile: React.FC = () => {
         const apiBkgs = await apiService.getBookings(userProfile.email);
         setRawBookings(apiBkgs);
 
-        // 2. Fetch real profile to get userId, then fetch wallet data
+        // 2. Fetch real profile from PostgreSQL database to sync photo and details
         const profileData = await apiService.getProfile(userProfile.email);
-        if (profileData && (profileData as any).id) {
-          const wData = await apiService.getWalletData((profileData as any).id);
-          if (wData) setWalletData(wData);
+        if (profileData) {
+          const dbAvatar = profileData.image || (profileData as any).avatar || '';
+          if (dbAvatar) {
+            setUserProfile(prev => ({ ...prev, avatar: dbAvatar }));
+          }
+          if (profileData.full_name) {
+            setUserProfile(prev => ({ ...prev, name: profileData.full_name }));
+            setNameVal(profileData.full_name);
+          }
+          if (profileData.phone) {
+            setUserProfile(prev => ({ ...prev, phone: profileData.phone }));
+            setPhoneVal(profileData.phone);
+          }
+          if ((profileData as any).id) {
+            const wData = await apiService.getWalletData((profileData as any).id);
+            if (wData) setWalletData(wData);
+          }
         }
       } catch (err) {
         console.warn('[Profile] Failed to load account data:', err);
@@ -212,9 +226,10 @@ export const Profile: React.FC = () => {
 
   const saveAvatar = async (uri: string) => {
     setUserProfile(prev => ({ ...prev, avatar: uri }));
-    if (userProfile.email) {
+    const targetEmail = (userProfile.email || loginInput || '').trim().toLowerCase();
+    if (targetEmail) {
       try {
-        await apiService.syncProfile({ email: userProfile.email, image: uri, avatar: uri });
+        await apiService.syncProfile({ email: targetEmail, image: uri, avatar: uri });
       } catch (e) {
         console.warn('Could not sync avatar to backend:', e);
       }
@@ -223,9 +238,10 @@ export const Profile: React.FC = () => {
 
   const removeAvatar = async () => {
     setUserProfile(prev => ({ ...prev, avatar: '' }));
-    if (userProfile.email) {
+    const targetEmail = (userProfile.email || loginInput || '').trim().toLowerCase();
+    if (targetEmail) {
       try {
-        await apiService.syncProfile({ email: userProfile.email, image: '', avatar: '' });
+        await apiService.syncProfile({ email: targetEmail, image: '', avatar: '' });
         Alert.alert('Photo Removed', 'Your profile photo has been removed.');
       } catch (e) {
         console.warn('Could not sync avatar removal to backend:', e);
