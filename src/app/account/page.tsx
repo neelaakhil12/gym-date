@@ -76,7 +76,7 @@ export default function AccountPage() {
     }
   }, [status, router]);
 
-  // Load profile photo from localStorage
+  // Load profile photo from localStorage and database
   useEffect(() => {
     const email = nextAuthSession?.user?.email;
     if (email) {
@@ -84,6 +84,33 @@ export default function AccountPage() {
       if (stored) setProfilePhoto(stored);
     }
   }, [nextAuthSession?.user?.email]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Url = reader.result as string;
+      if (!base64Url) return;
+
+      setProfilePhoto(base64Url);
+      const email = nextAuthSession?.user?.email || supabaseUser?.email;
+      if (email) {
+        localStorage.setItem(`gymdate_photo_${email}`, base64Url);
+        try {
+          await fetch('/api/user/sync-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, image: base64Url, avatar: base64Url })
+          });
+        } catch (err) {
+          console.error("Failed to sync photo to database:", err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const fetchUserAndGyms = async () => {
@@ -117,6 +144,11 @@ export default function AccountPage() {
           const profileResult = await profileRes.json();
           if (profileResult.success && profileResult.profile) {
             setSupabaseUser(profileResult.profile);
+            const dbImg = profileResult.profile.image || profileResult.profile.avatar;
+            if (dbImg) {
+              setProfilePhoto(dbImg);
+              localStorage.setItem(`gymdate_photo_${email}`, dbImg);
+            }
             setEditName(profileResult.profile.full_name || nextAuthSession?.user?.name || "");
             const rawP = profileResult.profile.phone || "";
             setEditPhone(rawP.replace(/^\+91/, '').trim());
@@ -427,10 +459,18 @@ export default function AccountPage() {
                   )}
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-md"
+                    className="absolute -bottom-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-md hover:bg-primary-dark transition-all cursor-pointer"
+                    title="Change Profile Photo"
                   >
                     <Camera className="w-2.5 h-2.5 text-white" />
                   </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handlePhotoUpload} 
+                    accept="image/*" 
+                    className="hidden" 
+                  />
                 </div>
                 <div className="overflow-hidden">
                   <h3 className="font-black text-secondary truncate">{displayName.split(' ')[0]}</h3>

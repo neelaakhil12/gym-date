@@ -30,10 +30,16 @@ export async function GET(req: Request) {
             referred_by: extra.referred_by || null,
             address: extra.address || profile.address || profile.location,
             latitude: extra.latitude ?? profile.latitude ?? profile.lat,
-            longitude: extra.longitude ?? profile.longitude ?? profile.lng
+            longitude: extra.longitude ?? profile.longitude ?? profile.lng,
+            image: profile.image || extra.image || profile.avatar || extra.avatar || null,
+            avatar: profile.avatar || extra.avatar || profile.image || extra.image || null
           };
         }
       } catch (e) {}
+
+      const userImage = profile.image || profile.avatar || null;
+      profile.image = userImage;
+      profile.avatar = userImage;
 
       if (!profile.address && profile.location) {
         profile.address = profile.location;

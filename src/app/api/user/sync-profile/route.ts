@@ -12,6 +12,14 @@ export async function POST(req: Request) {
 
     const formattedPhone = phone && phone.startsWith('+91') ? phone : (phone ? `+91${phone}` : null);
 
+    // Ensure image and avatar columns exist on users table
+    try {
+      await query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS image TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+      `);
+    } catch (e) {}
+
     // Dynamically check columns on users table
     const userColsRes = await query(`
       SELECT column_name FROM information_schema.columns 
@@ -31,10 +39,15 @@ export async function POST(req: Request) {
         updateVals.push(name);
         updateParts.push(`full_name = $${updateVals.length}`);
       }
-      if (profileImg && (userCols.has("image") || userCols.has("avatar"))) {
-        updateVals.push(profileImg);
-        const col = userCols.has("image") ? "image" : "avatar";
-        updateParts.push(`${col} = $${updateVals.length}`);
+      if (profileImg) {
+        if (userCols.has("image")) {
+          updateVals.push(profileImg);
+          updateParts.push(`image = $${updateVals.length}`);
+        }
+        if (userCols.has("avatar")) {
+          updateVals.push(profileImg);
+          updateParts.push(`avatar = $${updateVals.length}`);
+        }
       }
       if (formattedPhone && userCols.has("phone")) {
         updateVals.push(formattedPhone);

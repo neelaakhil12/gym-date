@@ -279,12 +279,14 @@ export const Profile: React.FC = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.6,
+        base64: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        saveAvatar(uri);
-        Alert.alert('✅ Photo Updated', 'Your profile photo has been updated!');
+        const asset = result.assets[0];
+        const base64Data = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        saveAvatar(base64Data);
+        Alert.alert('✅ Photo Updated', 'Your profile photo has been saved to your account!');
       }
     } catch (err: any) {
       Alert.alert('Error', 'Could not open gallery: ' + err.message);
@@ -308,12 +310,14 @@ export const Profile: React.FC = () => {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.6,
+        base64: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        saveAvatar(uri);
-        Alert.alert('✅ Photo Updated', 'Your profile photo has been updated!');
+        const asset = result.assets[0];
+        const base64Data = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        saveAvatar(base64Data);
+        Alert.alert('✅ Photo Updated', 'Your profile photo has been saved to your account!');
       }
     } catch (err: any) {
       Alert.alert('Error', 'Could not open camera: ' + err.message);

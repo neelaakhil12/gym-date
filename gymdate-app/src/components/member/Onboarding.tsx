@@ -435,12 +435,16 @@ export const Onboarding: React.FC = () => {
             }
           }
 
+          const userDbProfile = await apiService.getProfile(cleanEmail);
+          const finalAvatar = userDbProfile?.image || userDbProfile?.avatar || syncedUser?.image || syncedUser?.avatar || '';
+
           setLoginInput(cleanEmail);
           setUserProfile(prev => ({
             ...prev,
-            name: syncedUser?.full_name || cleanName,
+            name: syncedUser?.full_name || userDbProfile?.full_name || cleanName,
             email: cleanEmail,
-            phone: syncedUser?.phone || loginPhone.trim() || '',
+            phone: syncedUser?.phone || userDbProfile?.phone || loginPhone.trim() || '',
+            avatar: finalAvatar,
           }));
           setIsLoggedIn(true);
           setActiveScreen('home');
@@ -480,13 +484,17 @@ export const Onboarding: React.FC = () => {
         }
       }
 
+      const userDbProfile = await apiService.getProfile(cleanEmail);
+      const finalAvatar = userDbProfile?.image || userDbProfile?.avatar || syncedUser?.image || syncedUser?.avatar || '';
+
       setShowGoogleModal(false);
       setLoginInput(cleanEmail);
       setUserProfile(prev => ({
         ...prev,
-        name: syncedUser?.full_name || googleName.trim() || 'Gym Member',
+        name: syncedUser?.full_name || userDbProfile?.full_name || googleName.trim() || 'Gym Member',
         email: cleanEmail,
-        phone: syncedUser?.phone || loginPhone.trim() || '',
+        phone: syncedUser?.phone || userDbProfile?.phone || loginPhone.trim() || '',
+        avatar: finalAvatar,
       }));
       setIsLoggedIn(true);
       setActiveScreen('home');
@@ -498,6 +506,7 @@ export const Onboarding: React.FC = () => {
         name: googleName.trim() || 'Gym Member',
         email: cleanEmail,
         phone: loginPhone.trim() || '',
+        avatar: '',
       }));
       setIsLoggedIn(true);
       setActiveScreen('home');
