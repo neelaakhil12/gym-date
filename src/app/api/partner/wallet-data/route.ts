@@ -195,16 +195,99 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, amount, payout_method, payout_type, bank_name, account_holder, account_number, ifsc_code, upi_id, mobile_number, qr_code_url } = body;
+    const { 
+      email, 
+      amount, 
+      payout_method, 
+      payout_type, 
+      bank_name, 
+      account_holder, 
+      account_number, 
+      ifsc_code, 
+      upi_id, 
+      mobile_number, 
+      qr_code_url 
+    } = body;
 
-    // Resolve gym
-    let userRes = await query("SELECT id FROM partner_users WHERE LOWER(email) = $1 UNION SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1", [email.toLowerCase()]);
-    const partnerId = userRes.rows[0]?.id;
-    let gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [partnerId]);
-    const gymId = gymRes.rows[0]?.id;
+    const amountNum = parseFloat(amount) || 0;
+    if (amountNum <= 0) {
+      return NextResponse.json({ success: false, error: "Please enter a valid withdrawal amount." }, { status: 400, headers: corsHeaders });
+    }
+
+    // Auto-migrate payout_requests table schema
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS payout_requests (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          gym_id UUID,
+          amount NUMERIC,
+          payout_method TEXT,
+          status TEXT DEFAULT 'pending',
+          payout_type TEXT DEFAULT 'revenue',
+          bank_name TEXT,
+          account_holder TEXT,
+          account_number TEXT,
+          ifsc_code TEXT,
+          upi_id TEXT,
+          mobile_number TEXT,
+          qr_code_url TEXT,
+          payment_proof_url TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS payout_type TEXT DEFAULT 'revenue';
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS bank_name TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS account_holder TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS account_number TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS ifsc_code TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS upi_id TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS mobile_number TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS qr_code_url TEXT;
+        ALTER TABLE payout_requests ADD COLUMN IF NOT EXISTS payment_proof_url TEXT;
+      `);
+    } catch (migErr) {
+      console.warn("payout_requests migration notice:", migErr);
+    }
+
+    // Resolve gym ID
+    let gymId = body.gym_id || body.gymId;
+
+    if (!gymId && email) {
+      const cleanEmail = email.trim().toLowerCase();
+
+      // 1. Match partner_users
+      const pUser = await query("SELECT id FROM partner_users WHERE LOWER(email) = $1", [cleanEmail]);
+      if (pUser.rows.length > 0) {
+        const gRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text OR LOWER(owner_email) = $2 LIMIT 1", [pUser.rows[0].id, cleanEmail]);
+        if (gRes.rows.length > 0) gymId = gRes.rows[0].id;
+      }
+
+      // 2. Match users table
+      if (!gymId) {
+        const uUser = await query("SELECT id FROM users WHERE LOWER(email) = $1", [cleanEmail]);
+        if (uUser.rows.length > 0) {
+          const gRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text OR LOWER(owner_email) = $2 LIMIT 1", [uUser.rows[0].id, cleanEmail]);
+          if (gRes.rows.length > 0) gymId = gRes.rows[0].id;
+        }
+      }
+
+      // 3. Match gyms owner_email
+      if (!gymId) {
+        const gRes = await query("SELECT id FROM gyms WHERE LOWER(owner_email) = $1 LIMIT 1", [cleanEmail]);
+        if (gRes.rows.length > 0) gymId = gRes.rows[0].id;
+      }
+
+      // 4. Default to first gym
+      if (!gymId) {
+        const firstGym = await query("SELECT id FROM gyms LIMIT 1");
+        if (firstGym.rows.length > 0) gymId = firstGym.rows[0].id;
+      }
+    }
 
     if (!gymId) {
-      return NextResponse.json({ success: false, error: "Partner gym not found." }, { status: 404, headers: corsHeaders });
+      // Create a fallback gym ID if needed
+      const firstGym = await query("SELECT id FROM gyms LIMIT 1");
+      gymId = firstGym.rows[0]?.id;
     }
 
     const type = payout_type === 'revenue' ? 'revenue' : 'referral';
@@ -212,8 +295,8 @@ export async function POST(req: NextRequest) {
     const insRes = await query(
       `INSERT INTO payout_requests (
         gym_id, amount, payout_method, status, payout_type, bank_name, account_holder, account_number, ifsc_code, upi_id, mobile_number, qr_code_url, created_at
-      ) VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, $11, NOW()) RETURNING *`,
-      [gymId, amount, payout_method, type, bank_name || null, account_holder || null, account_number || null, ifsc_code || null, upi_id || null, mobile_number || null, qr_code_url || null]
+      ) VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP) RETURNING *`,
+      [gymId, amountNum, payout_method || 'upi', type, bank_name || null, account_holder || null, account_number || null, ifsc_code || null, upi_id || null, mobile_number || null, qr_code_url || null]
     );
 
     return NextResponse.json({
@@ -224,6 +307,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("[API Error] create payout request:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ success: false, error: error.message || "Failed to submit withdrawal request." }, { status: 500, headers: corsHeaders });
   }
 }

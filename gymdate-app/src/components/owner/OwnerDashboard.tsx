@@ -647,11 +647,21 @@ export const OwnerDashboard: React.FC = () => {
     const maxAvailable = withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance;
 
     if (amountNum < minLimit) {
-      setWithdrawSuccessMsg(`Minimum withdrawal amount is ₹${minLimit.toLocaleString()}`);
+      Alert.alert('Amount Too Low', `Minimum withdrawal amount is ₹${minLimit.toLocaleString()}`);
       return;
     }
     if (amountNum > maxAvailable) {
-      setWithdrawSuccessMsg(`Requested amount exceeds available balance of ₹${maxAvailable.toLocaleString()}`);
+      Alert.alert('Insufficient Balance', `Requested amount exceeds available balance of ₹${maxAvailable.toLocaleString()}`);
+      return;
+    }
+
+    if (withdrawMethod === 'upi' && !withdrawUpiId.trim()) {
+      Alert.alert('UPI ID Required', 'Please enter your UPI ID or mobile number.');
+      return;
+    }
+
+    if (withdrawMethod === 'bank' && (!withdrawAccountNumber.trim() || !withdrawIfsc.trim())) {
+      Alert.alert('Bank Details Required', 'Please enter your Account Number and IFSC code.');
       return;
     }
 
@@ -659,13 +669,18 @@ export const OwnerDashboard: React.FC = () => {
     try {
       let uploadedQrUrl: string | undefined = undefined;
       if (qrCodeFile) {
-        const upRes = await apiService.uploadPayoutQrCode(qrCodeFile);
-        if (upRes && upRes.url) {
-          uploadedQrUrl = upRes.url;
+        try {
+          const upRes = await apiService.uploadPayoutQrCode(qrCodeFile);
+          if (upRes && upRes.url) {
+            uploadedQrUrl = upRes.url;
+          }
+        } catch (qrErr) {
+          console.warn('QR upload error:', qrErr);
         }
       }
 
       const payload = {
+        gym_id: activeGym?.id || partnerGym?.id,
         email: currentEmail,
         amount: amountNum,
         payout_method: withdrawMethod,
@@ -679,21 +694,18 @@ export const OwnerDashboard: React.FC = () => {
       };
       const res = await apiService.submitPartnerPayoutRequest(payload);
       if (res && res.success) {
-        setWithdrawSuccessMsg(res.message || 'Withdrawal request submitted! Super Admin will review shortly.');
-        fetchLiveDashboard();
-      } else {
-        setWithdrawSuccessMsg(res.error || 'Failed to submit withdrawal.');
-      }
-    } catch (e: any) {
-      setWithdrawSuccessMsg(e.message || 'Error submitting request.');
-    } finally {
-      setIsWithdrawing(false);
-      setTimeout(() => {
+        Alert.alert('✅ Request Submitted', res.message || 'Your withdrawal request has been submitted to Super Admin!');
         setShowWithdrawModal(false);
-        setWithdrawSuccessMsg('');
         setQrCodeFile(null);
         setQrCodePreview('');
-      }, 2500);
+        fetchLiveDashboard();
+      } else {
+        Alert.alert('Submission Error', res?.error || 'Failed to submit withdrawal.');
+      }
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Error submitting request.');
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
