@@ -221,6 +221,18 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const removeAvatar = async () => {
+    setUserProfile(prev => ({ ...prev, avatar: '' }));
+    if (userProfile.email) {
+      try {
+        await apiService.syncProfile({ email: userProfile.email, image: '', avatar: '' });
+        Alert.alert('Photo Removed', 'Your profile photo has been removed.');
+      } catch (e) {
+        console.warn('Could not sync avatar removal to backend:', e);
+      }
+    }
+  };
+
   const handleUploadPhoto = () => {
     if (Platform.OS === 'web') {
       // Web: use file input
@@ -243,20 +255,31 @@ export const Profile: React.FC = () => {
       input.click();
     } else {
       // Native Android/iOS: show picker option sheet
+      const buttons: any[] = [
+        {
+          text: '📷 Take a Photo',
+          onPress: () => openCamera()
+        },
+        {
+          text: '🖼️ Choose from Gallery',
+          onPress: () => openGallery()
+        }
+      ];
+
+      if (userProfile.avatar) {
+        buttons.push({
+          text: '🗑️ Remove Photo',
+          style: 'destructive',
+          onPress: () => removeAvatar()
+        });
+      }
+
+      buttons.push({ text: 'Cancel', style: 'cancel' });
+
       Alert.alert(
-        'Update Profile Photo',
-        'Choose how to upload your photo:',
-        [
-          {
-            text: '📷 Take a Photo',
-            onPress: () => openCamera()
-          },
-          {
-            text: '🖼️ Choose from Gallery',
-            onPress: () => openGallery()
-          },
-          { text: 'Cancel', style: 'cancel' }
-        ]
+        'Edit Profile Photo',
+        'Update or change your profile picture anytime:',
+        buttons
       );
     }
   };

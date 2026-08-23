@@ -112,6 +112,23 @@ export default function AccountPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleRemovePhoto = async () => {
+    setProfilePhoto(null);
+    const email = nextAuthSession?.user?.email || supabaseUser?.email;
+    if (email) {
+      localStorage.removeItem(`gymdate_photo_${email}`);
+      try {
+        await fetch('/api/user/sync-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, image: '', avatar: '' })
+        });
+      } catch (err) {
+        console.error("Failed to remove photo:", err);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchUserAndGyms = async () => {
       try {
@@ -717,13 +734,23 @@ export default function AccountPage() {
                     <div>
                       <h3 className="text-lg font-black text-secondary">{displayName}</h3>
                       <p className="text-xs text-gray-400 font-bold mt-0.5 uppercase tracking-widest">Active Member</p>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mt-3 px-5 py-2 bg-primary text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-md shadow-primary/20 flex items-center gap-2"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                        {profilePhoto ? 'Change Photo' : 'Upload Photo'}
-                      </button>
+                      <div className="flex items-center gap-2 mt-3">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-5 py-2 bg-primary text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-md shadow-primary/20 flex items-center gap-2"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          {profilePhoto ? 'Change Photo' : 'Upload Photo'}
+                        </button>
+                        {profilePhoto && (
+                          <button
+                            onClick={handleRemovePhoto}
+                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-red-50 hover:text-red-600 transition-all"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                       <p className="text-[10px] text-gray-400 mt-1.5">JPG, PNG or GIF · Max 5MB</p>
                     </div>
                     <input
