@@ -209,10 +209,7 @@ function LoginForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center ml-1">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Referral Code (Optional)</label>
-                    <span className="text-[10px] font-bold text-primary">🎁 Get Wallet Bonus</span>
-                  </div>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Referral Code (Optional)</label>
                   <div className="relative group">
                     <Gift className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     <input
