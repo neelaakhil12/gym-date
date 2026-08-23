@@ -12,7 +12,8 @@ import {
   Alert,
   useColorScheme
 } from 'react-native';
-import { useGymDate, Trainer } from '../../context/GymDateContext';
+import { useGymDate, Trainer, Gym } from '../../context/GymDateContext';
+import { apiService } from '../../services/apiService';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
 import { RazorpayCheckout, RazorpayPaymentOptions } from '../RazorpayCheckout';
@@ -27,7 +28,14 @@ import {
   Compass,
   ArrowRight,
   ChevronRight,
-  Menu
+  Menu,
+  Gift,
+  Wallet,
+  User,
+  Phone,
+  Mail,
+  CheckCircle2,
+  Tag
 } from 'lucide-react-native';
 
 export const GymDiscovery: React.FC = () => {
@@ -41,6 +49,7 @@ export const GymDiscovery: React.FC = () => {
     setUserProfile,
     addBooking,
     userCoords,
+    loginInput,
   } = useGymDate();
 
   // Haversine distance
@@ -95,6 +104,17 @@ export const GymDiscovery: React.FC = () => {
   const [selectedRadius, setSelectedRadius] = useState<'all' | number>('all');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number; duration: string } | null>(null);
+
+  // Autofilled Member Details State
+  const [buyerName, setBuyerName] = useState('');
+  const [buyerPhone, setBuyerPhone] = useState('');
+  const [buyerEmail, setBuyerEmail] = useState('');
+
+  // Wallet & Referral Balance State
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [maxWalletPerTxn, setMaxWalletPerTxn] = useState(10);
+  const [useWallet, setUseWallet] = useState(false);
+
   // Real Razorpay payment options state — null = closed
   const [paymentOptions, setPaymentOptions] = useState<RazorpayPaymentOptions | null>(null);
 
@@ -135,25 +155,78 @@ export const GymDiscovery: React.FC = () => {
   const activeGym = gyms.find(g => g.id === selectedGymId);
   const showDetails = Boolean(selectedGymId && activeGym);
 
-  const handleBuyPassClick = (plan: { name: string; price: number; duration: string }) => {
+  const handleBuyPassClick = async (plan: { name: string; price: number; duration: string }) => {
     setSelectedPlan(plan);
+    setBuyerName(userProfile.name || '');
+    const rawP = userProfile.phone || '';
+    setBuyerPhone(rawP.replace(/^\+91/, '').trim());
+    setBuyerEmail(userProfile.email || loginInput || '');
+    setUseWallet(false);
+
+    // Fetch user wallet balance from backend
+    const targetEmail = userProfile.email || loginInput;
+    if (targetEmail) {
+      try {
+        const profRes = await (window as any).apiService.getProfile(targetEmail);
+        if (profRes) {
+          const wb = (profRes as any).wallet_balance !== undefined ? parseFloat((profRes as any).wallet_balance) : 0;
+          setWalletBalance(wb);
+          if (profRes.full_name && !userProfile.name) setBuyerName(profRes.full_name);
+          if (profRes.phone && !userProfile.phone) setBuyerPhone(profRes.phone.replace(/^\+91/, '').trim());
+        }
+
+        // Fetch max wallet per txn config
+        fetch('https://gymdate.in/api/admin/referral-config')
+          .then(r => r.json())
+          .then(d => {
+            if (d.success && d.config?.max_wallet_per_txn) {
+              setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 10);
+            }
+          })
+          .catch(() => {});
+      } catch (e) {
+        console.warn('Wallet fetch error in checkout:', e);
+      }
+    }
+
     setShowCheckoutModal(true);
   };
 
   const handleConfirmPayment = () => {
     if (!selectedPlan || !activeGym) return;
+
+    if (!buyerName.trim()) {
+      Alert.alert('Required Field', 'Please enter your Full Name for the booking pass.');
+      return;
+    }
+    if (!buyerPhone.trim()) {
+      Alert.alert('Required Field', 'Please enter your Phone Number.');
+      return;
+    }
+    if (!buyerEmail.trim() || !buyerEmail.includes('@') || !buyerEmail.includes('.')) {
+      Alert.alert('Required Field', 'Please enter a valid Email Address.');
+      return;
+    }
+
+    const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price) : 0;
+    const finalAmount = Math.max(1, selectedPlan.price - usableWallet);
+
     // Launch real Razorpay payment
     setShowCheckoutModal(false);
     setPaymentOptions({
       gymId: activeGym.id,
       gymName: activeGym.name,
       planName: selectedPlan.name,
-      amount: selectedPlan.price,
-      customerEmail: userProfile.email,
-      customerName: userProfile.name,
-      customerPhone: userProfile.phone,
+      amount: finalAmount,
+      customerEmail: buyerEmail.trim().toLowerCase(),
+      customerName: buyerName.trim(),
+      customerPhone: buyerPhone.trim().startsWith('+91') ? buyerPhone.trim() : `+91${buyerPhone.trim()}`,
+      useWallet: useWallet && usableWallet > 0,
       startDate: new Date().toISOString(),
       onSuccess: (bookingId, paymentId) => {
+        if (useWallet && usableWallet > 0) {
+          setWalletBalance(prev => Math.max(0, prev - usableWallet));
+        }
         Alert.alert(
           '✅ Payment Successful!',
           `Your ${selectedPlan.name} for ${activeGym.name} is now active.\nBooking ID: ${bookingId.substring(0, 8).toUpperCase()}\n\nYour QR entry ticket is ready in My Tickets!`,
@@ -419,38 +492,158 @@ export const GymDiscovery: React.FC = () => {
       <Modal visible={showCheckoutModal} transparent animationType="slide">
         <View style={[styles.modalBackdrop, { backgroundColor: modalBg }]}>
           <View style={[styles.modalCard, { backgroundColor: modalCardBg }]}>
+            
+            {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTag}>Razorpay Secure</Text>
-              <Text style={[styles.modalTitle, { color: textPrimary }]}>Order Summary</Text>
+              <Text style={styles.modalTag}>Razorpay Secure Checkout</Text>
+              <Text style={[styles.modalTitle, { color: textPrimary }]}>Pass Order Summary</Text>
             </View>
 
-            {selectedPlan && activeGym && (
-              <View style={[styles.billCard, { backgroundColor: billCardBg }]}>
-                <View style={styles.billRow}>
-                  <Text style={[styles.billLabel, { color: textSecondary }]}>Partner Gym:</Text>
-                  <Text style={[styles.billVal, { color: textPrimary }]}>{activeGym.name}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 12 }}>
+              
+              {/* Gym and Plan details */}
+              {selectedPlan && activeGym && (
+                <View style={[styles.billCard, { backgroundColor: billCardBg, borderColor: amenityBorder }]}>
+                  <View style={styles.billRow}>
+                    <Text style={[styles.billLabel, { color: textSecondary }]}>Partner Gym:</Text>
+                    <Text style={[styles.billVal, { color: textPrimary }]}>{activeGym.name}</Text>
+                  </View>
+                  <View style={styles.billRow}>
+                    <Text style={[styles.billLabel, { color: textSecondary }]}>Pass Package:</Text>
+                    <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.name}</Text>
+                  </View>
+                  <View style={styles.billRow}>
+                    <Text style={[styles.billLabel, { color: textSecondary }]}>Duration:</Text>
+                    <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.duration}</Text>
+                  </View>
                 </View>
-                <View style={styles.billRow}>
-                  <Text style={[styles.billLabel, { color: textSecondary }]}>Pass Package:</Text>
-                  <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.name}</Text>
+              )}
+
+              {/* Autofilled Member Details */}
+              <View style={[styles.memberFormCard, { backgroundColor: billCardBg, borderColor: amenityBorder }]}>
+                <View style={styles.memberFormHeader}>
+                  <User size={13} color="#e50914" />
+                  <Text style={[styles.memberFormTitle, { color: textPrimary }]}>Member Details</Text>
+                  <Text style={styles.autofillBadge}>Autofilled</Text>
                 </View>
-                <View style={styles.billRow}>
-                  <Text style={[styles.billLabel, { color: textSecondary }]}>Duration:</Text>
-                  <Text style={[styles.billVal, { color: textPrimary }]}>{selectedPlan.duration}</Text>
+
+                {/* Name */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: textSecondary }]}>Full Name</Text>
+                  <View style={[styles.inputBox, { backgroundColor: inputBg, borderColor: inputBorder }]}>
+                    <User size={13} color={textSecondary} />
+                    <TextInput
+                      value={buyerName}
+                      onChangeText={setBuyerName}
+                      placeholder="Enter Full Name"
+                      placeholderTextColor={textMuted}
+                      style={[styles.formTextInput, { color: textPrimary }]}
+                    />
+                  </View>
                 </View>
-                <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: sectionBorder, paddingTop: 10, marginTop: 6 }]}>
-                  <Text style={[styles.billLabel, { fontWeight: '700', color: textPrimary }]}>Total Payment:</Text>
-                  <Text style={styles.billPrice}>₹{selectedPlan.price}</Text>
+
+                {/* Phone */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: textSecondary }]}>Phone Number</Text>
+                  <View style={[styles.inputBox, { backgroundColor: inputBg, borderColor: inputBorder }]}>
+                    <Phone size={13} color={textSecondary} />
+                    <TextInput
+                      value={buyerPhone}
+                      onChangeText={setBuyerPhone}
+                      placeholder="9876543210"
+                      keyboardType="phone-pad"
+                      placeholderTextColor={textMuted}
+                      style={[styles.formTextInput, { color: textPrimary }]}
+                    />
+                  </View>
+                </View>
+
+                {/* Email */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: textSecondary }]}>Email Address</Text>
+                  <View style={[styles.inputBox, { backgroundColor: inputBg, borderColor: inputBorder }]}>
+                    <Mail size={13} color={textSecondary} />
+                    <TextInput
+                      value={buyerEmail}
+                      onChangeText={setBuyerEmail}
+                      placeholder="name@example.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholderTextColor={textMuted}
+                      style={[styles.formTextInput, { color: textPrimary }]}
+                    />
+                  </View>
                 </View>
               </View>
-            )}
+
+              {/* Wallet / Referral Balance Discount Card */}
+              {walletBalance > 0 && selectedPlan && (
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={() => setUseWallet(!useWallet)}
+                  style={[
+                    styles.walletDiscountCard, 
+                    useWallet ? styles.walletDiscountCardActive : styles.walletDiscountCardInactive
+                  ]}
+                >
+                  <View style={styles.walletLeft}>
+                    <View style={[styles.walletIconBox, useWallet && { backgroundColor: '#10B981' }]}>
+                      <Gift size={16} color={useWallet ? '#ffffff' : '#10B981'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.walletTitle, { color: textPrimary }]}>
+                        Use Wallet & Referral Balance
+                      </Text>
+                      <Text style={styles.walletSub}>
+                        Available: ₹{walletBalance} (Max ₹{maxWalletPerTxn} off)
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.walletToggleBtn, useWallet ? styles.walletToggleActive : styles.walletToggleInactive]}>
+                    <Text style={[styles.walletToggleText, useWallet && { color: '#ffffff' }]}>
+                      {useWallet ? `✓ -₹${Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)}` : 'Apply'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {/* Total Payment Breakdown */}
+              {selectedPlan && (
+                <View style={[styles.billCard, { backgroundColor: billCardBg, borderColor: amenityBorder }]}>
+                  <View style={styles.billRow}>
+                    <Text style={[styles.billLabel, { color: textSecondary }]}>Base Plan Price:</Text>
+                    <Text style={[styles.billVal, { color: textPrimary }]}>₹{selectedPlan.price}</Text>
+                  </View>
+                  
+                  {useWallet && walletBalance > 0 && (
+                    <View style={styles.billRow}>
+                      <Text style={[styles.billLabel, { color: '#10B981', fontWeight: '700' }]}>Wallet Discount:</Text>
+                      <Text style={[styles.billVal, { color: '#10B981', fontWeight: '800' }]}>
+                        -₹{Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: sectionBorder, paddingTop: 8, marginTop: 4 }]}>
+                    <Text style={[styles.billLabel, { fontWeight: '800', color: textPrimary }]}>Final Payable:</Text>
+                    <Text style={styles.billPrice}>
+                      ₹{Math.max(1, selectedPlan.price - (useWallet && walletBalance > 0 ? Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price) : 0))}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+            </ScrollView>
 
             {/* Single real Razorpay button */}
             <TouchableOpacity
               onPress={handleConfirmPayment}
               style={styles.planBuyBtn}
             >
-              <Text style={styles.planBuyBtnText}>🔒  Pay ₹{selectedPlan?.price} via Razorpay</Text>
+              <Text style={styles.planBuyBtnText}>
+                🔒  Pay ₹{selectedPlan ? Math.max(1, selectedPlan.price - (useWallet && walletBalance > 0 ? Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price) : 0)) : 0} via Razorpay
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setShowCheckoutModal(false)} style={styles.payCancelBtn}>
@@ -540,8 +733,8 @@ const styles = StyleSheet.create({
   planPrice: { color: '#e50914', fontWeight: '900', fontSize: 14, fontFamily: 'monospace' },
   planFeatures: { borderTopWidth: 1, paddingTop: 8, gap: 4 },
   planFeatureItem: { fontSize: 9 },
-  planBuyBtn: { backgroundColor: '#e50914', height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  planBuyBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  planBuyBtn: { backgroundColor: '#e50914', height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  planBuyBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
   coachesContainer: { gap: 8 },
   coachGridCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, padding: 10, borderRadius: 16 },
   coachGridProfile: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -554,20 +747,40 @@ const styles = StyleSheet.create({
   mapCardTitle: { fontWeight: '700', fontSize: 11 },
   mapCardSub: { fontSize: 8, fontFamily: 'monospace', marginTop: 2 },
   mapCardBtn: { color: '#e50914', fontWeight: '800', fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 10 },
-  modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalCard: { width: '100%', maxWidth: 320, borderColor: 'rgba(229,9,20,0.2)', borderWidth: 1, borderRadius: 28, padding: 20, gap: 16 },
-  modalHeader: { alignItems: 'center', borderBottomWidth: 1, paddingBottom: 10 },
+  modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { width: '100%', maxWidth: 360, borderColor: 'rgba(229,9,20,0.2)', borderWidth: 1, borderRadius: 28, padding: 18, gap: 12 },
+  modalHeader: { alignItems: 'center', borderBottomWidth: 1, paddingBottom: 8, borderBottomColor: 'rgba(229,9,20,0.1)' },
   modalTag: { color: '#e50914', fontSize: 8, fontWeight: '800', textTransform: 'uppercase', backgroundColor: 'rgba(229,9,20,0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 4 },
-  modalTitle: {  fontWeight: '900', fontSize: 16 },
-  billCard: { borderWidth: 1, padding: 12, borderRadius: 16, gap: 6 },
+  modalTitle: { fontWeight: '900', fontSize: 16 },
+  billCard: { borderWidth: 1, padding: 10, borderRadius: 14, gap: 5 },
   billRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  billLabel: { fontSize: 11 },
-  billVal: { fontWeight: '700', fontSize: 11 },
-  billPrice: { color: '#00c758', fontWeight: '900', fontSize: 14, fontFamily: 'monospace' },
-  payCancelBtn: { height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
-  payCancelBtnText: { fontWeight: '700', fontSize: 11, textTransform: 'uppercase' },
-  payMethods: { gap: 8 },
-  payMethodsTitle: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', marginBottom: 2 },
-  payMethodBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, padding: 10, borderRadius: 12 },
-  payMethodText: { fontWeight: '600', fontSize: 11 },
+  billLabel: { fontSize: 10 },
+  billVal: { fontWeight: '700', fontSize: 10 },
+  billPrice: { color: '#10B981', fontWeight: '900', fontSize: 14, fontFamily: 'monospace' },
+  
+  // Member Form Styles
+  memberFormCard: { borderWidth: 1, padding: 10, borderRadius: 14, gap: 8 },
+  memberFormHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  memberFormTitle: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  autofillBadge: { fontSize: 7, fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16,185,129,0.1)', paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 4, marginLeft: 'auto', textTransform: 'uppercase' },
+  inputGroup: { gap: 3 },
+  inputLabel: { fontSize: 8, fontWeight: '700', textTransform: 'uppercase' },
+  inputBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, height: 32, gap: 6 },
+  formTextInput: { flex: 1, fontSize: 10, fontWeight: '600', paddingVertical: 0 },
+
+  // Wallet Discount Styles
+  walletDiscountCard: { borderWidth: 1, borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  walletDiscountCardActive: { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.08)' },
+  walletDiscountCardInactive: { borderColor: 'rgba(16,185,129,0.25)', backgroundColor: 'rgba(16,185,129,0.03)' },
+  walletLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  walletIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center' },
+  walletTitle: { fontSize: 10, fontWeight: '800' },
+  walletSub: { fontSize: 8, color: '#10B981', fontWeight: '700', marginTop: 1 },
+  walletToggleBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  walletToggleActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  walletToggleInactive: { backgroundColor: 'transparent', borderColor: '#10B981' },
+  walletToggleText: { fontSize: 9, fontWeight: '800', color: '#10B981' },
+
+  payCancelBtn: { height: 38, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', borderColor: 'rgba(150,150,150,0.25)' },
+  payCancelBtnText: { fontWeight: '700', fontSize: 10, textTransform: 'uppercase', color: '#64748b' },
 });
