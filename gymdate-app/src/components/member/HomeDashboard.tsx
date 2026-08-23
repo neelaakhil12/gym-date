@@ -311,11 +311,12 @@ export const HomeDashboard: React.FC = () => {
 
           gymsData.forEach(g => {
             if (g.lat && g.lng) {
+              const shortName = g.name.length > 16 ? g.name.substring(0, 14) + '..' : g.name;
               const gymIcon = L.divIcon({
                 className: '',
-                html: '<div class="gym-price-pill">🏋️ ₹' + g.price + '/d</div>',
-                iconSize: [88, 28],
-                iconAnchor: [44, 14]
+                html: '<div class="gym-price-pill">🏋️ ' + shortName + '</div>',
+                iconSize: [110, 28],
+                iconAnchor: [55, 14]
               });
               const marker = L.marker([g.lat, g.lng], { icon: gymIcon }).addTo(map);
               marker.bindPopup(

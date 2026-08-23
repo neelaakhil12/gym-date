@@ -134,11 +134,12 @@ function MapContent() {
 
       filtered.forEach((g) => {
         const distKm = haversineKm(userLat, userLng, g.latitude, g.longitude).toFixed(1);
+        const shortName = (g.name || "Gym").length > 16 ? (g.name || "Gym").substring(0, 14) + ".." : (g.name || "Gym");
         const gymIcon = L.divIcon({
           className: "",
-          html: `<div style="background:#10B981;color:#fff;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:800;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.25);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px;">🏋️ ₹${g.pricePerDay}/d</div>`,
-          iconSize: [88, 28],
-          iconAnchor: [44, 14],
+          html: `<div style="background:#10B981;color:#fff;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:800;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.25);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:4px;">🏋️ ${shortName}</div>`,
+          iconSize: [110, 28],
+          iconAnchor: [55, 14],
         });
 
         const marker = L.marker([g.latitude, g.longitude], { icon: gymIcon }).addTo(map);
