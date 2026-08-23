@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
+import crypto from "crypto";
 
 export const dynamic = 'force-dynamic';
 
@@ -291,12 +292,13 @@ export async function POST(req: NextRequest) {
     }
 
     const type = payout_type === 'revenue' ? 'revenue' : 'referral';
+    const id = crypto.randomUUID ? crypto.randomUUID() : (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
 
     const insRes = await query(
       `INSERT INTO payout_requests (
-        gym_id, amount, payout_method, status, payout_type, bank_name, account_holder, account_number, ifsc_code, upi_id, mobile_number, qr_code_url, created_at
-      ) VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP) RETURNING *`,
-      [gymId, amountNum, payout_method || 'upi', type, bank_name || null, account_holder || null, account_number || null, ifsc_code || null, upi_id || null, mobile_number || null, qr_code_url || null]
+        id, gym_id, amount, payout_method, status, payout_type, bank_name, account_holder, account_number, ifsc_code, upi_id, mobile_number, qr_code_url, created_at
+      ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP) RETURNING *`,
+      [id, gymId, amountNum, payout_method || 'upi', type, bank_name || null, account_holder || null, account_number || null, ifsc_code || null, upi_id || null, mobile_number || null, qr_code_url || null]
     );
 
     return NextResponse.json({
