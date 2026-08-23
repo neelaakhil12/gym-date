@@ -9,7 +9,8 @@ import {
   Alert, 
   ActivityIndicator,
   Linking,
-  Platform
+  Platform,
+  KeyboardAvoidingView
 } from 'react-native';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
@@ -151,16 +152,22 @@ export const PartnerForm: React.FC = () => {
   };
 
   return (
-    <ScrollView 
-      style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} 
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView 
+      style={{ flex: 1, backgroundColor: isLight ? '#ffffff' : '#060608' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
     >
-      {/* Header section */}
-      <View style={styles.headerBlock}>
-        <View style={styles.headerIconContainer}>
-          <Handshake size={32} color={THEME.COLORS.primary} />
-        </View>
+      <ScrollView 
+        style={[styles.container, isLight && { backgroundColor: '#ffffff' }]} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 280, flexGrow: 1 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header section */}
+        <View style={styles.headerBlock}>
+          <View style={styles.headerIconContainer}>
+            <Handshake size={32} color={THEME.COLORS.primary} />
+          </View>
         <Text style={[styles.titleText, isLight && { color: '#111827' }]}>
           Partner With <Text style={{ color: THEME.COLORS.primary }}>GymDate</Text>
         </Text>
@@ -345,7 +352,8 @@ export const PartnerForm: React.FC = () => {
           )}
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
