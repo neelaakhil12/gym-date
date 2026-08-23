@@ -23,7 +23,7 @@ import {
   Home, 
   Search, 
   Handshake, 
-  MapPin 
+  Ticket 
 } from 'lucide-react-native';
 
 const AppContent: React.FC = () => {
@@ -144,15 +144,15 @@ const AppContent: React.FC = () => {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              onPress={() => setActiveScreen('nearby')}
+              onPress={() => setActiveScreen('bookings')}
               style={styles.navItem}
             >
-              <MapPin size={18} color={activeScreen === 'nearby' ? THEME.COLORS.primary : inactiveIconColor} />
+              <Ticket size={18} color={activeScreen === 'bookings' ? THEME.COLORS.primary : inactiveIconColor} />
               <Text style={[
                 styles.navText, 
                 isLight && { color: '#6B7280' },
-                activeScreen === 'nearby' && styles.navTextActive
-              ]}>Nearby</Text>
+                activeScreen === 'bookings' && styles.navTextActive
+              ]}>Bookings</Text>
             </TouchableOpacity>
           </View>
         )}

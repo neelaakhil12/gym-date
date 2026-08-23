@@ -70,19 +70,6 @@ function MapContent() {
   useEffect(() => {
     if (loading || typeof window === "undefined") return;
 
-    // Load Leaflet CSS & JS dynamically
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(link);
-
-    const script = document.createElement("script");
-    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = () => {
-      initMap();
-    };
-    document.head.appendChild(script);
-
     function initMap() {
       const L = (window as any).L;
       if (!L) return;
@@ -108,6 +95,18 @@ function MapContent() {
         maxZoom: 19,
       }).addTo(map);
 
+      // Radius circle boundary if radius is set
+      if (radius < 99999) {
+        L.circle([userLat, userLng], {
+          color: '#FF0000',
+          fillColor: '#FF0000',
+          fillOpacity: 0.05,
+          weight: 2,
+          dashArray: '6, 6',
+          radius: radius * 1000,
+        }).addTo(map);
+      }
+
       // User location marker
       const userIcon = L.divIcon({
         className: "",
@@ -115,16 +114,23 @@ function MapContent() {
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
-      const userMarker = L.marker([userLat, userLng], { icon: userIcon }).addTo(map)
-        .bindPopup('<div style="font-family:sans-serif;font-size:12px;font-weight:700;color:#0F172A;text-align:center;">📍 Your Pinned Location</div>');
-
-      const allMarkers = [userMarker];
+      const userMarker = L.marker([userLat, userLng], { icon: userIcon }).addTo(map);
 
       // Filter gyms by radius
       const filtered = gyms.filter((g) => {
         const d = haversineKm(userLat, userLng, g.latitude, g.longitude);
         return d <= radius;
       });
+
+      if (filtered.length === 0 && radius < 99999) {
+        userMarker.bindPopup(
+          `<div style="font-family:sans-serif;font-size:12px;text-align:center;padding:4px;"><b style="color:#0F172A;">📍 You are here</b><div style="color:#EF4444;font-size:11px;font-weight:700;margin-top:4px;">No gyms within ${radius} km.<br>Switch to 5km, 10km, or All!</div></div>`
+        ).openPopup();
+      } else {
+        userMarker.bindPopup('<div style="font-family:sans-serif;font-size:12px;font-weight:700;color:#0F172A;text-align:center;">📍 Your Pinned Location</div>');
+      }
+
+      const allMarkers = [userMarker];
 
       filtered.forEach((g) => {
         const distKm = haversineKm(userLat, userLng, g.latitude, g.longitude).toFixed(1);
@@ -177,6 +183,31 @@ function MapContent() {
         map.fitBounds(group.getBounds().pad(0.2));
       } else {
         map.setView([userLat, userLng], 14);
+      }
+    }
+
+    // Ensure Leaflet CSS
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    // Ensure Leaflet JS
+    if ((window as any).L) {
+      initMap();
+    } else {
+      let script = document.getElementById("leaflet-js") as HTMLScriptElement;
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "leaflet-js";
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        script.onload = () => initMap();
+        document.head.appendChild(script);
+      } else {
+        script.addEventListener("load", initMap);
       }
     }
 

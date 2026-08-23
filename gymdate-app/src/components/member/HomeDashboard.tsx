@@ -461,21 +461,8 @@ export const HomeDashboard: React.FC = () => {
         })}
       </ScrollView>
 
-      {/* 5. Demand Heat Map Banner & View Switcher (Live Map View vs List View) */}
+      {/* 5. View Switcher (Live Map View vs List View) */}
       <View style={styles.mapControlHeader}>
-        {/* Heat Map Legend Banner */}
-        <View style={[styles.heatMapBanner, isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-            <Text style={[styles.heatMapTitle, isLight && { color: '#0F172A' }]}>🔥 Gym Demand Heat Map</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.heatMapStatus}><Text style={{ color: '#10B981', fontSize: 13 }}>●</Text> Easy</Text>
-              <Text style={styles.heatMapStatus}><Text style={{ color: '#F59E0B', fontSize: 13 }}>●</Text> Moderate</Text>
-              <Text style={styles.heatMapStatus}><Text style={{ color: '#EF4444', fontSize: 13 }}>●</Text> Full</Text>
-            </View>
-          </View>
-          <Text style={[styles.heatMapSubtitle, isLight && { color: '#64748B' }]}>Helps users decide workout rush & pass booking before traveling.</Text>
-        </View>
-
         {/* View Switcher Toggle */}
         <View style={styles.viewSwitcherRow}>
           <TouchableOpacity
@@ -522,7 +509,7 @@ export const HomeDashboard: React.FC = () => {
           {Platform.OS === 'web' ? (
             <iframe
               id="gymdate-leaflet-map"
-              srcDoc={generateMapHtml()}
+              src={mapUri}
               style={{
                 width: '100%',
                 height: 380,
@@ -534,9 +521,9 @@ export const HomeDashboard: React.FC = () => {
           ) : (
             <View style={{ height: 380, width: '100%', borderRadius: 20, overflow: 'hidden', backgroundColor: isLight ? '#F1F5F9' : '#0F172A' }}>
               <WebView
-                key={`${selectedRadius}-${effectiveUserCoords.lat}-${effectiveUserCoords.lng}-${filteredGyms.length}`}
+                key={`${selectedRadius}-${effectiveUserCoords.lat}-${effectiveUserCoords.lng}`}
                 originWhitelist={['*']}
-                source={{ html: generateMapHtml(), baseUrl: 'https://gymdate.in' }}
+                source={{ uri: mapUri }}
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
@@ -552,6 +539,12 @@ export const HomeDashboard: React.FC = () => {
                 mixedContentMode="always"
                 allowFileAccess={true}
                 geolocationEnabled={true}
+                startInLoadingState={true}
+                renderLoading={() => (
+                  <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: isLight ? '#F1F5F9' : '#0F172A' }}>
+                    <ActivityIndicator size="small" color={THEME.COLORS.primary} />
+                  </View>
+                )}
               />
             </View>
           )}
@@ -599,7 +592,6 @@ export const HomeDashboard: React.FC = () => {
                     <Text style={[styles.listCardTitle, isLight && { color: '#0F172A' }]} numberOfLines={1}>
                       {gym.name}
                     </Text>
-                    <Text style={styles.listCardPrice}>₹{gym.pricePerDay}/d</Text>
                   </View>
                   <Text style={[styles.listCardLoc, isLight && { color: '#64748B' }]} numberOfLines={1}>
                     {gym.location}
@@ -617,23 +609,7 @@ export const HomeDashboard: React.FC = () => {
         </View>
       )}
 
-      {/* 7. Horizontal Categories Row */}
-      <View style={styles.categoriesSection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {categories.map((cat, i) => (
-            <TouchableOpacity 
-              key={i} 
-              onPress={() => setActiveScreen('discovery')}
-              style={[styles.categoryChip, isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.categoryChipText, isLight && { color: '#334155' }]}>{cat.icon} {cat.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* 8. Horizontal Nearby Premium Gyms Carousel */}
+      {/* 7. Horizontal Nearby Premium Gyms Carousel */}
       <View style={styles.sectionHeaderRow}>
         <Text style={[styles.sectionTitle, isLight && { color: '#0F172A' }]}>Nearby Premium Gyms</Text>
         <TouchableOpacity onPress={() => setActiveScreen('discovery')} style={styles.seeAllBtn}>
@@ -655,9 +631,6 @@ export const HomeDashboard: React.FC = () => {
               <MapPin size={8} color={THEME.COLORS.primary} style={{ marginRight: 2 }} />
               <Text style={styles.gymDistanceText}>{getGymDistance(gym)}</Text>
             </View>
-            <View style={styles.gymPriceBadge}>
-              <Text style={styles.gymPriceText}>₹{gym.pricePerDay}/d</Text>
-            </View>
 
             <View style={styles.gymInfo}>
               <Text style={[styles.gymName, isLight && { color: '#0F172A' }]} numberOfLines={1}>{gym.name}</Text>
@@ -666,7 +639,6 @@ export const HomeDashboard: React.FC = () => {
               <View style={styles.ratingRow}>
                 <Star size={10} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginRight: 2 }} />
                 <Text style={styles.ratingText}>{gym.rating}</Text>
-                <Text style={styles.ratingCount}>({gym.reviewsCount})</Text>
               </View>
             </View>
           </TouchableOpacity>

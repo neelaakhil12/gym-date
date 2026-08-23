@@ -92,15 +92,10 @@ export const GymDiscovery: React.FC = () => {
 
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFacility, setActiveFacility] = useState<string | null>(null);
-  const [maxPrice, setMaxPrice] = useState<number>(500);
-  const [showFilters, setShowFilters] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: number; duration: string } | null>(null);
   // Real Razorpay payment options state — null = closed
   const [paymentOptions, setPaymentOptions] = useState<RazorpayPaymentOptions | null>(null);
-
-  const facilitiesList = ['Locker Room', 'Steam Room', 'Air Conditioned', 'MMA Cage', 'Group Workouts'];
 
   const handleGymClick = (id: string) => {
     setSelectedGymId(id);
@@ -113,11 +108,10 @@ export const GymDiscovery: React.FC = () => {
   };
 
   const filteredGyms = gyms.filter(gym => {
-    const matchesSearch = gym.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          gym.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFacility = activeFacility ? gym.facilities.includes(activeFacility) : true;
-    const matchesPrice = gym.pricePerDay <= maxPrice;
-    return matchesSearch && matchesFacility && matchesPrice;
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return gym.name.toLowerCase().includes(q) || 
+           gym.location.toLowerCase().includes(q);
   });
 
   const activeGym = gyms.find(g => g.id === selectedGymId);
@@ -204,60 +198,18 @@ export const GymDiscovery: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Search Input bar */}
             <View style={styles.searchRow}>
-              <View style={[styles.searchBar, { backgroundColor: inputBg, borderColor: inputBorder }]}>
+              <View style={[styles.searchBar, { backgroundColor: inputBg, borderColor: inputBorder, flex: 1 }]}>
                 <Search size={14} color={textMuted} style={{ marginRight: 8 }} />
                 <TextInput
-                  placeholder="Search Bandra, Indiranagar..."
+                  placeholder="Search gym name, area, or location..."
                   placeholderTextColor={textMuted}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   style={[styles.textInput, { color: textPrimary }]}
                 />
               </View>
-              <TouchableOpacity 
-                onPress={() => setShowFilters(!showFilters)} 
-                style={[styles.filterBtn, { backgroundColor: inputBg, borderColor: inputBorder }, showFilters && styles.filterBtnActive]}
-              >
-                <SlidersHorizontal size={14} color={showFilters ? '#ffffff' : textSecondary} />
-              </TouchableOpacity>
             </View>
-
-            {/* Filter Overlay panel */}
-            {showFilters && (
-              <View style={[styles.filtersCard, { backgroundColor: filterCardBg, borderColor: isDark ? THEME.COLORS.borderColor : 'rgba(0,0,0,0.08)' }]}>
-                <View style={styles.filterGroup}>
-                  <Text style={[styles.filterGroupLabel, { color: textSecondary }]}>Max Budget/Day: ₹{maxPrice}</Text>
-                  <View style={styles.priceGrid}>
-                    {[200, 300, 400, 500].map(pr => (
-                      <TouchableOpacity
-                        key={pr}
-                        onPress={() => setMaxPrice(pr)}
-                        style={[styles.priceChip, { borderColor: inputBorder, backgroundColor: inputBg }, maxPrice === pr && styles.priceChipActive]}
-                      >
-                        <Text style={[styles.priceChipText, { color: textSecondary }, maxPrice === pr && styles.priceChipTextActive]}>₹{pr}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.filterGroup}>
-                  <Text style={[styles.filterGroupLabel, { color: textSecondary }]}>Gym Amenity</Text>
-                  <View style={styles.facilityGrid}>
-                    {facilitiesList.map(fac => (
-                      <TouchableOpacity
-                        key={fac}
-                        onPress={() => setActiveFacility(activeFacility === fac ? null : fac)}
-                        style={[styles.facChip, { borderColor: inputBorder, backgroundColor: inputBg }, activeFacility === fac && styles.facChipActive]}
-                      >
-                        <Text style={[styles.facChipText, { color: textSecondary }, activeFacility === fac && styles.facChipTextActive]}>{fac}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            )}
 
             {/* Gyms cards render feed */}
             <View style={styles.gymGrid}>

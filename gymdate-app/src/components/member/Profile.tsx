@@ -83,6 +83,12 @@ export const Profile: React.FC = () => {
     setPhoneVal(userProfile.phone);
   }, [userProfile.name, userProfile.phone]);
 
+  useEffect(() => {
+    if (activeScreen === 'bookings') {
+      setActiveTab('subscriptions');
+    }
+  }, [activeScreen]);
+
   // Fetch real wallet data and full API bookings on mount
   useEffect(() => {
     const loadAccountData = async () => {
