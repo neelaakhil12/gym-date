@@ -5,6 +5,8 @@
  */
 import { Platform } from 'react-native';
 
+import * as Location from 'expo-location';
+
 export interface Coords {
   latitude: number;
   longitude: number;
@@ -29,19 +31,33 @@ export async function getCurrentLocation(): Promise<Coords> {
       );
     });
   } else {
-    // Native Android / iOS — use expo-location
-    const Location = require('expo-location');
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Location permission denied. Please allow access in your device settings.');
+    // Native Android / iOS — use expo-location with permissions and fallback
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        throw new Error('Location permission denied. Please allow location access in your device settings.');
+      }
+      
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      return {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      };
+    } catch (err: any) {
+      // Fallback: try last known position if fresh fix fails
+      try {
+        const lastKnown = await Location.getLastKnownPositionAsync({});
+        if (lastKnown) {
+          return {
+            latitude: lastKnown.coords.latitude,
+            longitude: lastKnown.coords.longitude,
+          };
+        }
+      } catch (_) {}
+      throw err;
     }
-    const pos = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-    return {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-    };
   }
 }
 

@@ -57,7 +57,8 @@ export const Profile: React.FC = () => {
     setActiveScreen, 
     themeMode, 
     setThemeMode, 
-    setLoginInput 
+    setLoginInput,
+    setUserCoords
   } = useGymDate();
 
   const { isDark, bg } = useTheme();
@@ -335,8 +336,14 @@ export const Profile: React.FC = () => {
         }),
       });
 
-      // Update local profile state
-      setUserProfile(prev => ({ ...prev, address: fullAddress }));
+      // Update local profile state and global coordinates
+      setUserCoords({ lat: latitude, lng: longitude });
+      setUserProfile(prev => ({ 
+        ...prev, 
+        latitude, 
+        longitude, 
+        address: fullAddress 
+      }));
       showAlertSafe('✅ Location Updated', `Address set to:\n${fullAddress}`);
     } catch (err: any) {
       showAlertSafe('Location Error', err.message || 'Could not get your GPS location. Please ensure location permissions are enabled.');

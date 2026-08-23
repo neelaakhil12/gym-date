@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, ApiGym, ApiPlan, ApiBooking } from '../services/apiService';
+import { getCurrentLocation } from '../utils/location';
 
 // Types Definitions
 export type UserRole = 'member' | 'owner' | 'admin';
@@ -304,28 +305,30 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // User's real GPS coordinates — stored globally so all screens share them
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Fetch user's saved lat/lng from backend once after login
-  const resolveUserCoords = React.useCallback(async (email: string) => {
+  // Fetch user's saved lat/lng from backend once after login or resolve device GPS
+  const resolveUserCoords = React.useCallback(async (email?: string) => {
     try {
-      const res = await fetch(`https://gymdate.in/api/user/get-profile?email=${encodeURIComponent(email)}`);
-      const data = await res.json();
-      if (data.success && data.profile?.latitude) {
-        const lat = parseFloat(data.profile.latitude);
-        const lng = parseFloat(data.profile.longitude);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          setUserCoords({ lat, lng });
-          return;
+      if (email) {
+        const res = await fetch(`https://gymdate.in/api/user/get-profile?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data.success && data.profile?.latitude) {
+          const lat = parseFloat(data.profile.latitude);
+          const lng = parseFloat(data.profile.longitude);
+          if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
+            setUserCoords({ lat, lng });
+            return;
+          }
         }
       }
     } catch (_) {}
-    // Fallback: browser geolocation
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
+
+    // Fallback: cross-platform GPS (Expo Location on Native APK / Geolocation on Web)
+    try {
+      const coords = await getCurrentLocation();
+      if (coords?.latitude && coords?.longitude) {
+        setUserCoords({ lat: coords.latitude, lng: coords.longitude });
+      }
+    } catch (_) {}
   }, []);
 
   // Gyms Database

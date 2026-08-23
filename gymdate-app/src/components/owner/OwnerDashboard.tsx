@@ -18,6 +18,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
+import { getCurrentLocation } from '../../utils/location';
 import { 
   QrCode, 
   DollarSign, 
@@ -394,22 +395,18 @@ export const OwnerDashboard: React.FC = () => {
     setActiveTab('edit_gym');
   };
 
-  const handleLocateMe = () => {
+  const handleLocateMe = async () => {
     setIsLocatingMe(true);
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setEditLat(latitude.toString());
-          setEditLng(longitude.toString());
-          setEditGymLocation(`https://www.google.com/maps?q=${latitude},${longitude}`);
-          setIsLocatingMe(false);
-        },
-        () => {
-          setIsLocatingMe(false);
-        }
-      );
-    } else {
+    try {
+      const coords = await getCurrentLocation();
+      if (coords?.latitude && coords?.longitude) {
+        setEditLat(coords.latitude.toString());
+        setEditLng(coords.longitude.toString());
+        setEditGymLocation(`https://www.google.com/maps?q=${coords.latitude},${coords.longitude}`);
+      }
+    } catch (err: any) {
+      Alert.alert('Location Error', err.message || 'Could not fetch current GPS location.');
+    } finally {
       setIsLocatingMe(false);
     }
   };

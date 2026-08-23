@@ -13,6 +13,7 @@ import { getApiUrl } from '../../config';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
 import { MapPin, Star, Clock, SlidersHorizontal, Navigation } from 'lucide-react-native';
+import { getCurrentLocation } from '../../utils/location';
 
 // ─── Haversine Distance (same formula as website) ────────────────────────────
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -79,7 +80,7 @@ export const NearbyGyms: React.FC = () => {
         if (data.success && data.profile?.latitude) {
           const lat = parseFloat(data.profile.latitude);
           const lng = parseFloat(data.profile.longitude);
-          if (!isNaN(lat) && !isNaN(lng)) {
+          if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
             setUserCoords({ lat, lng });
             setLocationSource('Saved profile');
             setLocationStatus('found');
@@ -88,17 +89,17 @@ export const NearbyGyms: React.FC = () => {
         }
       }
     } catch (_) {}
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          setLocationSource('GPS');
-          setLocationStatus('found');
-        },
-        () => setLocationStatus('failed'),
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } else {
+
+    try {
+      const coords = await getCurrentLocation();
+      if (coords?.latitude && coords?.longitude) {
+        setUserCoords({ lat: coords.latitude, lng: coords.longitude });
+        setLocationSource('GPS');
+        setLocationStatus('found');
+      } else {
+        setLocationStatus('failed');
+      }
+    } catch (e) {
       setLocationStatus('failed');
     }
   }, [userProfile?.email]);

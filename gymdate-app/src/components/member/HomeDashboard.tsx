@@ -99,23 +99,52 @@ export const HomeDashboard: React.FC = () => {
     return dist <= selectedRadius;
   });
 
-  const handleLocateUser = async () => {
+  // Auto locate user on mount if coordinates not yet available
+  useEffect(() => {
+    if (!userCoords) {
+      handleLocateUser(true);
+    }
+  }, [userCoords]);
+
+  const handleLocateUser = async (silent: boolean = false) => {
     setIsLocating(true);
     try {
       const coords = await getCurrentLocation();
-      setUserCoords({ lat: coords.latitude, lng: coords.longitude });
-      const geo = await reverseGeocode(coords.latitude, coords.longitude);
-      setUserProfile(prev => ({
-        ...prev,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        address: geo.address || geo.city || prev.address
-      }));
+      if (coords?.latitude && coords?.longitude) {
+        setUserCoords({ lat: coords.latitude, lng: coords.longitude });
+        const geo = await reverseGeocode(coords.latitude, coords.longitude);
+        const resolvedAddress = geo.address || geo.city || userProfile.address || 'Current Location';
+        
+        setUserProfile(prev => ({
+          ...prev,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          address: resolvedAddress
+        }));
+
+        // Persist to backend profile if email is present
+        if (userProfile.email) {
+          fetch('https://gymdate.in/api/user/sync-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: userProfile.email,
+              name: userProfile.name,
+              phone: userProfile.phone,
+              lat: coords.latitude,
+              lng: coords.longitude,
+              address: resolvedAddress,
+            }),
+          }).catch(() => {});
+        }
+      }
     } catch (err: any) {
-      if (Platform.OS === 'web') {
-        window.alert(err.message || 'Could not fetch current GPS location.');
-      } else {
-        Alert.alert('Location Error', err.message || 'Could not fetch current GPS location.');
+      if (!silent) {
+        if (Platform.OS === 'web') {
+          window.alert(err.message || 'Could not fetch current GPS location.');
+        } else {
+          Alert.alert('Location Error', err.message || 'Could not fetch current GPS location.');
+        }
       }
     } finally {
       setIsLocating(false);
@@ -373,7 +402,7 @@ export const HomeDashboard: React.FC = () => {
 
             <TouchableOpacity 
               style={[styles.changePinBtn, { backgroundColor: THEME.COLORS.primary }]} 
-              onPress={handleLocateUser}
+              onPress={() => handleLocateUser(false)}
               disabled={isLocating}
               activeOpacity={0.8}
             >
@@ -507,7 +536,7 @@ export const HomeDashboard: React.FC = () => {
               <WebView
                 key={`${selectedRadius}-${effectiveUserCoords.lat}-${effectiveUserCoords.lng}-${filteredGyms.length}`}
                 originWhitelist={['*']}
-                source={{ html: generateMapHtml() }}
+                source={{ html: generateMapHtml(), baseUrl: 'https://gymdate.in' }}
                 onMessage={(event) => {
                   try {
                     const data = JSON.parse(event.nativeEvent.data);
@@ -520,6 +549,9 @@ export const HomeDashboard: React.FC = () => {
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 nestedScrollEnabled={true}
+                mixedContentMode="always"
+                allowFileAccess={true}
+                geolocationEnabled={true}
               />
             </View>
           )}
