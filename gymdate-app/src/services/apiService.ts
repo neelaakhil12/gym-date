@@ -10,6 +10,8 @@ export interface ApiProfile {
   lng?: number;
   role_id?: string;
   created_at?: string;
+  image?: string;
+  avatar?: string;
 }
 
 export interface ApiGym {
@@ -64,7 +66,7 @@ export interface ApiWalletData {
   maxWalletPerTxn: number;
   referralLink: string;
   referralCode: string;
-  history: { amount: number; created_at: string; detail: string; type: string }[];
+  history: { amount: number; created_at: string; detail: string; type: string; status?: string }[];
 }
 
 export const apiService = {
@@ -175,6 +177,8 @@ export const apiService = {
     lat?: number;
     lng?: number;
     address?: string;
+    image?: string;
+    avatar?: string;
   }): Promise<ApiProfile> {
     const url = `${getApiUrl()}/api/user/sync-profile`;
     console.log(`[API] Syncing profile with backend: ${url}`);

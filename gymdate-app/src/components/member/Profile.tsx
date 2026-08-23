@@ -183,6 +183,15 @@ export const Profile: React.FC = () => {
     const performLogout = () => {
       setIsLoggedIn(false);
       setLoginInput('');
+      setUserProfile(prev => ({
+        ...prev,
+        name: 'Gym Member',
+        email: '',
+        phone: '',
+        membershipType: 'none',
+        avatar: '',
+        address: ''
+      }));
       setActiveScreen('onboarding');
     };
 
@@ -201,6 +210,17 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const saveAvatar = async (uri: string) => {
+    setUserProfile(prev => ({ ...prev, avatar: uri }));
+    if (userProfile.email) {
+      try {
+        await apiService.syncProfile({ email: userProfile.email, image: uri, avatar: uri });
+      } catch (e) {
+        console.warn('Could not sync avatar to backend:', e);
+      }
+    }
+  };
+
   const handleUploadPhoto = () => {
     if (Platform.OS === 'web') {
       // Web: use file input
@@ -213,7 +233,7 @@ export const Profile: React.FC = () => {
           const reader = new FileReader();
           reader.onload = () => {
             if (reader.result) {
-              setUserProfile(prev => ({ ...prev, avatar: reader.result as string }));
+              saveAvatar(reader.result as string);
               Alert.alert('Success', 'Profile photo updated successfully!');
             }
           };
@@ -263,7 +283,7 @@ export const Profile: React.FC = () => {
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const uri = result.assets[0].uri;
-        setUserProfile(prev => ({ ...prev, avatar: uri }));
+        saveAvatar(uri);
         Alert.alert('✅ Photo Updated', 'Your profile photo has been updated!');
       }
     } catch (err: any) {
@@ -292,7 +312,7 @@ export const Profile: React.FC = () => {
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const uri = result.assets[0].uri;
-        setUserProfile(prev => ({ ...prev, avatar: uri }));
+        saveAvatar(uri);
         Alert.alert('✅ Photo Updated', 'Your profile photo has been updated!');
       }
     } catch (err: any) {
@@ -301,7 +321,7 @@ export const Profile: React.FC = () => {
   };
 
   const updateAvatar = (url: string) => {
-    setUserProfile(prev => ({ ...prev, avatar: url }));
+    saveAvatar(url);
     Alert.alert('Success', 'Profile photo updated successfully!');
   };
 
@@ -639,6 +659,141 @@ export const Profile: React.FC = () => {
                   </View>
                 ))}
               </View>
+            </View>
+
+            {/* Referral & Wallet Transactions History */}
+            <View style={[styles.infoBlock, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }, { marginTop: 14 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <History size={16} color={THEME.COLORS.primary} />
+                  <Text style={[styles.blockTitleText, isLight && { color: '#111827' }, { marginBottom: 0 }]}>
+                    Referral & Wallet History
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: 'rgba(229, 9, 20, 0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                  <Text style={{ color: THEME.COLORS.primary, fontSize: 10, fontWeight: '800' }}>
+                    {walletData?.history?.length || 0} Transactions
+                  </Text>
+                </View>
+              </View>
+
+              {walletData?.history && walletData.history.length > 0 ? (
+                <View style={{ gap: 10 }}>
+                  {walletData.history.map((item, idx) => {
+                    const isCredit = item.type === 'credit';
+                    return (
+                      <View
+                        key={idx}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingVertical: 12,
+                          paddingHorizontal: 14,
+                          borderRadius: 14,
+                          backgroundColor: isLight ? '#F9FAFB' : 'rgba(255,255,255,0.03)',
+                          borderWidth: 1,
+                          borderColor: isLight ? '#E5E7EB' : 'rgba(255,255,255,0.06)'
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 8 }}>
+                          <View
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 10,
+                              backgroundColor: isCredit ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <TrendingUp
+                              size={15}
+                              color={isCredit ? '#10B981' : '#EF4444'}
+                              style={{ transform: [{ rotate: isCredit ? '0deg' : '180deg' }] }}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={{
+                                color: isLight ? '#111827' : '#FFFFFF',
+                                fontSize: 12,
+                                fontWeight: '700',
+                              }}
+                              numberOfLines={1}
+                            >
+                              {item.detail || (isCredit ? 'Referral Reward' : 'Wallet Debit')}
+                            </Text>
+                            <Text
+                              style={{
+                                color: isLight ? '#6B7280' : '#94A3B8',
+                                fontSize: 10,
+                                marginTop: 2,
+                              }}
+                            >
+                              {item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text
+                            style={{
+                              color: isCredit ? '#10B981' : '#EF4444',
+                              fontSize: 13,
+                              fontWeight: '900',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            {isCredit ? '+' : '-'}₹{Number(item.amount || 0).toFixed(2)}
+                          </Text>
+                          <View
+                            style={{
+                              backgroundColor: isCredit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              paddingHorizontal: 6,
+                              paddingVertical: 2,
+                              borderRadius: 6,
+                              marginTop: 2,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: isCredit ? '#10B981' : '#EF4444',
+                                fontSize: 9,
+                                fontWeight: '800',
+                                textTransform: 'capitalize',
+                              }}
+                            >
+                              {item.status || (isCredit ? 'Credited' : 'Debited')}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View
+                  style={{
+                    padding: 24,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isLight ? '#F9FAFB' : 'rgba(255,255,255,0.02)',
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: isLight ? '#E5E7EB' : 'rgba(255,255,255,0.04)',
+                    gap: 6,
+                  }}
+                >
+                  <Gift size={24} color={isLight ? '#9CA3AF' : '#64748B'} />
+                  <Text style={{ color: isLight ? '#374151' : '#E2E8F0', fontSize: 12, fontWeight: '700' }}>
+                    No Referral Transactions Yet
+                  </Text>
+                  <Text style={{ color: isLight ? '#6B7280' : '#94A3B8', fontSize: 10, textAlign: 'center' }}>
+                    Share your referral code with friends. When they join & purchase a pass, rewards will appear here!
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         )}

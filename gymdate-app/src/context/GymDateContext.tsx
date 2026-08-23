@@ -444,8 +444,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
           name: profile.full_name || prev.name,
           phone: profile.phone || prev.phone,
           email: profile.email || prev.email,
-          avatar: (profile as any).image || prev.avatar,
-          address: (profile as any).address || prev.address
+          avatar: (profile as any).image || (profile as any).avatar || '',
+          address: (profile as any).address || (profile as any).location || ''
         }));
       }
 

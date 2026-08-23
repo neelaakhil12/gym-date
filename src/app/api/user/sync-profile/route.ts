@@ -3,7 +3,8 @@ import { query } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
-    const { email, name, phone, lat, lng, address } = await req.json();
+    const { email, name, phone, lat, lng, address, image, avatar } = await req.json();
+    const profileImg = image || avatar || null;
 
     if (!email) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400 });
@@ -29,6 +30,11 @@ export async function POST(req: Request) {
       if (name) {
         updateVals.push(name);
         updateParts.push(`full_name = $${updateVals.length}`);
+      }
+      if (profileImg && (userCols.has("image") || userCols.has("avatar"))) {
+        updateVals.push(profileImg);
+        const col = userCols.has("image") ? "image" : "avatar";
+        updateParts.push(`${col} = $${updateVals.length}`);
       }
       if (formattedPhone && userCols.has("phone")) {
         updateVals.push(formattedPhone);

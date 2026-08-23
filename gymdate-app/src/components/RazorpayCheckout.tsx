@@ -15,6 +15,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { getApiUrl } from '../config';
 import { THEME } from '../theme';
@@ -263,9 +264,17 @@ export const RazorpayCheckout: React.FC<{
     );
   }
 
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={!!options} animationType="slide" onRequestClose={() => { options?.onDismiss?.(); onClose(); }}>
-      <View style={s.webviewContainer}>
+      <View style={[
+        s.webviewContainer,
+        {
+          paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 24 : 0),
+          paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 20 : 10)
+        }
+      ]}>
         <View style={s.webviewHeader}>
           <Text style={s.webviewTitle}>Secure Payment</Text>
           <TouchableOpacity onPress={() => { options?.onDismiss?.(); onClose(); }} style={s.closeBtn}>
@@ -329,7 +338,7 @@ const s = StyleSheet.create({
   loadCard: { backgroundColor: '#ffffff', borderRadius: 24, padding: 32, alignItems: 'center', gap: 16, minWidth: 200, borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, elevation: 4 },
   loadText: { color: '#0F172A', fontSize: 13, fontWeight: '700' },
   webviewContainer: { flex: 1, backgroundColor: '#ffffff' },
-  webviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
+  webviewHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   webviewTitle: { color: '#0F172A', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 },
   closeBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   centeredFill: { flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },

@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.neelaakhil12.gymdateapp",
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",

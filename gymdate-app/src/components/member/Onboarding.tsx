@@ -14,7 +14,8 @@ import {
   Animated,
   Easing,
   Linking,
-  Modal
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -540,6 +541,7 @@ export const Onboarding: React.FC = () => {
         name: finalName,
         email: emailTrimmed,
         phone: finalPhone,
+        avatar: existingProfile?.image || (existingProfile as any)?.avatar || '',
       }));
       setIsLoggedIn(true);
       setActiveScreen('home');
@@ -551,6 +553,7 @@ export const Onboarding: React.FC = () => {
           name: loginName || 'Gym Member',
           email: emailTrimmed,
           phone: loginPhone || '',
+          avatar: '',
         }));
         setIsLoggedIn(true);
         setActiveScreen('home');
@@ -592,6 +595,7 @@ export const Onboarding: React.FC = () => {
         name: profile.full_name || regName.trim(),
         email: profile.email || regEmail.trim(),
         phone: profile.phone || regPhone.trim(),
+        avatar: profile.image || (profile as any).avatar || '',
       }));
 
       setLoginInput(regEmail.trim());
@@ -642,11 +646,20 @@ export const Onboarding: React.FC = () => {
 
 
   return (
-    <ScrollView 
-      contentContainerStyle={[styles.container, isLight && styles.containerLight]} 
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView 
+      style={{ flex: 1, backgroundColor: isLight ? '#ffffff' : '#060608' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
     >
+      <ScrollView 
+        contentContainerStyle={[
+          styles.container, 
+          isLight && styles.containerLight,
+          { paddingBottom: step === 'intro' ? 36 : 140 }
+        ]} 
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       {/* STEP 1: SPLASH INTRO SCREEN - LOGO REVEAL THEN BUTTONS */}
       {step === 'intro' && (
         <View style={styles.cleanIntroWrapper}>
@@ -1443,7 +1456,8 @@ export const Onboarding: React.FC = () => {
         </View>
       </Modal>
     </ScrollView>
-  );
+  </KeyboardAvoidingView>
+);
 };
 
 const styles = StyleSheet.create({
