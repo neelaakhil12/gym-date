@@ -1419,16 +1419,27 @@ export const OwnerDashboard: React.FC = () => {
               <View style={{ alignItems: 'center', gap: 14, width: '100%' }}>
                 {Platform.OS !== 'web' ? (
                   !cameraPermission?.granted ? (
-                    <View style={{ width: '100%', maxWidth: 300, padding: 24, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: '100%', maxWidth: 300, padding: 24, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
                       <Camera size={36} color={THEME.COLORS.primary} />
                       <Text style={{ color: '#FFFFFF', textAlign: 'center', fontSize: 13, fontWeight: '700' }}>
                         Camera permission is required to scan member tickets.
                       </Text>
                       <TouchableOpacity
-                        onPress={requestCameraPermission}
+                        onPress={async () => {
+                          if (!cameraPermission?.canAskAgain) {
+                            Linking.openSettings();
+                          } else {
+                            const res = await requestCameraPermission();
+                            if (!res.granted && !res.canAskAgain) {
+                              Linking.openSettings();
+                            }
+                          }
+                        }}
                         style={{ backgroundColor: THEME.COLORS.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}
                       >
-                        <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>Enable Camera</Text>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>
+                          {!cameraPermission?.canAskAgain ? 'Open App Settings' : 'Allow Camera Permission'}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   ) : (
