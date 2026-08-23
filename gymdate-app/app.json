@@ -29,7 +29,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "neelasai12",
+    "owner": "aish07",
     "plugins": [
       "expo-status-bar",
       [
@@ -49,7 +49,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "e546c914-b238-451e-bb4a-3d03578750f7"
+        "projectId": "77aee143-89df-4d37-82f7-87a206974858"
       }
     }
   }

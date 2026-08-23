@@ -38,7 +38,8 @@ const AppContent: React.FC = () => {
   } = useGymDate();
 
   const insets = useSafeAreaInsets();
-  const safeBottom = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 8);
+  const safeTop = Math.max(insets.top, Platform.OS === 'android' ? 24 : 0);
+  const safeBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
   const dynamicNavHeight = 58 + safeBottom;
 
 
@@ -92,7 +93,14 @@ const AppContent: React.FC = () => {
 
   return (
     <DeviceShell>
-      <View style={[styles.appViewport, isLight && { backgroundColor: '#ffffff' }]}>
+      <View style={[
+        styles.appViewport, 
+        {
+          paddingTop: currentRole === 'owner' ? 0 : safeTop,
+          paddingBottom: showBottomNav ? 0 : safeBottom,
+        },
+        isLight && { backgroundColor: '#ffffff' }
+      ]}>
         <StatusBar style={isLight ? 'dark' : 'light'} />
         
         {/* Active Screen View */}

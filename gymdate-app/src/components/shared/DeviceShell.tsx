@@ -79,24 +79,16 @@ export const DeviceShell: React.FC<DeviceShellProps> = ({ children }) => {
   // Responsive Check: If the window is narrow (e.g. less than 500px, which matches DevTools mobile simulation or actual mobile screens),
   // render the pure clean fullscreen app directly without the custom outer frame border!
   if (Platform.OS !== 'web' || windowWidth < 500 || deviceFrame === 'fullscreen') {
-    // On Android, SafeAreaView does NOT pad for the status bar.
-    // We must manually add StatusBar.currentHeight as paddingTop.
-    const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
     const bgColor = isLight ? '#ffffff' : '#060608';
     return (
-      <SafeAreaView style={[styles.nativeWrapper, { backgroundColor: bgColor }]}>
+      <View style={{ flex: 1, backgroundColor: bgColor }}>
         <StatusBar 
           barStyle={isLight ? 'dark-content' : 'light-content'} 
           backgroundColor={bgColor}
           translucent={false}
         />
-        <View style={[
-          styles.nativeContainer,
-          { backgroundColor: bgColor, paddingTop: statusBarHeight }
-        ]}>
-          {children}
-        </View>
-      </SafeAreaView>
+        {children}
+      </View>
     );
   }
 

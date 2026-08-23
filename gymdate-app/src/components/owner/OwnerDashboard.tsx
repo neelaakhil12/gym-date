@@ -16,6 +16,8 @@ import {
   Alert
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGymDate } from '../../context/GymDateContext';
 import { THEME } from '../../theme';
 import { getCurrentLocation } from '../../utils/location';
@@ -76,6 +78,9 @@ export const OwnerDashboard: React.FC = () => {
     setIsLoggedIn,
     setActiveScreen
   } = useGymDate();
+
+  const insets = useSafeAreaInsets();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   // Navigation & Drawer State
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
@@ -708,7 +713,13 @@ export const OwnerDashboard: React.FC = () => {
             activeOpacity={1} 
             onPress={() => setIsSidebarOpen(false)} 
           />
-          <View style={styles.drawerContent}>
+          <View style={[
+            styles.drawerContent,
+            {
+              paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 32 : 24),
+              paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 32 : 24),
+            }
+          ]}>
             {/* Sidebar Brand Header */}
             <View style={styles.drawerHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -802,7 +813,13 @@ export const OwnerDashboard: React.FC = () => {
       )}
 
       {/* 🔝 TOP NAVIGATION BAR (CLEAN HEADER) */}
-      <View style={styles.topNavbar}>
+      <View style={[
+        styles.topNavbar,
+        {
+          paddingTop: Math.max(insets.top, Platform.OS === 'android' ? 12 : 8),
+          paddingBottom: 10,
+        }
+      ]}>
         <TouchableOpacity 
           style={styles.menuToggleBtn} 
           onPress={() => setIsSidebarOpen(true)}
@@ -1400,7 +1417,45 @@ export const OwnerDashboard: React.FC = () => {
             {/* STATE 2: ACTIVE CAMERA SCANNING */}
             {isLiveCameraScanning && !scanResult && (
               <View style={{ alignItems: 'center', gap: 14, width: '100%' }}>
-                {Platform.OS === 'web' && (
+                {Platform.OS !== 'web' ? (
+                  !cameraPermission?.granted ? (
+                    <View style={{ width: '100%', maxWidth: 300, padding: 24, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', gap: 12 }}>
+                      <Camera size={36} color={THEME.COLORS.primary} />
+                      <Text style={{ color: '#FFFFFF', textAlign: 'center', fontSize: 13, fontWeight: '700' }}>
+                        Camera permission is required to scan member tickets.
+                      </Text>
+                      <TouchableOpacity
+                        onPress={requestCameraPermission}
+                        style={{ backgroundColor: THEME.COLORS.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13 }}>Enable Camera</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={{ width: '100%', maxWidth: 300, height: 300, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000000', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }}>
+                      <CameraView
+                        style={StyleSheet.absoluteFill}
+                        facing="back"
+                        barcodeScannerSettings={{
+                          barcodeTypes: ['qr'],
+                        }}
+                        onBarcodeScanned={async (result) => {
+                          if (isScanningQR) return;
+                          setIsLiveCameraScanning(false);
+                          let bookingId = (result.data || '').trim();
+                          if (bookingId.includes('/verify/')) {
+                            bookingId = bookingId.split('/verify/')[1].split('?')[0];
+                          } else if (bookingId.includes('://')) {
+                            const urlParts = bookingId.split('/');
+                            bookingId = urlParts[urlParts.length - 1].split('?')[0];
+                          }
+                          setTerminalInput(bookingId);
+                          await handleTerminalScanWithCode(bookingId);
+                        }}
+                      />
+                    </View>
+                  )
+                ) : (
                   <>
                     <style>{`
                       #reader {
@@ -1457,6 +1512,24 @@ export const OwnerDashboard: React.FC = () => {
                     />
                   </>
                 )}
+
+                {/* Manual Ticket Code fallback */}
+                <View style={{ width: '100%', maxWidth: 300, flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                  <TextInput
+                    placeholder="Or enter Ticket Code manually..."
+                    placeholderTextColor="#64748B"
+                    value={terminalInput}
+                    onChangeText={setTerminalInput}
+                    style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 12, color: '#fff', fontSize: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', height: 42 }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => handleTerminalScanWithCode(terminalInput)}
+                    style={{ backgroundColor: THEME.COLORS.primary, paddingHorizontal: 14, borderRadius: 12, justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Verify</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity 
                   style={{ paddingHorizontal: 18, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}
                   onPress={() => setIsLiveCameraScanning(false)}
