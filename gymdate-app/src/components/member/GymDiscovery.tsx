@@ -10,6 +10,7 @@ import {
   Modal, 
   Linking,
   Alert,
+  Switch,
   useColorScheme
 } from 'react-native';
 import { useGymDate, Trainer, Gym } from '../../context/GymDateContext';
@@ -164,26 +165,33 @@ export const GymDiscovery: React.FC = () => {
     setUseWallet(false);
 
     // Fetch user wallet balance from backend
-    const targetEmail = userProfile.email || loginInput;
+    const targetEmail = (userProfile.email || loginInput || '').trim().toLowerCase();
     if (targetEmail) {
       try {
-        const profRes = await (window as any).apiService.getProfile(targetEmail);
+        const profRes = await apiService.getProfile(targetEmail);
         if (profRes) {
           const wb = (profRes as any).wallet_balance !== undefined ? parseFloat((profRes as any).wallet_balance) : 0;
           setWalletBalance(wb);
           if (profRes.full_name && !userProfile.name) setBuyerName(profRes.full_name);
           if (profRes.phone && !userProfile.phone) setBuyerPhone(profRes.phone.replace(/^\+91/, '').trim());
+          if ((profRes as any).id) {
+            try {
+              const wData = await apiService.getWalletData((profRes as any).id);
+              if (wData && wData.balance !== undefined) {
+                setWalletBalance(parseFloat(wData.balance) || wb);
+              }
+            } catch (e) {}
+          }
         }
 
         // Fetch max wallet per txn config
-        fetch('https://gymdate.in/api/admin/referral-config')
-          .then(r => r.json())
-          .then(d => {
-            if (d.success && d.config?.max_wallet_per_txn) {
-              setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 10);
-            }
-          })
-          .catch(() => {});
+        try {
+          const confRes = await fetch('https://gymdate.in/api/admin/referral-config');
+          const d = await confRes.json();
+          if (d.success && d.config?.max_wallet_per_txn) {
+            setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 50);
+          }
+        } catch (e) {}
       } catch (e) {
         console.warn('Wallet fetch error in checkout:', e);
       }
@@ -583,34 +591,50 @@ export const GymDiscovery: React.FC = () => {
 
               {/* Wallet / Referral Balance Discount Card */}
               {walletBalance > 0 && selectedPlan && (
-                <TouchableOpacity 
-                  activeOpacity={0.8}
-                  onPress={() => setUseWallet(!useWallet)}
-                  style={[
-                    styles.walletDiscountCard, 
-                    useWallet ? styles.walletDiscountCardActive : styles.walletDiscountCardInactive
-                  ]}
-                >
-                  <View style={styles.walletLeft}>
-                    <View style={[styles.walletIconBox, useWallet && { backgroundColor: '#10B981' }]}>
-                      <Gift size={16} color={useWallet ? '#ffffff' : '#10B981'} />
+                <View style={[
+                  styles.walletDiscountCard, 
+                  { 
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.12)' : '#F0FDF4', 
+                    borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : '#BBF7D0' 
+                  }
+                ]}>
+                  <View style={styles.walletDiscountRow}>
+                    <View style={styles.walletLeft}>
+                      <View style={[
+                        styles.walletIconBox, 
+                        useWallet 
+                          ? { backgroundColor: '#10B981' } 
+                          : { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }
+                      ]}>
+                        <Gift size={16} color={useWallet ? '#ffffff' : '#10B981'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.walletTitle, { color: isDark ? '#34D399' : '#065F46' }]}>
+                          WALLET DISCOUNT
+                        </Text>
+                        <Text style={[styles.walletSub, { color: isDark ? '#A7F3D0' : '#047857' }]}>
+                          Use ₹{Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)} from wallet (Balance: ₹{walletBalance.toFixed(2)})
+                        </Text>
+                      </View>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.walletTitle, { color: textPrimary }]}>
-                        Use Wallet & Referral Balance
-                      </Text>
-                      <Text style={styles.walletSub}>
-                        Available: ₹{walletBalance} (Max ₹{maxWalletPerTxn} off)
-                      </Text>
-                    </View>
+
+                    <Switch
+                      value={useWallet}
+                      onValueChange={setUseWallet}
+                      trackColor={{ false: '#D1D5DB', true: '#10B981' }}
+                      thumbColor="#FFFFFF"
+                    />
                   </View>
 
-                  <View style={[styles.walletToggleBtn, useWallet ? styles.walletToggleActive : styles.walletToggleInactive]}>
-                    <Text style={[styles.walletToggleText, useWallet && { color: '#ffffff' }]}>
-                      {useWallet ? `✓ -₹${Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)}` : 'Apply'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                  {useWallet && (
+                    <View style={[styles.walletAppliedRow, { borderTopColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
+                      <Text style={[styles.walletAppliedLabel, { color: isDark ? '#34D399' : '#047857' }]}>DISCOUNT APPLIED</Text>
+                      <Text style={[styles.walletAppliedVal, { color: isDark ? '#34D399' : '#047857' }]}>
+                        -₹{Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               )}
 
               {/* Total Payment Breakdown */}
@@ -774,16 +798,15 @@ const styles = StyleSheet.create({
   formTextInput: { flex: 1, fontSize: 10, fontWeight: '600', paddingVertical: 0 },
 
   // Wallet Discount Styles
-  walletDiscountCard: { borderWidth: 1, borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  walletDiscountCardActive: { borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,0.08)' },
-  walletDiscountCardInactive: { borderColor: 'rgba(16,185,129,0.25)', backgroundColor: 'rgba(16,185,129,0.03)' },
+  walletDiscountCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
+  walletDiscountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   walletLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  walletIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center' },
-  walletTitle: { fontSize: 10, fontWeight: '800' },
-  walletSub: { fontSize: 8, color: '#10B981', fontWeight: '700', marginTop: 1 },
-  walletToggleBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  walletToggleActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
-  walletToggleInactive: { backgroundColor: 'transparent', borderColor: '#10B981' },
+  walletIconBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  walletTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  walletSub: { fontSize: 9, fontWeight: '700', marginTop: 1 },
+  walletAppliedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, paddingTop: 6, marginTop: 2 },
+  walletAppliedLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  walletAppliedVal: { fontSize: 10, fontWeight: '900' },
   walletToggleText: { fontSize: 9, fontWeight: '800', color: '#10B981' },
 
   payCancelBtn: { height: 38, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', borderColor: 'rgba(150,150,150,0.25)' },
