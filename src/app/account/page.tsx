@@ -278,23 +278,6 @@ export default function AccountPage() {
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be under 5MB');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setProfilePhoto(base64);
-      const email = nextAuthSession?.user?.email;
-      if (email) localStorage.setItem(`gymdate_photo_${email}`, base64);
-    };
-    reader.readAsDataURL(file);
-  };
-
   // Search location effect
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
