@@ -43,9 +43,10 @@ export default function Home() {
             src="https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&q=80&w=2000"
             alt="Gym Background"
             fill
-            className="object-cover brightness-[0.4]"
+            className="object-cover"
             priority
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/50" />
         </div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center lg:text-left">

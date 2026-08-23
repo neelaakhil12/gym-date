@@ -7,7 +7,7 @@ import { reverseGeocode, searchLocation, LocationResult } from "@/lib/location";
 
 export default function LocationGate({ children }: { children: React.ReactNode }) {
   const { data: nextAuthSession, status: nextAuthStatus } = useSession();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
@@ -181,13 +181,6 @@ export default function LocationGate({ children }: { children: React.ReactNode }
       setLocating(false);
     }
   };
-
-  if (loading) return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center space-y-4">
-      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-xs font-black text-secondary tracking-widest uppercase animate-pulse">Initializing GymDate...</p>
-    </div>
-  );
 
   return (
     <>
