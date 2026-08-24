@@ -16,7 +16,8 @@ import {
   Alert,
   Modal,
   KeyboardAvoidingView,
-  Keyboard
+  Keyboard,
+  BackHandler
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -67,7 +68,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { apiService } from '../../services/apiService';
 
-type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet' | 'scan' | 'edit_gym';
+type DashboardTab = 'overview' | 'bookings' | 'virtual_wallet' | 'referral_wallet' | 'scan' | 'edit_gym' | 'withdraw';
 
 export const OwnerDashboard: React.FC = () => {
   const { 
@@ -260,6 +261,31 @@ export const OwnerDashboard: React.FC = () => {
       hideSub.remove();
     };
   }, []);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isSidebarOpen) {
+        setIsSidebarOpen(false);
+        return true;
+      }
+      if (activeTab === 'withdraw') {
+        setActiveTab(withdrawPayoutType === 'revenue' ? 'virtual_wallet' : 'referral_wallet');
+        return true;
+      }
+      if (activeTab === 'edit_gym') {
+        setActiveTab('overview');
+        return true;
+      }
+      if (activeTab !== 'overview') {
+        setActiveTab('overview');
+        return true;
+      }
+      return false;
+    };
+
+    const backSub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSub.remove();
+  }, [activeTab, isSidebarOpen, withdrawPayoutType]);
 
   useEffect(() => {
     fetchLiveDashboard();
@@ -658,7 +684,7 @@ export const OwnerDashboard: React.FC = () => {
     setWithdrawSuccessMsg('');
     setQrCodeFile(null);
     setQrCodePreview('');
-    setShowWithdrawModal(true);
+    setActiveTab('withdraw');
   };
 
   const handleWithdrawSubmit = async () => {
@@ -714,8 +740,8 @@ export const OwnerDashboard: React.FC = () => {
       };
       const res = await apiService.submitPartnerPayoutRequest(payload);
       if (res && res.success) {
+        setWithdrawSuccessMsg(res.message || 'Your withdrawal request has been submitted to Super Admin!');
         Alert.alert('✅ Request Submitted', res.message || 'Your withdrawal request has been submitted to Super Admin!');
-        setShowWithdrawModal(false);
         setQrCodeFile(null);
         setQrCodePreview('');
         fetchLiveDashboard();
@@ -852,13 +878,29 @@ export const OwnerDashboard: React.FC = () => {
           paddingBottom: 10,
         }
       ]}>
-        <TouchableOpacity 
-          style={styles.menuToggleBtn} 
-          onPress={() => setIsSidebarOpen(true)}
-          activeOpacity={0.8}
-        >
-          <Menu size={20} color="#1E293B" />
-        </TouchableOpacity>
+        {activeTab === 'withdraw' || activeTab === 'edit_gym' ? (
+          <TouchableOpacity 
+            style={styles.menuToggleBtn} 
+            onPress={() => {
+              if (activeTab === 'withdraw') {
+                setActiveTab(withdrawPayoutType === 'revenue' ? 'virtual_wallet' : 'referral_wallet');
+              } else {
+                setActiveTab('overview');
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <ArrowLeft size={20} color="#1E293B" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={styles.menuToggleBtn} 
+            onPress={() => setIsSidebarOpen(true)}
+            activeOpacity={0.8}
+          >
+            <Menu size={20} color="#1E293B" />
+          </TouchableOpacity>
+        )}
 
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 }}>
           <View>
@@ -866,7 +908,13 @@ export const OwnerDashboard: React.FC = () => {
               {activeGym?.name || 'Partner Admin'}
             </Text>
             <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748B' }}>
-              {activeTab === 'overview' ? 'Overview' : activeTab === 'bookings' ? 'Bookings & Revenue' : activeTab === 'virtual_wallet' ? 'Virtual Wallet' : activeTab === 'referral_wallet' ? 'Referral Rewards' : 'QR Scanner'}
+              {activeTab === 'overview' ? 'Overview' : 
+               activeTab === 'bookings' ? 'Bookings & Revenue' : 
+               activeTab === 'virtual_wallet' ? 'Virtual Wallet' : 
+               activeTab === 'referral_wallet' ? 'Referral Rewards' : 
+               activeTab === 'edit_gym' ? 'Edit Gym Details' : 
+               activeTab === 'withdraw' ? (withdrawPayoutType === 'revenue' ? 'Withdraw Revenue Payout' : 'Withdraw Referral Bonus') : 
+               'QR Scanner'}
             </Text>
           </View>
 
@@ -2053,199 +2101,164 @@ export const OwnerDashboard: React.FC = () => {
             </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
+        {/* ============================================================== */}
+        {/* TAB 7: WITHDRAW PAYOUT DEDICATED FULL PAGE                      */}
+        {/* ============================================================== */}
+        {activeTab === 'withdraw' && (
+          <View style={styles.tabContentWrapper}>
+            {/* Header Back Button Row */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <TouchableOpacity 
+                onPress={() => setActiveTab(withdrawPayoutType === 'revenue' ? 'virtual_wallet' : 'referral_wallet')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }}
+                activeOpacity={0.7}
+              >
+                <ArrowLeft size={16} color="#334155" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155' }}>
+                  Back to {withdrawPayoutType === 'revenue' ? 'Virtual Wallet' : 'Referral Rewards'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-      {/* 💰 FULLY SCROLLABLE KEYBOARD-AWARE MODAL: WITHDRAWAL REQUEST */}
-      <Modal
-        visible={showWithdrawModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowWithdrawModal(false)}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          <View style={[
-            styles.inFrameModalOverlay, 
-            { 
-              justifyContent: keyboardVisible ? 'flex-start' : 'center', 
-              alignItems: 'center',
-              paddingTop: keyboardVisible ? (Platform.OS === 'android' ? 24 : 44) : 16,
-            }
-          ]}>
-            <TouchableOpacity 
-              style={styles.inFrameModalBackdrop} 
-              activeOpacity={1} 
-              onPress={() => setShowWithdrawModal(false)} 
-            />
-            <View style={{ 
-              backgroundColor: '#FFFFFF', 
-              borderRadius: 20, 
-              width: '94%', 
-              maxWidth: 380, 
-              height: keyboardVisible ? 300 : 530, 
-              maxHeight: keyboardVisible ? '50%' : '88%', 
-              overflow: 'hidden', 
-              zIndex: 1001,
-              borderWidth: 1,
-              borderColor: '#E2E8F0',
-              elevation: 10,
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
-              {/* Modal Sticky Header */}
-              <View style={[styles.modalHeader, { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', backgroundColor: '#FFFFFF', flexShrink: 0 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Wallet size={18} color={THEME.COLORS.primary} />
-                  <Text style={styles.modalTitle}>
-                    {withdrawPayoutType === 'revenue' ? 'Withdraw Revenue Payout' : 'Withdraw Referral Bonus'}
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2, gap: 14 }}>
+              {/* Wallet Info Summary Box */}
+              <View style={styles.withdrawInfoBanner}>
+                <View>
+                  <Text style={styles.withdrawInfoLabel}>Available to Withdraw</Text>
+                  <Text style={styles.withdrawInfoVal}>
+                    ₹{(withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance).toLocaleString()}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={{ padding: 4 }}>
-                  <X size={18} color="#64748B" />
-                </TouchableOpacity>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.withdrawInfoLabel}>Min. Limit</Text>
+                  <Text style={[styles.withdrawInfoVal, { color: '#64748B' }]}>
+                    ₹{(withdrawPayoutType === 'revenue' ? virtualWallet.min_withdrawal : referralWallet.min_withdrawal).toLocaleString()}
+                  </Text>
+                </View>
               </View>
 
-              {/* Scrollable Form Body */}
-              <ScrollView 
-                style={{ flex: 1 }}
-                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 160 }}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled={true}
-                showsVerticalScrollIndicator={true}
-              >
-                {/* Wallet Info Summary Box */}
-                <View style={styles.withdrawInfoBanner}>
-                  <View>
-                    <Text style={styles.withdrawInfoLabel}>Available to Withdraw</Text>
-                    <Text style={styles.withdrawInfoVal}>
-                      ₹{(withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance).toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.withdrawInfoLabel}>Min. Limit</Text>
-                    <Text style={[styles.withdrawInfoVal, { color: '#64748B' }]}>
-                      ₹{(withdrawPayoutType === 'revenue' ? virtualWallet.min_withdrawal : referralWallet.min_withdrawal).toLocaleString()}
-                    </Text>
+              {withdrawSuccessMsg ? (
+                <View style={[styles.successBanner, { paddingVertical: 16 }]}>
+                  <CheckCircle2 size={24} color="#059669" style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.successBannerText, { fontSize: 14, fontWeight: '800' }]}>{withdrawSuccessMsg}</Text>
+                    <TouchableOpacity 
+                      onPress={() => setActiveTab(withdrawPayoutType === 'revenue' ? 'virtual_wallet' : 'referral_wallet')}
+                      style={{ marginTop: 12, backgroundColor: '#059669', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, alignSelf: 'flex-start' }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>Return to Wallet</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-
-                {withdrawSuccessMsg ? (
-                  <View style={styles.successBanner}>
-                    <CheckCircle2 size={20} color="#059669" style={{ marginRight: 8 }} />
-                    <Text style={styles.successBannerText}>{withdrawSuccessMsg}</Text>
+              ) : (
+                <>
+                  <View style={styles.formFieldGroup}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={[styles.formLabel, { fontSize: 13, fontWeight: '800', color: '#1E293B' }]}>Withdrawal Amount (₹)</Text>
+                      <TouchableOpacity onPress={() => setWithdrawAmount(String(withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance))}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.COLORS.primary }}>Set Max</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <TextInput 
+                      value={withdrawAmount} 
+                      onChangeText={setWithdrawAmount} 
+                      keyboardType="numeric" 
+                      placeholder="Enter amount in ₹" 
+                      style={[styles.formInput, { height: 48, fontSize: 16, fontWeight: '700', backgroundColor: '#F8FAFC' }]} 
+                    />
                   </View>
-                ) : (
-                  <>
-                    <View style={styles.formFieldGroup}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <Text style={styles.formLabel}>Withdrawal Amount (₹)</Text>
-                        <TouchableOpacity onPress={() => setWithdrawAmount(String(withdrawPayoutType === 'revenue' ? virtualWallet.balance : referralWallet.balance))}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.COLORS.primary }}>Set Max</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <TextInput 
-                        value={withdrawAmount} 
-                        onChangeText={setWithdrawAmount} 
-                        keyboardType="numeric" 
-                        placeholder="Enter amount" 
-                        style={styles.formInput} 
-                      />
-                    </View>
 
-                    <View style={styles.withdrawTypeTabs}>
-                      <TouchableOpacity 
-                        style={[styles.withdrawTypeTab, withdrawMethod === 'bank' && styles.withdrawTypeTabActive]}
-                        onPress={() => setWithdrawMethod('bank')}
-                      >
-                        <Text style={[styles.withdrawTypeTabText, withdrawMethod === 'bank' && styles.withdrawTypeTabTextActive]}>
-                          Bank Transfer
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.withdrawTypeTab, withdrawMethod === 'upi' && styles.withdrawTypeTabActive]}
-                        onPress={() => setWithdrawMethod('upi')}
-                      >
-                        <Text style={[styles.withdrawTypeTabText, withdrawMethod === 'upi' && styles.withdrawTypeTabTextActive]}>
-                          UPI / QR
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {withdrawMethod === 'bank' ? (
-                      <View style={{ gap: 8 }}>
-                        <View style={styles.formFieldGroup}>
-                          <Text style={styles.formLabel}>Bank Name</Text>
-                          <TextInput value={withdrawBankName} onChangeText={setWithdrawBankName} placeholder="HDFC, SBI, ICICI..." style={styles.formInput} />
-                        </View>
-                        <View style={styles.formFieldGroup}>
-                          <Text style={styles.formLabel}>Account Number</Text>
-                          <TextInput value={withdrawAccountNumber} onChangeText={setWithdrawAccountNumber} placeholder="0000 0000 0000" keyboardType="numeric" style={styles.formInput} />
-                        </View>
-                        <View style={styles.formFieldGroup}>
-                          <Text style={styles.formLabel}>IFSC Code</Text>
-                          <TextInput value={withdrawIfsc} onChangeText={setWithdrawIfsc} placeholder="HDFC0001234" autoCapitalize="characters" style={styles.formInput} />
-                        </View>
-                      </View>
-                    ) : (
-                      <View style={{ gap: 10 }}>
-                        <View style={styles.formFieldGroup}>
-                          <Text style={styles.formLabel}>UPI ID / Mobile Number</Text>
-                          <TextInput 
-                            value={withdrawUpiId} 
-                            onChangeText={setWithdrawUpiId} 
-                            placeholder="partner@upi or 9876543210" 
-                            style={styles.formInput} 
-                          />
-                        </View>
-
-                        {/* QR Code / Payment Screenshot Upload */}
-                        <View style={styles.formFieldGroup}>
-                          <Text style={styles.formLabel}>QR Code / Scanner Screenshot (Optional)</Text>
-                          {qrCodePreview ? (
-                            <View style={styles.qrPreviewBox}>
-                              <Image source={{ uri: qrCodePreview }} style={styles.qrPreviewImg} />
-                              <TouchableOpacity 
-                                style={styles.removeQrBtn} 
-                                onPress={() => { setQrCodePreview(''); setQrCodeFile(null); }}
-                              >
-                                <X size={14} color="#FFFFFF" />
-                              </TouchableOpacity>
-                            </View>
-                          ) : (
-                            <TouchableOpacity 
-                              style={styles.uploadQrBox}
-                              onPress={handlePickQrImage}
-                              activeOpacity={0.7}
-                            >
-                              <Upload size={20} color={THEME.COLORS.primary} style={{ marginBottom: 6 }} />
-                              <Text style={styles.uploadQrTitle}>Upload QR Code / Scanner Screenshot</Text>
-                              <Text style={styles.uploadQrSub}>Super Admin will scan and transfer payout directly to your bank</Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      </View>
-                    )}
-
+                  <View style={styles.withdrawTypeTabs}>
                     <TouchableOpacity 
-                      style={[styles.submitWithdrawBtn, { marginTop: 8, paddingVertical: 12 }]}
-                      onPress={handleWithdrawSubmit}
-                      disabled={isWithdrawing}
+                      style={[styles.withdrawTypeTab, withdrawMethod === 'bank' && styles.withdrawTypeTabActive]}
+                      onPress={() => setWithdrawMethod('bank')}
                     >
-                      {isWithdrawing ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                      ) : (
-                        <Text style={[styles.submitWithdrawBtnText, { fontSize: 13 }]}>Submit Request</Text>
-                      )}
+                      <Text style={[styles.withdrawTypeTabText, withdrawMethod === 'bank' && styles.withdrawTypeTabTextActive]}>
+                        Bank Transfer
+                      </Text>
                     </TouchableOpacity>
-                  </>
-                )}
-              </ScrollView>
+                    <TouchableOpacity 
+                      style={[styles.withdrawTypeTab, withdrawMethod === 'upi' && styles.withdrawTypeTabActive]}
+                      onPress={() => setWithdrawMethod('upi')}
+                    >
+                      <Text style={[styles.withdrawTypeTabText, withdrawMethod === 'upi' && styles.withdrawTypeTabTextActive]}>
+                        UPI / QR
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {withdrawMethod === 'bank' ? (
+                    <View style={{ gap: 12 }}>
+                      <View style={styles.formFieldGroup}>
+                        <Text style={[styles.formLabel, { fontSize: 12, fontWeight: '700', color: '#475569' }]}>Bank Name</Text>
+                        <TextInput value={withdrawBankName} onChangeText={setWithdrawBankName} placeholder="e.g. HDFC Bank, SBI, ICICI" style={styles.formInput} />
+                      </View>
+                      <View style={styles.formFieldGroup}>
+                        <Text style={[styles.formLabel, { fontSize: 12, fontWeight: '700', color: '#475569' }]}>Account Number</Text>
+                        <TextInput value={withdrawAccountNumber} onChangeText={setWithdrawAccountNumber} placeholder="0000 0000 0000 0000" keyboardType="numeric" style={styles.formInput} />
+                      </View>
+                      <View style={styles.formFieldGroup}>
+                        <Text style={[styles.formLabel, { fontSize: 12, fontWeight: '700', color: '#475569' }]}>IFSC Code</Text>
+                        <TextInput value={withdrawIfsc} onChangeText={setWithdrawIfsc} placeholder="e.g. HDFC0001234" autoCapitalize="characters" style={styles.formInput} />
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ gap: 14 }}>
+                      <View style={styles.formFieldGroup}>
+                        <Text style={[styles.formLabel, { fontSize: 12, fontWeight: '700', color: '#475569' }]}>UPI ID / Mobile Number</Text>
+                        <TextInput 
+                          value={withdrawUpiId} 
+                          onChangeText={setWithdrawUpiId} 
+                          placeholder="partner@okhdfcbank or 9876543210" 
+                          style={styles.formInput} 
+                        />
+                      </View>
+
+                      {/* QR Code / Payment Screenshot Upload */}
+                      <View style={styles.formFieldGroup}>
+                        <Text style={[styles.formLabel, { fontSize: 12, fontWeight: '700', color: '#475569' }]}>QR Code / Scanner Screenshot (Optional)</Text>
+                        {qrCodePreview ? (
+                          <View style={styles.qrPreviewBox}>
+                            <Image source={{ uri: qrCodePreview }} style={styles.qrPreviewImg} />
+                            <TouchableOpacity 
+                              style={styles.removeQrBtn} 
+                              onPress={() => { setQrCodePreview(''); setQrCodeFile(null); }}
+                            >
+                              <X size={14} color="#FFFFFF" />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity 
+                            style={styles.uploadQrBox}
+                            onPress={handlePickQrImage}
+                            activeOpacity={0.7}
+                          >
+                            <Upload size={22} color={THEME.COLORS.primary} style={{ marginBottom: 6 }} />
+                            <Text style={styles.uploadQrTitle}>Upload QR Code / Scanner Screenshot</Text>
+                            <Text style={styles.uploadQrSub}>Super Admin will scan and transfer payout directly to your bank</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  )}
+
+                  <TouchableOpacity 
+                    style={[styles.submitWithdrawBtn, { marginTop: 12, paddingVertical: 14, borderRadius: 12 }]}
+                    onPress={handleWithdrawSubmit}
+                    disabled={isWithdrawing}
+                  >
+                    {isWithdrawing ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={[styles.submitWithdrawBtnText, { fontSize: 15, fontWeight: '900' }]}>Submit Withdrawal Request</Text>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        )}
+      </ScrollView>
 
       {/* 🖼️ IN-FRAME MODAL: PAYMENT PROOF RECEIPT VIEWER */}
       {selectedProofUrl && (
