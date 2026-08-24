@@ -5,13 +5,7 @@ import { useGymDate } from './context/GymDateContext';
  * Import this in any screen component to get consistent colors across the app.
  */
 export function useTheme() {
-  let isDark = false;
-  try {
-    const { themeMode } = useGymDate();
-    isDark = themeMode === 'dark';
-  } catch (e) {
-    // Fallback if context is not available yet
-  }
+  const isDark = false;
 
   return {
     isDark,

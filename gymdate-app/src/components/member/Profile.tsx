@@ -501,17 +501,6 @@ export const Profile: React.FC = () => {
             </View>
           </View>
         </View>
-
-        {/* Dynamic Dark Mode Toggle */}
-        <View style={[styles.toggleCard, isLight && { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }]}>
-          <Text style={[styles.toggleText, isLight && { color: '#374151' }]}>App Dark Theme Mode</Text>
-          <TouchableOpacity 
-            onPress={() => setThemeMode(prev => prev === 'light' ? 'dark' : 'light')}
-            style={[styles.switchTrack, themeMode === 'dark' ? styles.switchActive : styles.switchInactive]}
-          >
-            <View style={[styles.switchThumb, themeMode === 'dark' && styles.switchThumbActive]} />
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* 3. Horizontal Tabs Picker */}

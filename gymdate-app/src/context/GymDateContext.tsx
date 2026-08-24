@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService, ApiGym, ApiPlan, ApiBooking } from '../services/apiService';
 import { getCurrentLocation } from '../utils/location';
+import { sendLocalNotification, registerForPushNotificationsAsync } from '../utils/notifications';
 
 // Types Definitions
 export type UserRole = 'member' | 'owner' | 'admin';
@@ -174,6 +175,9 @@ export interface GymDateContextType {
   
   // Notifications
   notifications: GymDateNotification[];
+  addNotification: (notification: Omit<GymDateNotification, 'id' | 'timestamp' | 'unread'> & { timestamp?: string }) => void;
+  deleteNotification: (id: string) => void;
+  clearAllNotifications: () => void;
   markNotificationsAsRead: () => void;
   unreadNotificationsCount: number;
   
@@ -822,6 +826,26 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  const addNotification = (notif: Omit<GymDateNotification, 'id' | 'timestamp' | 'unread'> & { timestamp?: string }) => {
+    const newNotification: GymDateNotification = {
+      ...notif,
+      id: `n-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      timestamp: notif.timestamp || 'Just now',
+      unread: true,
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+    // Send external system notification on phone status bar
+    sendLocalNotification(notif.title, notif.message, { notificationId: newNotification.id });
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
   const markNotificationsAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
   };
@@ -933,6 +957,9 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       toggleLikePost,
       addComment,
       notifications,
+      addNotification,
+      deleteNotification,
+      clearAllNotifications,
       markNotificationsAsRead,
       unreadNotificationsCount,
       ownerProfile,

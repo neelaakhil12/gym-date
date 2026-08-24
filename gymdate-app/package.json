@@ -12,6 +12,7 @@
     "expo-dev-client": "~56.0.20",
     "expo-image-picker": "~56.0.18",
     "expo-location": "~56.0.18",
+    "expo-notifications": "^57.0.14",
     "expo-status-bar": "~56.0.4",
     "expo-web-browser": "~56.0.6",
     "html5-qrcode": "^2.3.8",

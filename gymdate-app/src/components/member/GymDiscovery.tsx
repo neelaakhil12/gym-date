@@ -51,6 +51,7 @@ export const GymDiscovery: React.FC = () => {
     userProfile,
     setUserProfile,
     addBooking,
+    addNotification,
     userCoords,
     loginInput,
   } = useGymDate();
@@ -302,6 +303,14 @@ export const GymDiscovery: React.FC = () => {
         if (useWallet && usableWallet > 0) {
           setWalletBalance(prev => Math.max(0, prev - usableWallet));
         }
+
+        // Add real notification to in-app bell & trigger phone system notification
+        addNotification({
+          title: `Booking Confirmed: ${selectedPlan.name}! 🎉`,
+          message: `Your pass for ${activeGym.name} is active. Order ID: ${bookingId.substring(0, 8).toUpperCase()}. QR entry ticket is ready in My Tickets!`,
+          type: 'booking',
+        });
+
         Alert.alert(
           '✅ Payment Successful!',
           `Your ${selectedPlan.name} for ${activeGym.name} is now active.\nBooking ID: ${bookingId.substring(0, 8).toUpperCase()}\n\nYour QR entry ticket is ready in My Tickets!`,
