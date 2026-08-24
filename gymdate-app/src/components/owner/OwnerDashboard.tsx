@@ -15,7 +15,8 @@ import {
   Share, 
   Alert,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Keyboard
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -242,6 +243,23 @@ export const OwnerDashboard: React.FC = () => {
       setIsLoadingData(false);
     }
   };
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     fetchLiveDashboard();
@@ -2048,7 +2066,14 @@ export const OwnerDashboard: React.FC = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
-          <View style={[styles.inFrameModalOverlay, { justifyContent: 'center', alignItems: 'center' }]}>
+          <View style={[
+            styles.inFrameModalOverlay, 
+            { 
+              justifyContent: keyboardVisible ? 'flex-start' : 'center', 
+              alignItems: 'center',
+              paddingTop: keyboardVisible ? (Platform.OS === 'android' ? 24 : 44) : 16,
+            }
+          ]}>
             <TouchableOpacity 
               style={styles.inFrameModalBackdrop} 
               activeOpacity={1} 
@@ -2057,9 +2082,10 @@ export const OwnerDashboard: React.FC = () => {
             <View style={{ 
               backgroundColor: '#FFFFFF', 
               borderRadius: 20, 
-              width: '92%', 
+              width: '94%', 
               maxWidth: 380, 
-              maxHeight: '85%', 
+              height: keyboardVisible ? 300 : 530, 
+              maxHeight: keyboardVisible ? '50%' : '88%', 
               overflow: 'hidden', 
               zIndex: 1001,
               borderWidth: 1,
@@ -2083,9 +2109,10 @@ export const OwnerDashboard: React.FC = () => {
 
               {/* Scrollable Form Body */}
               <ScrollView 
-                style={{ flexGrow: 1 }}
-                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 100 }}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 160 }}
                 keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={true}
               >
                 {/* Wallet Info Summary Box */}

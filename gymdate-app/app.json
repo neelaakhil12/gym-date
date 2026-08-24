@@ -30,7 +30,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "aish07",
+    "owner": "student15",
     "plugins": [
       "expo-status-bar",
       [
@@ -50,7 +50,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "77aee143-89df-4d37-82f7-87a206974858"
+        "projectId": "12af34a3-6dd0-445f-b44f-730029d05fd6"
       }
     }
   }
