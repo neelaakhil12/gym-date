@@ -284,19 +284,9 @@ export const Onboarding: React.FC = () => {
       }
 
       if (res.user) {
-        let detectedGym = res.user.gym;
-        if (!detectedGym) {
-          if (trimmedEmail.includes('sailakshmi') || trimmedEmail.includes('national')) {
-            detectedGym = gyms.find(g => g.name.toLowerCase().includes('national'));
-          } else if (trimmedEmail.includes('neelaakhilkumar50') || trimmedEmail.includes('cult')) {
-            detectedGym = gyms.find(g => g.name.toLowerCase().includes('cult'));
-          } else {
-            detectedGym = gyms.find(g => (g as any).owner_email?.toLowerCase() === trimmedEmail || (g as any).partner_id === res.user.id);
-          }
-        }
-
-        const gymName = detectedGym?.name || (trimmedEmail.includes('sailakshmi') ? 'national' : (trimmedEmail.includes('cult') ? 'cultfit gym' : (gyms[0]?.name || 'Partner Gym')));
-        const partnerName = res.user.name || (gymName.toUpperCase() + ' Partner');
+        const detectedGym = res.user.gym || gyms.find(g => (g as any).partner_id === res.user.id);
+        const gymName = detectedGym?.name || res.user.name || 'Partner Gym';
+        const partnerName = res.user.name || gymName;
 
         setOwnerProfile(prev => ({
           ...prev,

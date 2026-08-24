@@ -179,16 +179,12 @@ export const OwnerDashboard: React.FC = () => {
   const [partnerBookings, setPartnerBookings] = useState<any[]>([]);
   const [partnerGym, setPartnerGym] = useState<any>(null);
 
-  const currentEmail = (loginInput || userProfile.email || 'neelaakhilkumar50@gmail.com').toLowerCase();
+  const currentEmail = (loginInput || userProfile.email || '').toLowerCase();
   const activeGym = partnerGym || 
-    gyms.find(g => 
-      (ownerProfile.gymName && g.name.toLowerCase() === ownerProfile.gymName.toLowerCase()) ||
-      (currentEmail && (g as any).owner_email?.toLowerCase() === currentEmail) ||
-      (currentEmail.includes('sailakshmi') && g.name.toLowerCase().includes('national')) ||
-      (currentEmail.includes('neelaakhil') && g.name.toLowerCase().includes('cult')) ||
-      (currentEmail.includes('cult') && g.name.toLowerCase().includes('cult'))
-    ) || (currentEmail.includes('sailakshmi') ? gyms.find(g => g.name.toLowerCase().includes('national')) : null)
-    || gyms[0];
+    (ownerProfile.gymName ? gyms.find(g => g.name.toLowerCase() === ownerProfile.gymName.toLowerCase()) : null) ||
+    gyms.find(g => (g as any).partner_id && (g as any).partner_id === (userProfile as any).id) ||
+    gyms.find(g => g.name.toLowerCase() === 'fitpass') ||
+    gyms[0];
 
   const virtualWallet = {
     balance: walletData?.virtual_wallet?.balance ?? (liveStats.totalRevenue || 0),
@@ -204,15 +200,19 @@ export const OwnerDashboard: React.FC = () => {
     total_referred_gyms: walletData?.referral_wallet?.total_referred_gyms ?? (walletData?.total_referred_gyms ?? 0),
     bonus_per_referral: walletData?.referral_wallet?.bonus_per_referral ?? 100,
     min_withdrawal: walletData?.referral_wallet?.min_withdrawal ?? (walletData?.min_withdrawal ?? 1500),
-    referral_code: walletData?.referral_wallet?.referral_code ?? (walletData?.referral_code ?? 'CULTFIT50'),
-    referral_link: walletData?.referral_wallet?.referral_link ?? (walletData?.referral_link ?? 'https://gymdate.in/partner?ref=CULTFIT50'),
+    referral_code: walletData?.referral_wallet?.referral_code ?? (walletData?.referral_code ?? 'FITPASS'),
+    referral_link: walletData?.referral_wallet?.referral_link ?? (walletData?.referral_link ?? 'https://gymdate.in/partner?ref=FITPASS'),
     history: walletData?.referral_wallet?.history ?? []
   };
 
   const fetchLiveDashboard = async () => {
     setIsLoadingData(true);
     try {
-      const email = loginInput || userProfile.email || 'neelaakhilkumar50@gmail.com';
+      const email = loginInput || userProfile.email || '';
+      if (!email) {
+        setIsLoadingData(false);
+        return;
+      }
       const [data, wData] = await Promise.all([
         apiService.getPartnerDashboardData(email),
         apiService.getPartnerWalletData(email)
@@ -227,10 +227,21 @@ export const OwnerDashboard: React.FC = () => {
         }
         if (data.gym) {
           setPartnerGym(data.gym);
+          setEditGymName(data.gym.name || '');
+          setEditGymLocation(data.gym.location || '');
+          setEditDescription(data.gym.description || '');
+          setEditPrimaryImage(data.gym.image || '');
           setIsOpenStatus(data.gym.status !== 'Closed');
           setHasOffer(Boolean(data.gym.has_offer));
           if (data.gym.offer_percentage) {
             setOfferPercentage(String(data.gym.offer_percentage));
+          }
+          if (data.gym.plans && Array.isArray(data.gym.plans)) {
+            setEditPlans(data.gym.plans.map((p: any) => ({
+              id: p.id,
+              name: p.name || 'Plan',
+              price: String(p.price || p.price_per_day || '')
+            })));
           }
         }
       }

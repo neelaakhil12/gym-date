@@ -384,7 +384,7 @@ export const apiService = {
     bookings?: any[];
     error?: string;
   }> {
-    const url = `${getApiUrl()}/api/partner/bookings?email=${encodeURIComponent(email.trim().toLowerCase())}`;
+    const url = `${getApiUrl()}/api/partner/dashboard-data?email=${encodeURIComponent(email.trim().toLowerCase())}`;
     try {
       const res = await fetch(url);
       if (res.ok) {
@@ -392,11 +392,12 @@ export const apiService = {
         if (data && data.success) {
           return {
             success: true,
+            gym: data.gym,
             stats: {
               totalRevenue: data.stats?.totalRevenue ?? 0,
               totalBookings: data.stats?.totalBookings ?? 0,
-              activeMembers: data.stats?.uniqueCustomers ?? 0,
-              payoutPending: data.stats?.totalRevenue ?? 0
+              activeMembers: data.stats?.activeMembers ?? 0,
+              payoutPending: data.stats?.payoutPending ?? 0
             },
             bookings: data.bookings || []
           };
