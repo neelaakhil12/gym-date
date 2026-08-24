@@ -16,7 +16,8 @@ import {
   Linking,
   Modal,
   KeyboardAvoidingView,
-  StatusBar
+  StatusBar,
+  BackHandler
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -442,6 +443,30 @@ export const Onboarding: React.FC = () => {
       setStep('intro');
     }
   };
+
+  // Android hardware back & gesture handling in Onboarding
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      if (termsModalVisible) {
+        setTermsModalVisible(false);
+        return true;
+      }
+      if (showGoogleModal) {
+        setShowGoogleModal(false);
+        return true;
+      }
+      if (step !== 'intro') {
+        handleBack();
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [termsModalVisible, showGoogleModal, step]);
 
   const handleSelectGoal = (goal: string) => {
     setSelectedGoal(goal);

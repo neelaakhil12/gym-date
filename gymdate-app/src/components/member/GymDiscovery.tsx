@@ -11,7 +11,9 @@ import {
   Linking,
   Alert,
   Switch,
-  useColorScheme
+  useColorScheme,
+  Platform,
+  BackHandler
 } from 'react-native';
 import { useGymDate, Trainer, Gym } from '../../context/GymDateContext';
 import { apiService } from '../../services/apiService';
@@ -143,6 +145,35 @@ export const GymDiscovery: React.FC = () => {
     };
     fetchLiveConfig();
   }, []);
+
+  // Android hardware back button & gesture handling for Discovery & Modals
+  React.useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      if (paymentOptions) {
+        setPaymentOptions(null);
+        return true;
+      }
+      if (showCheckoutModal) {
+        setShowCheckoutModal(false);
+        return true;
+      }
+      if (selectedGymId) {
+        setSelectedGymId(null);
+        setActiveScreen('discovery');
+        return true;
+      }
+      if (activeScreen === 'discovery' || activeScreen === 'gym-details') {
+        setActiveScreen('home');
+        return true;
+      }
+      return false;
+    };
+
+    const backSub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSub.remove();
+  }, [paymentOptions, showCheckoutModal, selectedGymId, activeScreen, setActiveScreen, setSelectedGymId]);
 
   const handleGymClick = (id: string) => {
     setSelectedGymId(id);

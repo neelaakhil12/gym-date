@@ -11,7 +11,8 @@ import {
   Platform,
   Linking,
   ActivityIndicator,
-  Share
+  Share,
+  BackHandler
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
@@ -88,6 +89,30 @@ export const Profile: React.FC = () => {
       setActiveTab('subscriptions');
     }
   }, [activeScreen]);
+
+  // Android Back Button / Swipe gesture handling in Profile
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      if (isEditing) {
+        setIsEditing(false);
+        return true;
+      }
+      if (activeTab !== 'profile' && activeScreen !== 'bookings') {
+        setActiveTab('profile');
+        return true;
+      }
+      if (activeScreen === 'profile' || activeScreen === 'bookings') {
+        setActiveScreen('home');
+        return true;
+      }
+      return false;
+    };
+
+    const backSub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSub.remove();
+  }, [isEditing, activeTab, activeScreen, setActiveScreen]);
 
   // Fetch real wallet data and full API bookings on mount
   useEffect(() => {

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Platform, useColorScheme } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Platform, useColorScheme, BackHandler, ToastAndroid } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GymDateProvider, useGymDate } from './context/GymDateContext';
 import { DeviceShell } from './components/shared/DeviceShell';
@@ -31,7 +31,9 @@ const AppContent: React.FC = () => {
     currentRole, 
     activeScreen, 
     setActiveScreen, 
+    selectedGymId,
     setSelectedGymId,
+    goBack,
     isLoggedIn,
     themeMode,
     setThemeMode
@@ -41,6 +43,35 @@ const AppContent: React.FC = () => {
   const safeTop = Math.max(insets.top, Platform.OS === 'android' ? 24 : 0);
   const safeBottom = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
   const dynamicNavHeight = 58 + safeBottom;
+
+  const lastBackPressTime = useRef<number>(0);
+
+  // Android hardware back button and swipe gesture navigation handler
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      // 1. Try to go back in history or close active sub-views/gym details
+      const handled = goBack();
+      if (handled) {
+        return true; // Successfully navigated back internally
+      }
+
+      // 2. If at root screen, prompt user before exiting
+      const now = Date.now();
+      if (now - lastBackPressTime.current < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+
+      lastBackPressTime.current = now;
+      ToastAndroid.show('Press back again to exit GymDate', ToastAndroid.SHORT);
+      return true;
+    };
+
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backSubscription.remove();
+  }, [goBack]);
 
 
   // Screen Switcher routing engine

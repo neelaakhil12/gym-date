@@ -140,6 +140,8 @@ export interface GymDateContextType {
   setActiveScreen: (screen: ActiveScreen) => void;
   selectedGymId: string | null;
   setSelectedGymId: (id: string | null) => void;
+  screenHistory: ActiveScreen[];
+  goBack: () => boolean;
   
   // Theme state shared with simulator shell
   themeMode: 'light' | 'dark';
@@ -254,8 +256,45 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Navigation & Role State
   const [currentRole, setCurrentRole] = useState<UserRole>('member');
-  const [activeScreen, setActiveScreen] = useState<ActiveScreen>('onboarding');
+  const [activeScreen, setActiveScreenInternal] = useState<ActiveScreen>('onboarding');
   const [selectedGymId, setSelectedGymId] = useState<string | null>(null);
+  const [screenHistory, setScreenHistory] = useState<ActiveScreen[]>([]);
+
+  const setActiveScreen = React.useCallback((nextScreen: ActiveScreen) => {
+    setActiveScreenInternal(current => {
+      if (current !== nextScreen && current !== 'onboarding' && current !== 'login' && current !== 'otp') {
+        setScreenHistory(prev => {
+          if (prev.length > 0 && prev[prev.length - 1] === current) return prev;
+          return [...prev, current];
+        });
+      }
+      return nextScreen;
+    });
+  }, []);
+
+  const goBack = React.useCallback((): boolean => {
+    // 1. If currently inside gym details view, pop to gym discovery list
+    if (selectedGymId) {
+      setSelectedGymId(null);
+      return true;
+    }
+
+    // 2. If history stack has previous screens, pop and navigate back
+    if (screenHistory.length > 0) {
+      const prevScreen = screenHistory[screenHistory.length - 1];
+      setScreenHistory(prev => prev.slice(0, -1));
+      setActiveScreenInternal(prevScreen);
+      return true;
+    }
+
+    // 3. If currently on a sub-screen like bookings, profile, partner, nearby, discovery, return to home
+    if (activeScreen !== 'home' && activeScreen !== 'onboarding' && activeScreen !== 'login' && activeScreen !== 'otp') {
+      setActiveScreenInternal('home');
+      return true;
+    }
+
+    return false;
+  }, [selectedGymId, screenHistory, activeScreen]);
 
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -908,6 +947,8 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       refreshData,
       userCoords,
       setUserCoords,
+      screenHistory,
+      goBack,
     }}>
       {children}
     </GymDateContext.Provider>
