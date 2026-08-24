@@ -46,12 +46,14 @@ import {
   Eye, 
   EyeOff,
   X,
-  Gift
+  Gift,
+  FileText
 } from 'lucide-react-native';
 import logoImg from '../../../assets/brand-logo.png';
 import { apiService } from '../../services/apiService';
 import { getCurrentLocation, reverseGeocode } from '../../utils/location';
 import { getApiUrl } from '../../config';
+import { DEFAULT_USER_TERMS, DEFAULT_PARTNER_TERMS } from '../../utils/termsData';
 
 const { width, height } = Dimensions.get('window');
 
@@ -90,6 +92,31 @@ export const Onboarding: React.FC = () => {
   const [referralCodeInput, setReferralCodeInput] = useState('');
   const [otpCode, setOtpCode] = useState<string[]>(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState<string>('');
+
+  // Terms and Conditions State
+  const [userTermsAccepted, setUserTermsAccepted] = useState(false);
+  const [partnerTermsAccepted, setPartnerTermsAccepted] = useState(false);
+  const [termsModalVisible, setTermsModalVisible] = useState(false);
+  const [termsModalType, setTermsModalType] = useState<'user' | 'partner'>('user');
+  const [activeUserTerms, setActiveUserTerms] = useState(DEFAULT_USER_TERMS);
+  const [activePartnerTerms, setActivePartnerTerms] = useState(DEFAULT_PARTNER_TERMS);
+
+  // Fetch dynamic terms from backend API if updated by Super Admin
+  useEffect(() => {
+    const fetchActiveTerms = async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/api/terms`);
+        const data = await res.json();
+        if (data?.success) {
+          if (data.userTerms) setActiveUserTerms(data.userTerms);
+          if (data.partnerTerms) setActivePartnerTerms(data.partnerTerms);
+        }
+      } catch (err) {
+        // use default fallback
+      }
+    };
+    fetchActiveTerms();
+  }, []);
 
   // Partner login fields
   const [partnerEmail, setPartnerEmail] = useState('');
@@ -174,6 +201,47 @@ export const Onboarding: React.FC = () => {
     { title: 'Mind & Body Balance', desc: 'Stretching, yogic flows, & recovery posture', icon: '🧘' }
   ];
 
+  const renderTermsCheckbox = (type: 'user' | 'partner') => {
+    const isUser = type === 'user';
+    const accepted = isUser ? userTermsAccepted : partnerTermsAccepted;
+    const toggle = () => {
+      if (isUser) setUserTermsAccepted(!userTermsAccepted);
+      else setPartnerTermsAccepted(!partnerTermsAccepted);
+    };
+
+    return (
+      <View style={styles.termsCheckboxRow}>
+        <TouchableOpacity
+          onPress={toggle}
+          activeOpacity={0.8}
+          style={[
+            styles.checkboxBox,
+            accepted && styles.checkboxBoxActive,
+            isLight && !accepted && styles.checkboxBoxLight
+          ]}
+        >
+          {accepted && <Check size={12} color="#ffffff" strokeWidth={3.5} />}
+        </TouchableOpacity>
+        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Text style={[styles.termsText, isLight && styles.termsTextLight]}>
+            I agree to the{' '}
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setTermsModalType(type);
+              setTermsModalVisible(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.termsLink}>
+              {isUser ? 'User Terms & Conditions' : 'Partner Terms & Conditions'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   const handleUserLoginClick = () => {
     setCurrentRole('member');
     setStep('login');
@@ -187,6 +255,12 @@ export const Onboarding: React.FC = () => {
   const handlePartnerLoginSubmit = async () => {
     const trimmedEmail = partnerEmail.trim().toLowerCase();
     setPartnerLoginError('');
+
+    if (!partnerTermsAccepted) {
+      setPartnerLoginError('Please agree to the GymDate Partner Terms & Conditions to proceed.');
+      showAlert('Terms Required', 'Please review and agree to the GymDate Partner Terms & Conditions before signing in.');
+      return;
+    }
 
     if (!trimmedEmail) {
       setPartnerLoginError('Please enter your registered gym partner email.');
@@ -269,6 +343,11 @@ export const Onboarding: React.FC = () => {
   };
 
   const handlePartnerRegisterSubmit = async () => {
+    if (!partnerTermsAccepted) {
+      showAlert('Terms Required', 'Please review and agree to the GymDate Partner Terms & Conditions before submitting.');
+      return;
+    }
+
     if (!partnerRegGymName.trim()) {
       showAlert('Required Field', 'Please enter your Gym Name.');
       return;
@@ -383,6 +462,11 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleLoginSubmit = async () => {
+    if (!userTermsAccepted) {
+      showAlert('Terms Required', 'Please review and agree to the GymDate User Terms & Conditions before requesting an OTP code.');
+      return;
+    }
+
     const emailTrimmed = loginInput.trim().toLowerCase();
     if (!emailTrimmed || !emailTrimmed.includes('@') || !emailTrimmed.includes('.')) {
       showAlert('Invalid Email', 'Please enter a valid email address (e.g. name@example.com).');
@@ -407,6 +491,11 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
+    if (!userTermsAccepted) {
+      showAlert('Terms Required', 'Please review and agree to the GymDate User Terms & Conditions before continuing with Google.');
+      return;
+    }
+
     setIsGoogleLoading(true);
     try {
       const authUrl = `https://gymdate.in/api/auth/google/start`;
@@ -462,6 +551,11 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleGoogleSubmit = async () => {
+    if (!userTermsAccepted) {
+      showAlert('Terms Required', 'Please review and agree to the GymDate User Terms & Conditions before signing in.');
+      return;
+    }
+
     const cleanEmail = googleEmail.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
       showAlert('Invalid Email', 'Please enter a valid Google email address.');
@@ -582,6 +676,11 @@ export const Onboarding: React.FC = () => {
   };
 
   const handleRegisterSubmit = async () => {
+    if (!userTermsAccepted) {
+      showAlert('Terms Required', 'Please review and agree to the GymDate User Terms & Conditions before creating your account.');
+      return;
+    }
+
     if (!regName.trim()) {
       showAlert('Required Field', 'Please enter your Full Name.');
       return;
@@ -794,6 +893,8 @@ export const Onboarding: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {renderTermsCheckbox('partner')}
 
             <TouchableOpacity 
               style={[styles.btnPrimary, isPartnerLoggingIn && { opacity: 0.75 }]} 
@@ -1011,6 +1112,8 @@ export const Onboarding: React.FC = () => {
             </View>
           </View>
 
+          {renderTermsCheckbox('partner')}
+
           <TouchableOpacity 
             style={[styles.btnPrimary, isPartnerRegSubmitting && { opacity: 0.75 }, { marginTop: 10 }]} 
             onPress={handlePartnerRegisterSubmit}
@@ -1162,6 +1265,8 @@ export const Onboarding: React.FC = () => {
                 />
               </View>
             </View>
+
+            {renderTermsCheckbox('user')}
 
             <TouchableOpacity 
               style={[styles.btnPrimary, isSendingOtp && { opacity: 0.75 }]} 
@@ -1372,6 +1477,8 @@ export const Onboarding: React.FC = () => {
               </View>
             </View>
 
+            {renderTermsCheckbox('user')}
+
             <TouchableOpacity style={styles.btnPrimary} onPress={handleRegisterSubmit}>
               <Text style={styles.btnPrimaryText}>Create Account & Start</Text>
               <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
@@ -1442,6 +1549,8 @@ export const Onboarding: React.FC = () => {
               </View>
             </View>
 
+            {renderTermsCheckbox('user')}
+
             {/* Action Buttons */}
             <TouchableOpacity
               style={[styles.btnPrimary, { height: 50, borderRadius: 14 }, isGoogleLoading && { opacity: 0.75 }]}
@@ -1460,6 +1569,71 @@ export const Onboarding: React.FC = () => {
               onPress={() => setShowGoogleModal(false)}
             >
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* FULL-SCREEN TERMS & CONDITIONS VIEWER MODAL */}
+      <Modal
+        visible={termsModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setTermsModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: isLight ? '#ffffff' : '#0B0C10', paddingTop: Platform.OS === 'ios' ? 44 : 0 }}>
+          {/* Header */}
+          <View style={[
+            styles.termsModalHeader, 
+            isLight && { backgroundColor: '#F9FAFB', borderBottomColor: '#E5E7EB' }
+          ]}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <FileText size={16} color={THEME.COLORS.primary} />
+                <Text style={[styles.termsModalTitle, isLight && { color: '#111827' }]}>
+                  {termsModalType === 'user' ? 'User Terms & Conditions' : 'Partner Terms & Conditions'}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11, color: isLight ? '#6B7280' : '#9CA3AF' }}>
+                SantoEdge Private Limited • GymDate Platform
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setTermsModalVisible(false)}
+              style={[styles.termsModalCloseBtn, isLight && { backgroundColor: '#E5E7EB' }]}
+            >
+              <X size={20} color={isLight ? '#374151' : '#ffffff'} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Scrollable Formatted Content */}
+          <ScrollView 
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
+            showsVerticalScrollIndicator={true}
+          >
+            <View style={[styles.termsTextCard, isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
+              <Text style={[styles.termsContentText, isLight && { color: '#334155' }]}>
+                {termsModalType === 'user' ? activeUserTerms : activePartnerTerms}
+              </Text>
+            </View>
+          </ScrollView>
+
+          {/* Sticky Accept Button Footer */}
+          <View style={[styles.termsModalFooter, isLight && { backgroundColor: '#ffffff', borderTopColor: '#E5E7EB' }]}>
+            <TouchableOpacity
+              style={styles.btnPrimary}
+              onPress={() => {
+                if (termsModalType === 'user') {
+                  setUserTermsAccepted(true);
+                } else {
+                  setPartnerTermsAccepted(true);
+                }
+                setTermsModalVisible(false);
+              }}
+            >
+              <Check size={16} color="#ffffff" style={{ marginRight: 6 }} />
+              <Text style={styles.btnPrimaryText}>I Agree & Accept Terms</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2012,5 +2186,93 @@ const styles = StyleSheet.create({
   },
   textMutedLight: {
     color: '#6B7280',
-  }
+  },
+  termsCheckboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 14,
+    paddingHorizontal: 2,
+    gap: 10,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#374151',
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxBoxLight: {
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F9FAFB',
+  },
+  checkboxBoxActive: {
+    backgroundColor: THEME.COLORS.primary,
+    borderColor: THEME.COLORS.primary,
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  termsTextLight: {
+    color: '#4B5563',
+  },
+  termsLink: {
+    fontSize: 12,
+    color: THEME.COLORS.primary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  termsModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
+    backgroundColor: '#111827',
+  },
+  termsModalTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  termsModalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1F2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  termsTextCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    padding: 16,
+  },
+  termsContentText: {
+    fontSize: 13,
+    lineHeight: 22,
+    color: '#E5E7EB',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  termsModalFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    backgroundColor: '#0B0C10',
+    borderTopWidth: 1,
+    borderTopColor: '#1F2937',
+  },
 });

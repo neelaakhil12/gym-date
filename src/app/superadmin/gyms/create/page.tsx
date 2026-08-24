@@ -217,7 +217,29 @@ export default function CreateGymPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8" autoComplete="off">
+        {/* Browser Autofill Suppressor Decoy Inputs */}
+        <input 
+          type="text" 
+          name="prevent_autofill_username" 
+          id="prevent_autofill_username" 
+          defaultValue="" 
+          readOnly 
+          style={{ position: 'absolute', top: -9999, left: -9999, height: 0, width: 0, opacity: 0, zIndex: -1 }} 
+          tabIndex={-1} 
+          autoComplete="off" 
+        />
+        <input 
+          type="password" 
+          name="prevent_autofill_password" 
+          id="prevent_autofill_password" 
+          defaultValue="" 
+          readOnly 
+          style={{ position: 'absolute', top: -9999, left: -9999, height: 0, width: 0, opacity: 0, zIndex: -1 }} 
+          tabIndex={-1} 
+          autoComplete="new-password" 
+        />
+
         {/* Section 1: Gym Details */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
@@ -644,8 +666,12 @@ export default function CreateGymPage() {
                   </div>
                   <input
                     name="partnerEmail"
+                    id="new_partner_email_field"
                     type="email"
                     required
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                     placeholder="partner@gym.com"
                   />
@@ -661,9 +687,13 @@ export default function CreateGymPage() {
                   </div>
                   <input
                     name="partnerPassword"
+                    id="new_partner_password_field"
                     type="password"
                     required
                     minLength={6}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                     placeholder="••••••••"
                   />

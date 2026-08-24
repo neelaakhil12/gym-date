@@ -196,7 +196,10 @@ export default function AdminUsers() {
           </p>
         </div>
         <button 
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            setNewAdmin({ email: "", password: "", full_name: "" });
+            setIsAddModalOpen(true);
+          }}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-secondary text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg shadow-secondary/10"
         >
           <Plus className="w-5 h-5" />
@@ -397,7 +400,10 @@ export default function AdminUsers() {
               </button>
             </div>
             
-            <form onSubmit={handleCreateAdmin} className="p-6 space-y-4">
+            <form onSubmit={handleCreateAdmin} className="p-6 space-y-4" autoComplete="off">
+              <input type="text" name="prevent_autofill_username" tabIndex={-1} className="hidden" autoComplete="off" />
+              <input type="password" name="prevent_autofill_password" tabIndex={-1} className="hidden" autoComplete="new-password" />
+
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
                 <input
@@ -405,6 +411,7 @@ export default function AdminUsers() {
                   type="text"
                   placeholder="e.g. John Doe"
                   value={newAdmin.full_name}
+                  autoComplete="off"
                   onChange={(e) => setNewAdmin({...newAdmin, full_name: e.target.value})}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
                 />
@@ -416,6 +423,7 @@ export default function AdminUsers() {
                   type="email"
                   placeholder="operations@gymdate.in"
                   value={newAdmin.email}
+                  autoComplete="new-password"
                   onChange={(e) => setNewAdmin({...newAdmin, email: e.target.value})}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
                 />
@@ -429,6 +437,7 @@ export default function AdminUsers() {
                     type="password"
                     placeholder="••••••••"
                     value={newAdmin.password}
+                    autoComplete="new-password"
                     onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
                   />

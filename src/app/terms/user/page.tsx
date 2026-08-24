@@ -10,15 +10,12 @@ import {
   ArrowLeft, 
   Printer, 
   Calendar,
-  CheckCircle2,
-  Sparkles
+  CheckCircle2
 } from "lucide-react";
-import { DEFAULT_USER_TERMS, DEFAULT_PARTNER_TERMS } from "@/lib/termsData";
+import { DEFAULT_USER_TERMS } from "@/lib/termsData";
 
-export default function TermsOfService() {
-  const [activeTab, setActiveTab] = useState<"user" | "partner">("user");
+export default function UserTermsPage() {
   const [userTerms, setUserTerms] = useState(DEFAULT_USER_TERMS);
-  const [partnerTerms, setPartnerTerms] = useState(DEFAULT_PARTNER_TERMS);
   const [updatedAt, setUpdatedAt] = useState("24 August 2026");
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +25,6 @@ export default function TermsOfService() {
       .then((data) => {
         if (data.success) {
           if (data.userTerms) setUserTerms(data.userTerms);
-          if (data.partnerTerms) setPartnerTerms(data.partnerTerms);
           if (data.updatedAt) setUpdatedAt(data.updatedAt);
         }
       })
@@ -41,8 +37,6 @@ export default function TermsOfService() {
       window.print();
     }
   };
-
-  const currentContent = activeTab === "user" ? userTerms : partnerTerms;
 
   return (
     <div className="min-h-screen bg-gray-50 pt-36 pb-24">
@@ -58,12 +52,19 @@ export default function TermsOfService() {
           </Link>
 
           <div className="flex items-center gap-3">
+            <Link
+              href="/terms/partner"
+              className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-primary bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Partner Terms & Conditions →</span>
+            </Link>
             <button
               onClick={handlePrint}
               className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-secondary bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm transition-all hover:shadow"
             >
               <Printer className="w-3.5 h-3.5" />
-              Print / Save PDF
+              Print
             </button>
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-xl">
               <Calendar className="w-3.5 h-3.5 text-gray-400" />
@@ -75,55 +76,26 @@ export default function TermsOfService() {
         {/* Hero Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-widest mb-4">
-            <ShieldCheck className="w-4 h-4" />
-            Legal Agreements & Policies
+            <Users className="w-4 h-4" />
+            User Legal Agreement
           </div>
           <h1 className="text-3xl sm:text-5xl font-black text-secondary tracking-tight">
-            Terms & <span className="text-primary">Conditions</span>
+            User Terms & <span className="text-primary">Conditions</span>
           </h1>
           <p className="text-gray-500 max-w-xl mx-auto text-sm sm:text-base mt-3 font-medium">
-            Legally binding terms governing user access and gym partner participation on the GymDate platform by SantoEdge Private Limited.
+            Legally binding terms governing customer registration, membership purchases, gym access, and bookings on GymDate by SantoEdge Private Limited.
           </p>
         </div>
 
-        {/* Interactive Tab Switcher */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab("user")}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
-                activeTab === "user"
-                  ? "bg-primary text-white shadow-lg shadow-primary/25 scale-[1.02]"
-                  : "text-gray-500 hover:text-secondary hover:bg-gray-50"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>User Terms & Conditions</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("partner")}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${
-                activeTab === "partner"
-                  ? "bg-secondary text-white shadow-lg shadow-secondary/25 scale-[1.02]"
-                  : "text-gray-500 hover:text-secondary hover:bg-gray-50"
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>Gym Partner Terms & Conditions</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Content Document Box */}
+        {/* Content Box */}
         <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between pb-6 mb-8 border-b border-gray-100">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-secondary">
-                {activeTab === "user" ? "GYMDATE – User Terms & Conditions" : "GYMDATE – Gym / Fitness Partner Terms & Conditions"}
+                GYMDATE – USER TERMS & CONDITIONS
               </h2>
               <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-wider">
-                SantoEdge Private Limited • All Rights Reserved
+                SantoEdge Private Limited • Customer Agreement
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-xl text-xs font-black border border-green-200">
@@ -133,7 +105,7 @@ export default function TermsOfService() {
           </div>
 
           <div className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-sans space-y-6">
-            {currentContent}
+            {userTerms}
           </div>
 
           <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-bold text-gray-400">

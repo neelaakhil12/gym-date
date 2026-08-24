@@ -494,10 +494,10 @@ export const Profile: React.FC = () => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScrollContent}>
           {[
             { id: 'profile', label: 'My Profile', icon: <User size={13} color={activeTab === 'profile' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
+            { id: 'tickets', label: 'QR Tickets', icon: <Ticket size={13} color={activeTab === 'tickets' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
             { id: 'wallet', label: 'Wallet & Referrals', icon: <Gift size={13} color={activeTab === 'wallet' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
             { id: 'subscriptions', label: 'Subscriptions', icon: <CreditCard size={13} color={activeTab === 'subscriptions' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
             { id: 'payments', label: 'Payments History', icon: <History size={13} color={activeTab === 'payments' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
-            { id: 'tickets', label: 'QR Tickets', icon: <Ticket size={13} color={activeTab === 'tickets' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
             { id: 'addresses', label: 'Saved Addresses', icon: <MapPin size={13} color={activeTab === 'addresses' ? '#ffffff' : (isLight ? '#4B5563' : '#99a1af')} /> },
           ].map(t => (
             <TouchableOpacity

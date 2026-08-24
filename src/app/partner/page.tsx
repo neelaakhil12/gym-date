@@ -5,10 +5,11 @@ import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
-import { TrendingUp, Users, Shield, LayoutGrid, CheckCircle } from "lucide-react";
+import { TrendingUp, Users, Shield, LayoutGrid, CheckCircle, FileText, X, Check } from "lucide-react";
 import { registerPartnerRequest } from "@/actions/gymActions";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { toast } from "react-hot-toast";
+import { DEFAULT_PARTNER_TERMS } from "@/lib/termsData";
 
 const partnerSchema = z.object({
   gymName: z.string().min(2, "Gym name is required"),
@@ -25,6 +26,20 @@ function PartnerContent() {
   const searchParams = useSearchParams();
   const [refCode, setRefCode] = React.useState<string | null>(null);
   const [referrerName, setReferrerName] = React.useState<string | null>(null);
+  const [agreedTerms, setAgreedTerms] = React.useState(false);
+  const [showTermsModal, setShowTermsModal] = React.useState(false);
+  const [partnerTermsText, setPartnerTermsText] = React.useState(DEFAULT_PARTNER_TERMS);
+
+  React.useEffect(() => {
+    fetch("/api/terms")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.partnerTerms) {
+          setPartnerTermsText(data.partnerTerms);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   React.useEffect(() => {
     let code = searchParams.get('ref');
@@ -51,6 +66,11 @@ function PartnerContent() {
   });
 
   const onSubmit = async (data: PartnerFormValues) => {
+    if (!agreedTerms) {
+      toast.error("Please review and agree to the GymDate Partner Terms & Conditions.");
+      return;
+    }
+
     try {
       const result = await registerPartnerRequest({ ...data, referredBy: refCode || undefined });
       
@@ -206,10 +226,32 @@ function PartnerContent() {
                 {errors.address && <p className="text-red-500 text-[10px] font-bold">{errors.address.message}</p>}
               </div>
 
+              {/* Partner terms and conditions checkbox */}
+              <div className="flex items-start gap-3 pt-1 text-left">
+                <input
+                  type="checkbox"
+                  id="partnerTermsRegAgreement"
+                  checked={agreedTerms}
+                  onChange={(e) => setAgreedTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer accent-primary shrink-0"
+                  required
+                />
+                <label htmlFor="partnerTermsRegAgreement" className="text-xs font-semibold text-gray-600 leading-snug cursor-pointer select-none">
+                  I agree to the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    className="text-primary hover:underline font-bold"
+                  >
+                    GymDate Partner Terms & Conditions
+                  </button>
+                </label>
+              </div>
+
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || !agreedTerms}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
               >
                 {isSubmitting ? "Submitting..." : "Submit Registration"}
               </button>
@@ -217,6 +259,49 @@ function PartnerContent() {
           </div>
         </div>
       </div>
+
+      {/* Partner Terms and Conditions Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-gray-100">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-secondary">Gym / Fitness Partner Terms & Conditions</h3>
+                  <p className="text-xs text-gray-400 font-medium">SantoEdge Private Limited • GymDate Partner Network</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="p-2 hover:bg-gray-200 rounded-xl transition-colors text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap font-sans bg-white">
+              {partnerTermsText}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-4">
+              <span className="text-xs text-gray-400 font-semibold">Please review carefully before submitting.</span>
+              <button
+                onClick={() => {
+                  setAgreedTerms(true);
+                  setShowTermsModal(false);
+                }}
+                className="px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
+              >
+                <Check className="w-4 h-4" />
+                <span>I Agree & Accept</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

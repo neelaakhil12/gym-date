@@ -12,9 +12,13 @@ import {
   CheckCircle2,
   AlertCircle,
   User,
-  Gift
+  Gift,
+  FileText,
+  X,
+  Check
 } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { DEFAULT_USER_TERMS } from "@/lib/termsData";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -25,7 +29,22 @@ function LoginForm() {
   const [step, setStep] = useState<"email" | "otp">("email");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsText, setTermsText] = useState(DEFAULT_USER_TERMS);
   const searchParams = useSearchParams();
+
+  // Load latest active user terms
+  useEffect(() => {
+    fetch("/api/terms")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.userTerms) {
+          setTermsText(data.userTerms);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Save referral code from URL to localStorage, sessionStorage & cookie
   useEffect(() => {
@@ -40,6 +59,11 @@ function LoginForm() {
 
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreedTerms) {
+      setMessage({ type: "error", text: "Please review and agree to the GymDate User Terms & Conditions before requesting an OTP." });
+      return;
+    }
+
     setLoading(true);
     setMessage({ type: "", text: "" });
 
@@ -111,6 +135,10 @@ function LoginForm() {
 
 
   const handleGoogleLogin = async () => {
+    if (!agreedTerms) {
+      setMessage({ type: "error", text: "Please review and agree to the GymDate User Terms & Conditions before continuing with Google." });
+      return;
+    }
     try {
       await signIn('google', { callbackUrl: '/account' });
     } catch (err: any) {
@@ -143,7 +171,7 @@ function LoginForm() {
             </h1>
             <p className="text-gray-400 text-sm mt-2 font-medium">
               {step === "email" 
-                ? "Enter your email to receive a secure login code." 
+                ? "Enter your details to receive a secure login code." 
                 : `We've sent a 6-digit code to ${email}`}
             </p>
           </div>
@@ -228,6 +256,28 @@ function LoginForm() {
                     />
                   </div>
                 </div>
+
+                {/* Terms and conditions checkbox */}
+                <div className="flex items-start gap-3 pt-2 text-left">
+                  <input
+                    type="checkbox"
+                    id="userTermsAgreement"
+                    checked={agreedTerms}
+                    onChange={(e) => setAgreedTerms(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer accent-primary shrink-0"
+                    required
+                  />
+                  <label htmlFor="userTermsAgreement" className="text-xs font-semibold text-gray-600 leading-snug cursor-pointer select-none">
+                    I agree to the{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="text-primary hover:underline font-bold"
+                    >
+                      GymDate User Terms & Conditions
+                    </button>
+                  </label>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -248,7 +298,7 @@ function LoginForm() {
             )}
 
             <button
-              disabled={loading || (step === "email" && (!email || !name || phone.length < 10)) || (step === "otp" && !otp)}
+              disabled={loading || (step === "email" && (!email || !name || phone.length < 10 || !agreedTerms)) || (step === "otp" && !otp)}
               className="w-full py-5 bg-secondary text-white rounded-[24px] font-black text-lg hover:bg-slate-800 transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl shadow-secondary/20 disabled:opacity-30 disabled:cursor-not-allowed mt-4"
             >
               {loading ? (
@@ -294,6 +344,49 @@ function LoginForm() {
           By continuing, you agree to our <Link href="/terms" className="text-secondary hover:underline">Terms of Service</Link>
         </p>
       </div>
+
+      {/* User Terms and Conditions Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-gray-100">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-secondary">User Terms & Conditions</h3>
+                  <p className="text-xs text-gray-400 font-medium">SantoEdge Private Limited • GymDate</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTermsModal(false)}
+                className="p-2 hover:bg-gray-200 rounded-xl transition-colors text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap font-sans bg-white">
+              {termsText}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-4">
+              <span className="text-xs text-gray-400 font-semibold">Please read carefully before proceeding.</span>
+              <button
+                onClick={() => {
+                  setAgreedTerms(true);
+                  setShowTermsModal(false);
+                }}
+                className="px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
+              >
+                <Check className="w-4 h-4" />
+                <span>I Agree & Accept</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

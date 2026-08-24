@@ -69,13 +69,14 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Support & Legal */}
           <div>
-            <h4 className="text-lg font-bold mb-6">Support</h4>
-            <ul className="space-y-4 text-gray-400">
-              <li><Link href="/contact" className="hover:text-primary transition-colors text-sm">Contact Us</Link></li>
+            <h4 className="text-lg font-bold mb-6">Support & Legal</h4>
+            <ul className="space-y-3 text-gray-400">
+              <li><Link href="/terms/user" className="hover:text-primary transition-colors text-sm">User Terms & Conditions</Link></li>
+              <li><Link href="/terms/partner" className="hover:text-primary transition-colors text-sm">Partner Terms & Conditions</Link></li>
               <li><Link href="/privacy" className="hover:text-primary transition-colors text-sm">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-primary transition-colors text-sm">Terms of Service</Link></li>
+              <li><Link href="/contact" className="hover:text-primary transition-colors text-sm">Contact Us</Link></li>
               <li><Link href="/faq" className="hover:text-primary transition-colors text-sm">FAQs</Link></li>
             </ul>
           </div>

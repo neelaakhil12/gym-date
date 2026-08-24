@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
-// GET - fetch current referral config
+// GET - fetch current referral config & platform fee rates
 export async function GET() {
   try {
-    const result = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus', 'signup_bonus', 'max_referrals_allowed')`);
-    const config: Record<string, string> = {};
+    const result = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus', 'signup_bonus', 'max_referrals_allowed', 'gst_percentage')`);
+    const config: Record<string, string> = {
+      gst_percentage: '18',
+    };
     result.rows.forEach((r: any) => { config[r.key] = r.value; });
     return NextResponse.json({ success: true, config });
   } catch (err: any) {
@@ -16,7 +18,7 @@ export async function GET() {
 // POST - update referral config
 export async function POST(req: NextRequest) {
   try {
-    const { user_referral_bonus, max_wallet_per_txn, partner_referral_bonus, signup_bonus, max_referrals_allowed } = await req.json();
+    const { user_referral_bonus, max_wallet_per_txn, partner_referral_bonus, signup_bonus, max_referrals_allowed, gst_percentage } = await req.json();
 
     const updates = [
       ['user_referral_bonus', user_referral_bonus],
@@ -24,6 +26,7 @@ export async function POST(req: NextRequest) {
       ['partner_referral_bonus', partner_referral_bonus],
       ['signup_bonus', signup_bonus],
       ['max_referrals_allowed', max_referrals_allowed],
+      ['gst_percentage', gst_percentage],
     ];
 
     for (const [key, value] of updates) {

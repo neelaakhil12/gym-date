@@ -114,6 +114,7 @@ export const GymDiscovery: React.FC = () => {
   // Wallet & Referral Balance State
   const [walletBalance, setWalletBalance] = useState(0);
   const [maxWalletPerTxn, setMaxWalletPerTxn] = useState(10);
+  const [gstPercentage, setGstPercentage] = useState(18);
   const [useWallet, setUseWallet] = useState(false);
 
   // Real Razorpay payment options state — null = closed
@@ -184,12 +185,17 @@ export const GymDiscovery: React.FC = () => {
           }
         }
 
-        // Fetch max wallet per txn config
+        // Fetch max wallet per txn & GST percentage config
         try {
-          const confRes = await fetch('https://gymdate.in/api/admin/referral-config');
+          const confRes = await fetch(`${getApiUrl()}/api/admin/referral-config`);
           const d = await confRes.json();
-          if (d.success && d.config?.max_wallet_per_txn) {
-            setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 50);
+          if (d.success && d.config) {
+            if (d.config.max_wallet_per_txn) {
+              setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 10);
+            }
+            if (d.config.gst_percentage !== undefined) {
+              setGstPercentage(parseFloat(d.config.gst_percentage));
+            }
           }
         } catch (e) {}
       } catch (e) {
@@ -216,8 +222,11 @@ export const GymDiscovery: React.FC = () => {
       return;
     }
 
-    const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price) : 0;
-    const finalAmount = Math.max(1, selectedPlan.price - usableWallet);
+    const basePrice = Number(selectedPlan.price) || 0;
+    const gstAmount = gstPercentage > 0 ? Math.round((basePrice * gstPercentage) / 100) : 0;
+    const subtotalWithGst = basePrice + gstAmount;
+    const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, subtotalWithGst) : 0;
+    const finalAmount = Math.max(1, subtotalWithGst - usableWallet);
 
     // Launch real Razorpay payment
     setShowCheckoutModal(false);
@@ -638,42 +647,67 @@ export const GymDiscovery: React.FC = () => {
               )}
 
               {/* Total Payment Breakdown */}
-              {selectedPlan && (
-                <View style={[styles.billCard, { backgroundColor: billCardBg, borderColor: amenityBorder }]}>
-                  <View style={styles.billRow}>
-                    <Text style={[styles.billLabel, { color: textSecondary }]}>Base Plan Price:</Text>
-                    <Text style={[styles.billVal, { color: textPrimary }]}>₹{selectedPlan.price}</Text>
-                  </View>
-                  
-                  {useWallet && walletBalance > 0 && (
+              {selectedPlan && (() => {
+                const basePrice = Number(selectedPlan.price) || 0;
+                const gstAmount = gstPercentage > 0 ? Math.round((basePrice * gstPercentage) / 100) : 0;
+                const subtotalWithGst = basePrice + gstAmount;
+                const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, subtotalWithGst) : 0;
+                const finalPayable = Math.max(1, subtotalWithGst - usableWallet);
+
+                return (
+                  <View style={[styles.billCard, { backgroundColor: billCardBg, borderColor: amenityBorder, gap: 6 }]}>
                     <View style={styles.billRow}>
-                      <Text style={[styles.billLabel, { color: '#10B981', fontWeight: '700' }]}>Wallet Discount:</Text>
-                      <Text style={[styles.billVal, { color: '#10B981', fontWeight: '800' }]}>
-                        -₹{Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)}
+                      <Text style={[styles.billLabel, { color: textSecondary }]}>Subscription Fee:</Text>
+                      <Text style={[styles.billVal, { color: textPrimary, fontWeight: '700' }]}>₹{basePrice}</Text>
+                    </View>
+
+                    {gstPercentage > 0 && (
+                      <View style={styles.billRow}>
+                        <Text style={[styles.billLabel, { color: textSecondary }]}>GST Fee ({gstPercentage}%):</Text>
+                        <Text style={[styles.billVal, { color: textPrimary, fontWeight: '700' }]}>+₹{gstAmount}</Text>
+                      </View>
+                    )}
+                    
+                    {useWallet && usableWallet > 0 && (
+                      <View style={styles.billRow}>
+                        <Text style={[styles.billLabel, { color: '#10B981', fontWeight: '700' }]}>Wallet Discount:</Text>
+                        <Text style={[styles.billVal, { color: '#10B981', fontWeight: '800' }]}>
+                          -₹{usableWallet}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: sectionBorder, paddingTop: 8, marginTop: 4 }]}>
+                      <Text style={[styles.billLabel, { fontWeight: '800', color: textPrimary }]}>Total Fee to Pay:</Text>
+                      <Text style={styles.billPrice}>
+                        ₹{finalPayable}
                       </Text>
                     </View>
-                  )}
-
-                  <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: sectionBorder, paddingTop: 8, marginTop: 4 }]}>
-                    <Text style={[styles.billLabel, { fontWeight: '800', color: textPrimary }]}>Final Payable:</Text>
-                    <Text style={styles.billPrice}>
-                      ₹{Math.max(1, selectedPlan.price - (useWallet && walletBalance > 0 ? Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price) : 0))}
-                    </Text>
                   </View>
-                </View>
-              )}
+                );
+              })()}
 
             </ScrollView>
 
             {/* Single real Razorpay button */}
-            <TouchableOpacity
-              onPress={handleConfirmPayment}
-              style={styles.planBuyBtn}
-            >
-              <Text style={styles.planBuyBtnText}>
-                🔒  Pay ₹{selectedPlan ? Math.max(1, selectedPlan.price - (useWallet && walletBalance > 0 ? Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price) : 0)) : 0} via Razorpay
-              </Text>
-            </TouchableOpacity>
+            {selectedPlan && (() => {
+              const basePrice = Number(selectedPlan.price) || 0;
+              const gstAmount = gstPercentage > 0 ? Math.round((basePrice * gstPercentage) / 100) : 0;
+              const subtotalWithGst = basePrice + gstAmount;
+              const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, subtotalWithGst) : 0;
+              const finalPayable = Math.max(1, subtotalWithGst - usableWallet);
+
+              return (
+                <TouchableOpacity
+                  onPress={handleConfirmPayment}
+                  style={styles.planBuyBtn}
+                >
+                  <Text style={styles.planBuyBtnText}>
+                    🔒  Pay ₹{finalPayable} via Razorpay
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
 
             <TouchableOpacity onPress={() => setShowCheckoutModal(false)} style={styles.payCancelBtn}>
               <Text style={styles.payCancelBtnText}>Cancel checkout</Text>

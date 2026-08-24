@@ -274,10 +274,10 @@ export default function AccountPage() {
 
   const tabs = [
     { id: "profile", label: "My Profile", icon: <User className="w-5 h-5" /> },
+    { id: "bookings", label: "My QR Tickets", icon: <Ticket className="w-5 h-5" /> },
     { id: "wallet", label: "Wallet & Referral", icon: <Gift className="w-5 h-5" /> },
     { id: "subscriptions", label: "My Subscriptions", icon: <CreditCard className="w-5 h-5" /> },
     { id: "payments", label: "Payment History", icon: <History className="w-5 h-5" /> },
-    { id: "bookings", label: "My QR Tickets", icon: <Ticket className="w-5 h-5" /> },
     { id: "addresses", label: "Saved Addresses", icon: <MapPin className="w-5 h-5" /> },
   ];
 

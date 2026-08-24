@@ -10,6 +10,7 @@ export async function GET() {
 
     const defaultConfigs = [
       ['platform_commission', '10', 'Global platform commission percentage (fallback for all gyms).'],
+      ['gst_percentage', '18', 'Goods & Services Tax (GST %) charged on user subscription purchases. Set to 0 to disable GST.'],
       ['user_referral_bonus', '10', 'Amount given to a user when they refer a friend (credited upon subscription payment)'],
       ['partner_referral_bonus', '500', 'Referral bonus (in ₹) credited to gym partner wallet when an invited gym lead is approved by Super Admin.'],
       ['max_wallet_per_txn', '10', 'Maximum wallet amount (in ₹) that can be deducted per booking transaction.'],

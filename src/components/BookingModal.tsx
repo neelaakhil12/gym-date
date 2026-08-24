@@ -21,6 +21,7 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
   const [maxWalletPerTxn, setMaxWalletPerTxn] = useState(10);
+  const [gstPercentage, setGstPercentage] = useState(18);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -76,12 +77,17 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
           });
       }
       
-      // Fetch max wallet per txn config
+      // Fetch platform config (max wallet per txn & GST percentage)
       fetch('/api/admin/referral-config')
         .then(res => res.json())
         .then(data => {
-          if (data.success && data.config?.max_wallet_per_txn) {
-            setMaxWalletPerTxn(parseFloat(data.config.max_wallet_per_txn));
+          if (data.success && data.config) {
+            if (data.config.max_wallet_per_txn) {
+              setMaxWalletPerTxn(parseFloat(data.config.max_wallet_per_txn));
+            }
+            if (data.config.gst_percentage !== undefined) {
+              setGstPercentage(parseFloat(data.config.gst_percentage));
+            }
           }
         })
         .catch(() => {});
@@ -99,21 +105,22 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
     const selectedPlan = plans.find(p => p.id === formData.planId);
     if (!selectedPlan) return;
 
-    // Calculate discounted price if gym has offer
-    // Clean price string from symbols
-    const rawPrice = selectedPlan.price.toString().replace(/[^0-9.]/g, '');
-    let finalAmount = rawPrice;
+    // Calculate discounted base price if gym has offer
+    const rawPrice = parseFloat(selectedPlan.price.toString().replace(/[^0-9.]/g, '')) || 0;
+    let discountedBase = rawPrice;
     
     if (gym.has_offer && gym.offer_percentage) {
-      const discount = (parseFloat(rawPrice) * gym.offer_percentage) / 100;
-      finalAmount = Math.floor(parseFloat(rawPrice) - discount).toString();
+      const discount = (rawPrice * gym.offer_percentage) / 100;
+      discountedBase = Math.floor(rawPrice - discount);
     }
 
+    // Calculate GST
+    const gstAmount = gstPercentage > 0 ? Math.round((discountedBase * gstPercentage) / 100) : 0;
+    const subtotalWithGst = discountedBase + gstAmount;
+
     // Apply wallet discount
-    const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn) : 0;
-    if (usableWallet > 0) {
-      finalAmount = Math.max(1, parseFloat(finalAmount) - usableWallet).toString();
-    }
+    const usableWallet = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, subtotalWithGst) : 0;
+    const finalAmount = Math.max(1, subtotalWithGst - usableWallet).toString();
 
     setLoading(true);
     setError("");
@@ -325,14 +332,16 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
             const raw = parseFloat(sel.price.toString().replace(/[^0-9.]/g, '')) || 0;
             const offerDiscount = gym.has_offer && gym.offer_percentage ? Math.floor((raw * gym.offer_percentage) / 100) : 0;
             const priceAfterOffer = raw - offerDiscount;
-            const usableW = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn) : 0;
-            const finalPayable = Math.max(1, priceAfterOffer - usableW);
+            const gstAmount = gstPercentage > 0 ? Math.round((priceAfterOffer * gstPercentage) / 100) : 0;
+            const subtotalWithGst = priceAfterOffer + gstAmount;
+            const usableW = (useWallet && walletBalance > 0) ? Math.min(walletBalance, maxWalletPerTxn, subtotalWithGst) : 0;
+            const finalPayable = Math.max(1, subtotalWithGst - usableW);
 
             return (
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-1.5 text-xs">
+              <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-xs border border-gray-100">
                 <div className="flex justify-between text-gray-500 font-medium">
-                  <span>Plan Price:</span>
-                  <span>₹{raw}</span>
+                  <span>Subscription Fee:</span>
+                  <span className="font-bold text-secondary">₹{raw}</span>
                 </div>
                 {offerDiscount > 0 && (
                   <div className="flex justify-between text-primary font-bold">
@@ -340,14 +349,20 @@ export default function BookingModal({ isOpen, onClose, gym }: BookingModalProps
                     <span>-₹{offerDiscount}</span>
                   </div>
                 )}
+                {gstPercentage > 0 && (
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>GST Fee ({gstPercentage}%):</span>
+                    <span className="font-bold text-secondary">+₹{gstAmount}</span>
+                  </div>
+                )}
                 {usableW > 0 && (
                   <div className="flex justify-between text-green-600 font-bold">
-                    <span>Wallet Balance Applied:</span>
+                    <span>Wallet Discount Applied:</span>
                     <span>-₹{usableW}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-secondary font-black text-sm pt-2 border-t border-gray-200">
-                  <span>Remaining Amount to Pay:</span>
+                <div className="flex justify-between text-secondary font-black text-sm pt-2.5 border-t border-gray-200">
+                  <span>Total Fee to Pay:</span>
                   <span className="text-primary font-black text-base">₹{finalPayable}</span>
                 </div>
               </div>
