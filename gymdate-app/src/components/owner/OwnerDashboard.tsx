@@ -2048,15 +2048,29 @@ export const OwnerDashboard: React.FC = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
-          <View style={styles.inFrameModalOverlay}>
+          <View style={[styles.inFrameModalOverlay, { justifyContent: 'center', alignItems: 'center' }]}>
             <TouchableOpacity 
               style={styles.inFrameModalBackdrop} 
               activeOpacity={1} 
               onPress={() => setShowWithdrawModal(false)} 
             />
-            <View style={[styles.inFrameModalBox, { maxHeight: '86%', width: '100%', maxWidth: 360, padding: 0, overflow: 'hidden', zIndex: 1001 }]}>
+            <View style={{ 
+              backgroundColor: '#FFFFFF', 
+              borderRadius: 20, 
+              width: '92%', 
+              maxWidth: 380, 
+              height: 520, 
+              maxHeight: '88%', 
+              overflow: 'hidden', 
+              zIndex: 1001,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              elevation: 10,
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
               {/* Modal Sticky Header */}
-              <View style={[styles.modalHeader, { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', backgroundColor: '#FFFFFF' }]}>
+              <View style={[styles.modalHeader, { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', backgroundColor: '#FFFFFF', flexShrink: 0 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Wallet size={18} color={THEME.COLORS.primary} />
                   <Text style={styles.modalTitle}>
@@ -2071,7 +2085,7 @@ export const OwnerDashboard: React.FC = () => {
               {/* Scrollable Form Body */}
               <ScrollView 
                 style={{ flex: 1 }}
-                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 220 }}
+                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 60 }}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={true}
