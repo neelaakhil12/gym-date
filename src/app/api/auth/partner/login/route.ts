@@ -25,31 +25,23 @@ export async function POST(req: Request) {
 
     const trimmedEmail = email.trim().toLowerCase();
 
-    // Check partner_users table first
+    // 1. Check dedicated partner_users table first
     let userResult = await query(
-      "SELECT id, email, full_name, password_hash, 'partner' as role_id FROM partner_users WHERE email = $1",
+      "SELECT id, email, full_name, password_hash, 'partner' as role_id FROM partner_users WHERE LOWER(email) = $1",
       [trimmedEmail]
     );
 
-    // Fallback check users table with role = 'partner'
+    // 2. Fallback check users table
     if (userResult.rows.length === 0) {
       userResult = await query(
-        "SELECT id, email, full_name, password_hash, role_id FROM users WHERE email = $1 AND role_id = 'partner'",
-        [trimmedEmail]
-      );
-    }
-
-    // Fallback general check
-    if (userResult.rows.length === 0) {
-      userResult = await query(
-        "SELECT id, email, full_name, password_hash, role_id FROM users WHERE email = $1",
+        "SELECT id, email, full_name, NULL as password_hash, role_id FROM users WHERE LOWER(email) = $1 AND role_id = 'partner'",
         [trimmedEmail]
       );
     }
 
     if (userResult.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: "No partner account found with this email. Please register as a partner." },
+        { success: false, error: "No partner account found with this email. Please check your email spelling." },
         { status: 404, headers: corsHeaders }
       );
     }
@@ -58,7 +50,7 @@ export async function POST(req: Request) {
 
     if (!user.password_hash) {
       return NextResponse.json(
-        { success: false, error: "Password not set for this account. Please use Forgot Password to set one." },
+        { success: false, error: "Password not set for this account. Please contact Super Admin or reset password." },
         { status: 400, headers: corsHeaders }
       );
     }
