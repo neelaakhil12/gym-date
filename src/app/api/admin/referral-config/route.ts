@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET - fetch current referral config & platform fee rates
 export async function GET() {
   try {
     const result = await query(`SELECT key, value FROM platform_config WHERE key IN ('user_referral_bonus', 'max_wallet_per_txn', 'partner_referral_bonus', 'signup_bonus', 'max_referrals_allowed', 'gst_percentage')`);
     const config: Record<string, string> = {
       gst_percentage: '18',
+      max_wallet_per_txn: '10',
     };
     result.rows.forEach((r: any) => { config[r.key] = r.value; });
-    return NextResponse.json({ success: true, config });
+    return NextResponse.json({ success: true, config }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

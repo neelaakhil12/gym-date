@@ -634,6 +634,7 @@ export const GymDiscovery: React.FC = () => {
                     borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : '#BBF7D0' 
                   }
                 ]}>
+                  {/* Wallet Discount Row */}
                   <View style={styles.walletDiscountRow}>
                     <View style={styles.walletLeft}>
                       <View style={[
@@ -649,7 +650,7 @@ export const GymDiscovery: React.FC = () => {
                           WALLET DISCOUNT
                         </Text>
                         <Text style={[styles.walletSub, { color: isDark ? '#A7F3D0' : '#047857' }]}>
-                          Use ₹{Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)} from wallet (Balance: ₹{walletBalance.toFixed(2)})
+                          Use ₹{Math.min(walletBalance, maxWalletPerTxn, (Number(selectedPlan.price) || 0) + (gstPercentage > 0 ? Math.round(((Number(selectedPlan.price) || 0) * gstPercentage) / 100) : 0))} from wallet (Balance: ₹{walletBalance.toFixed(2)})
                         </Text>
                       </View>
                     </View>
@@ -666,7 +667,7 @@ export const GymDiscovery: React.FC = () => {
                     <View style={[styles.walletAppliedRow, { borderTopColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
                       <Text style={[styles.walletAppliedLabel, { color: isDark ? '#34D399' : '#047857' }]}>DISCOUNT APPLIED</Text>
                       <Text style={[styles.walletAppliedVal, { color: isDark ? '#34D399' : '#047857' }]}>
-                        -₹{Math.min(walletBalance, maxWalletPerTxn, selectedPlan.price)}
+                        -₹{Math.min(walletBalance, maxWalletPerTxn, (Number(selectedPlan.price) || 0) + (gstPercentage > 0 ? Math.round(((Number(selectedPlan.price) || 0) * gstPercentage) / 100) : 0))}
                       </Text>
                     </View>
                   )}
