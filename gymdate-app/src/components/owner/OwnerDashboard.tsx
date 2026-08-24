@@ -2045,7 +2045,7 @@ export const OwnerDashboard: React.FC = () => {
         onRequestClose={() => setShowWithdrawModal(false)}
       >
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
           <View style={[styles.inFrameModalOverlay, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -2059,8 +2059,7 @@ export const OwnerDashboard: React.FC = () => {
               borderRadius: 20, 
               width: '92%', 
               maxWidth: 380, 
-              height: 520, 
-              maxHeight: '88%', 
+              maxHeight: '85%', 
               overflow: 'hidden', 
               zIndex: 1001,
               borderWidth: 1,
@@ -2084,10 +2083,9 @@ export const OwnerDashboard: React.FC = () => {
 
               {/* Scrollable Form Body */}
               <ScrollView 
-                style={{ flex: 1 }}
-                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 60 }}
+                style={{ flexGrow: 1 }}
+                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 100 }}
                 keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={true}
               >
                 {/* Wallet Info Summary Box */}
