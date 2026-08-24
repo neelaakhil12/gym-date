@@ -284,9 +284,9 @@ export const Onboarding: React.FC = () => {
       }
 
       if (res.user) {
-        const detectedGym = res.user.gym || gyms.find(g => (g as any).partner_id === res.user.id);
-        const gymName = detectedGym?.name || res.user.name || 'Partner Gym';
-        const partnerName = res.user.name || gymName;
+        const detectedGym = res.user.gym;
+        const gymName = detectedGym?.name || 'Partner Gym';
+        const partnerName = res.user.full_name || res.user.name || gymName;
 
         setOwnerProfile(prev => ({
           ...prev,
