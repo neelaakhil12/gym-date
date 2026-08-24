@@ -96,7 +96,8 @@ export async function createGymAndPartner(formData: FormData) {
         INSERT INTO partner_users (id, email, full_name, password_hash)
         VALUES ($1, $2, $3, $4)
         ON CONFLICT (email) DO UPDATE
-          SET password_hash = EXCLUDED.password_hash,
+          SET id = EXCLUDED.id,
+              password_hash = EXCLUDED.password_hash,
               full_name = EXCLUDED.full_name,
               updated_at = CURRENT_TIMESTAMP
       `, [partnerId, partnerEmail, gymName, hashedPassword]);

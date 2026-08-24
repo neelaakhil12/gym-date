@@ -32,15 +32,17 @@ export async function GET(req: NextRequest) {
     const partnerId = partnerUser?.id;
 
     // 2. Locate gym
-    let gym: any = null;
-    if (partnerId) {
-      const gymRes = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [partnerId]);
-      gym = gymRes.rows[0] || null;
-    }
-    if (!gym) {
-      const firstGym = await query("SELECT * FROM gyms LIMIT 1");
-      gym = firstGym.rows[0] || null;
-    }
+    const gymRes = await query(`
+      SELECT g.* FROM gyms g
+      WHERE g.partner_id::text = $1::text 
+         OR g.partner_id IN (
+           SELECT id::text FROM users WHERE LOWER(email) = $2
+           UNION
+           SELECT id::text FROM partner_users WHERE LOWER(email) = $2
+         )
+      LIMIT 1
+    `, [partnerId || '', email]);
+    const gym = gymRes.rows[0] || null;
 
     // 3. Platform Config limits
     let partnerReferralMinWithdrawal = 1500;

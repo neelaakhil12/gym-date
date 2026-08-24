@@ -127,7 +127,19 @@ export async function getPartnerGym() {
     if (!session?.user) return null;
     
     const userId = (session.user as any).id;
-    const gymResult = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [userId]);
+    const userEmail = (session.user as any).email?.trim().toLowerCase();
+
+    let gymResult = await query(
+      `SELECT g.* FROM gyms g
+       WHERE g.partner_id::text = $1::text 
+          OR g.partner_id IN (
+            SELECT id::text FROM users WHERE LOWER(email) = $2
+            UNION
+            SELECT id::text FROM partner_users WHERE LOWER(email) = $2
+          )
+       LIMIT 1`,
+      [userId, userEmail || '']
+    );
     let gym = gymResult.rows[0] || null;
 
     if (gym) {

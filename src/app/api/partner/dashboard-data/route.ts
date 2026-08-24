@@ -32,19 +32,19 @@ export async function GET(req: Request) {
     const partnerUser = userRes.rows[0] || null;
     const partnerId = partnerUser?.id;
 
-    // 2. Locate gym
-    let gymRes: any = { rows: [] };
-    if (partnerId) {
-      gymRes = await query("SELECT * FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [partnerId]);
-    }
+    // 2. Locate gym by partner_id or email
+    const gymRes = await query(`
+      SELECT g.* FROM gyms g
+      WHERE g.partner_id::text = $1::text 
+         OR g.partner_id IN (
+           SELECT id::text FROM users WHERE LOWER(email) = $2
+           UNION
+           SELECT id::text FROM partner_users WHERE LOWER(email) = $2
+         )
+      LIMIT 1
+    `, [partnerId || '', email]);
 
     let gym = gymRes.rows[0] || null;
-
-    if (!gym) {
-      // Fallback: match first active gym or return clean empty state
-      const fallbackGym = await query("SELECT * FROM gyms LIMIT 1");
-      gym = fallbackGym.rows[0] || null;
-    }
 
     let bookings: any[] = [];
     let totalRevenue = 0;

@@ -183,8 +183,21 @@ export const OwnerDashboard: React.FC = () => {
   const activeGym = partnerGym || 
     (ownerProfile.gymName ? gyms.find(g => g.name.toLowerCase() === ownerProfile.gymName.toLowerCase()) : null) ||
     gyms.find(g => (g as any).partner_id && (g as any).partner_id === (userProfile as any).id) ||
-    gyms.find(g => g.name.toLowerCase() === 'fitpass') ||
-    gyms[0];
+    partnerGym || {
+      id: 'unlinked',
+      name: ownerProfile.gymName || userProfile.name || 'Partner Facility',
+      location: 'Location not set',
+      description: 'Your partner account is being linked.',
+      price_per_day: 0,
+      hours: '6:00 AM - 10:00 PM',
+      rating: 5.0,
+      reviews: 0,
+      status: 'Open',
+      image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&auto=format&fit=crop&q=80',
+      gallery: [],
+      amenities: [],
+      plans: []
+    };
 
   const virtualWallet = {
     balance: walletData?.virtual_wallet?.balance ?? (liveStats.totalRevenue || 0),

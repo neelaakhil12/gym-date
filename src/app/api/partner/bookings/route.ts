@@ -23,19 +23,16 @@ export async function GET(req: NextRequest) {
 
     // If only email is provided, resolve the gym ID from partner_users / users / gyms
     if (!targetGymId && email) {
-      const userRes = await query("SELECT id FROM partner_users WHERE LOWER(email) = $1 UNION SELECT id FROM users WHERE LOWER(email) = $1 LIMIT 1", [email]);
-      const partnerId = userRes.rows[0]?.id;
-
-      if (partnerId) {
-        const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text LIMIT 1", [partnerId]);
-        targetGymId = gymRes.rows[0]?.id;
-      }
-    }
-
-    if (!targetGymId) {
-      // Fallback: select first gym if not found
-      const firstGym = await query("SELECT id FROM gyms LIMIT 1");
-      targetGymId = firstGym.rows[0]?.id;
+      const gymRes = await query(`
+        SELECT id FROM gyms 
+        WHERE partner_id IN (
+          SELECT id::text FROM users WHERE LOWER(email) = $1
+          UNION
+          SELECT id::text FROM partner_users WHERE LOWER(email) = $1
+        )
+        LIMIT 1
+      `, [email]);
+      targetGymId = gymRes.rows[0]?.id;
     }
 
     if (!targetGymId) {
