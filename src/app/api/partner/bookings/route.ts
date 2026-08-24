@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     if (!targetGymId && email) {
       const gymRes = await query(`
         SELECT id FROM gyms 
-        WHERE partner_id IN (
+        WHERE partner_id::text IN (
           SELECT id::text FROM users WHERE LOWER(email) = $1
           UNION
           SELECT id::text FROM partner_users WHERE LOWER(email) = $1

@@ -155,7 +155,7 @@ export async function getPartnerGym() {
     let gymResult = await query(
       `SELECT g.* FROM gyms g
        WHERE g.partner_id::text = $1::text 
-          OR g.partner_id IN (
+          OR g.partner_id::text IN (
             SELECT id::text FROM users WHERE LOWER(email) = $2
             UNION
             SELECT id::text FROM partner_users WHERE LOWER(email) = $2

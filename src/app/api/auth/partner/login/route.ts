@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       const gymRes = await query(
         `SELECT id, name, location, price_per_day, hours, image FROM gyms 
          WHERE partner_id::text = $1::text 
-            OR partner_id IN (
+            OR partner_id::text IN (
               SELECT id::text FROM users WHERE LOWER(email) = $2
               UNION
               SELECT id::text FROM partner_users WHERE LOWER(email) = $2
