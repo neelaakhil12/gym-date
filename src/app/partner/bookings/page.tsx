@@ -16,7 +16,7 @@ export default function PartnerBookings() {
     async function loadData() {
       setLoading(true);
       let gymData = await getPartnerGym();
-      if (!gymData && (session?.user as any)?.email) {
+      if (!gymData && session && (session.user as any)?.email) {
         try {
           const res = await fetch(`/api/partner/dashboard-data?email=${encodeURIComponent((session.user as any).email)}`);
           const json = await res.json();

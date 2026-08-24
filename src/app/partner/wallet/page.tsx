@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Wallet, ArrowDownCircle, Banknote, Building2, User, CreditCard, Send, X, Smartphone, QrCode, Upload, Clock, CheckCircle2, Eye } from "lucide-react";
 import { getPartnerGym, getPartnerBookings, createPayoutRequest, getPartnerPayoutRequests, uploadPayoutQrCode } from "@/actions/adminActions";
 import { supabase } from "@/lib/supabase";
+import { useSession } from "next-auth/react";
 
 export default function PartnerWallet() {
   const [gym, setGym] = useState<any>(null);

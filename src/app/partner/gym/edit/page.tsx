@@ -80,7 +80,7 @@ export default function PartnerEditGymPage() {
       try {
         let gym = await getPartnerGym();
 
-        if (!gym && (session?.user as any)?.email) {
+        if (!gym && session && (session.user as any)?.email) {
           try {
             const res = await fetch(`/api/partner/dashboard-data?email=${encodeURIComponent((session.user as any).email)}`);
             const json = await res.json();
@@ -109,18 +109,18 @@ export default function PartnerEditGymPage() {
         setOfferPercentage(gym.offer_percentage?.toString() || "10");
 
         // Split amenities into default and custom, ensuring uniqueness and case-normalization
-        const rawDbAmenities = Array.from(new Set(gym.amenities || []));
+        const rawDbAmenities: string[] = Array.from(new Set<string>((gym.amenities || []) as string[]));
         
         // Map to official names from standard list if match found (case-insensitive)
-        const normalizedDbAmenities = rawDbAmenities.map(a => {
+        const normalizedDbAmenities: string[] = rawDbAmenities.map((a: string) => {
           const official = defaultAmenitiesList.find(da => da.toLowerCase() === a.toLowerCase());
           return official || a;
         });
 
-        const checkedDefaults = normalizedDbAmenities.filter((a: string) => 
+        const checkedDefaults: string[] = normalizedDbAmenities.filter((a: string) => 
           defaultAmenitiesList.includes(a)
         );
-        const customs = normalizedDbAmenities.filter((a: string) => 
+        const customs: string[] = normalizedDbAmenities.filter((a: string) => 
           !defaultAmenitiesList.includes(a)
         );
         
