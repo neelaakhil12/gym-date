@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       email,
       name,
       location,
+      status,
       lat,
       lng,
       rating,
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
 
     const updatedName = name !== undefined ? name.trim() : currentGym.name;
     const updatedLocation = location !== undefined ? location.trim() : currentGym.location;
+    const updatedStatus = status !== undefined ? status : currentGym.status;
     const updatedLat = lat !== undefined && lat !== "" ? parseFloat(lat) : currentGym.lat;
     const updatedLng = lng !== undefined && lng !== "" ? parseFloat(lng) : currentGym.lng;
     const updatedRating = rating !== undefined ? parseFloat(rating) : currentGym.rating;
@@ -87,21 +89,23 @@ export async function POST(req: Request) {
       SET 
         name = $1,
         location = $2,
-        lat = $3,
-        lng = $4,
-        rating = $5,
-        reviews = $6,
-        has_offer = $7,
-        offer_percentage = $8,
-        description = $9,
-        image = $10,
-        gallery = $11,
-        amenities = $12
-      WHERE id::text = $13::text
+        status = $3,
+        lat = $4,
+        lng = $5,
+        rating = $6,
+        reviews = $7,
+        has_offer = $8,
+        offer_percentage = $9,
+        description = $10,
+        image = $11,
+        gallery = $12,
+        amenities = $13
+      WHERE id::text = $14::text
       RETURNING *
     `, [
       updatedName,
       updatedLocation,
+      updatedStatus,
       updatedLat,
       updatedLng,
       updatedRating,

@@ -118,6 +118,7 @@ export const OwnerDashboard: React.FC = () => {
 
   // Operational & Promotional State
   const [isOpenStatus, setIsOpenStatus] = useState(true);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [hasOffer, setHasOffer] = useState(false);
   const [offerPercentage, setOfferPercentage] = useState('15');
   const [isUpdatingOffer, setIsUpdatingOffer] = useState(false);
@@ -654,6 +655,38 @@ export const OwnerDashboard: React.FC = () => {
     }
   };
 
+  const handleToggleOperationalStatus = async () => {
+    const nextStatus = isOpenStatus ? 'Closed' : 'Open';
+    setIsTogglingStatus(true);
+    try {
+      const res = await apiService.updateGymProfile({
+        gym_id: partnerGym?.id,
+        email: currentEmail,
+        status: nextStatus
+      });
+      if (res && res.success) {
+        setIsOpenStatus(nextStatus === 'Open');
+        if (res.gym) {
+          setPartnerGym(res.gym);
+        }
+        if (Platform.OS === 'web') {
+          alert(`Gym status changed to ${nextStatus}!`);
+        } else {
+          Alert.alert('Status Updated', `Gym is now marked as ${nextStatus}.`);
+        }
+      } else {
+        const msg = res?.error || 'Failed to update gym status';
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('Error', msg);
+      }
+    } catch (e: any) {
+      if (Platform.OS === 'web') alert(e.message || 'Error updating status');
+      else Alert.alert('Error', e.message || 'Error updating status');
+    } finally {
+      setIsTogglingStatus(false);
+    }
+  };
+
   const handleCopyReferral = async () => {
     const link = referralWallet.referral_link;
     try {
@@ -1075,12 +1108,18 @@ export const OwnerDashboard: React.FC = () => {
                   </View>
 
                   <TouchableOpacity 
-                    style={styles.statusToggleBtn}
-                    onPress={() => setIsOpenStatus(!isOpenStatus)}
+                    style={[styles.statusToggleBtn, isTogglingStatus && { opacity: 0.6 }]}
+                    onPress={handleToggleOperationalStatus}
+                    disabled={isTogglingStatus}
+                    activeOpacity={0.8}
                   >
-                    <Text style={styles.statusToggleText}>
-                      {isOpenStatus ? 'Close Gym' : 'Open Gym'}
-                    </Text>
+                    {isTogglingStatus ? (
+                      <ActivityIndicator size="small" color="#DC2626" />
+                    ) : (
+                      <Text style={styles.statusToggleText}>
+                        {isOpenStatus ? 'Close Gym' : 'Open Gym'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1088,7 +1127,11 @@ export const OwnerDashboard: React.FC = () => {
               {/* PROMOTIONAL OFFER CARD */}
               <View style={styles.sideCard}>
                 <Text style={styles.sideCardTitle}>Promotional Offer</Text>
-                <View style={styles.offerRow}>
+                <TouchableOpacity 
+                  style={styles.offerRow}
+                  onPress={() => setHasOffer(!hasOffer)}
+                  activeOpacity={0.8}
+                >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.offerLabel}>Activate Discount</Text>
                     <Text style={styles.offerSub}>Apply to all memberships</Text>
@@ -1099,7 +1142,7 @@ export const OwnerDashboard: React.FC = () => {
                     trackColor={{ false: '#E2E8F0', true: '#EF4444' }}
                     thumbColor="#FFFFFF"
                   />
-                </View>
+                </TouchableOpacity>
 
                 {hasOffer && (
                   <View style={styles.offerInputWrapper}>
