@@ -1,5 +1,15 @@
-import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { NextResponse } from "next/server";
+import { query } from "@/lib/db";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
 
 export async function POST(req: Request) {
   try {
@@ -11,11 +21,11 @@ export async function POST(req: Request) {
       location,
       lat,
       lng,
-      description,
       rating,
       reviews,
       has_offer,
       offer_percentage,
+      description,
       image,
       gallery,
       amenities,
@@ -24,93 +34,119 @@ export async function POST(req: Request) {
 
     let targetGymId = gym_id;
 
+    // If gym_id not passed, find gym by partner email
     if (!targetGymId && email) {
-      const userRes = await query('SELECT id FROM users WHERE email = $1', [email]);
-      if (userRes.rows.length > 0) {
-        const userId = userRes.rows[0].id;
-        const gymRes = await query('SELECT id FROM gyms WHERE owner_id::text = $1::text OR partner_id::text = $1::text', [userId]);
-        if (gymRes.rows.length > 0) {
-          targetGymId = gymRes.rows[0].id;
-        }
-      }
+      const cleanEmail = email.trim().toLowerCase();
+      const gymRes = await query(`
+        SELECT id FROM gyms 
+        WHERE partner_id::text IN (
+          SELECT id::text FROM users WHERE LOWER(email) = $1
+          UNION
+          SELECT id::text FROM partner_users WHERE LOWER(email) = $1
+        )
+        LIMIT 1
+      `, [cleanEmail]);
+
+      targetGymId = gymRes.rows[0]?.id;
     }
 
     if (!targetGymId) {
-      return NextResponse.json({ success: false, error: 'Target gym not found' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Gym ID or partner email is required." },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
-    const numLat = lat !== undefined && lat !== null && lat !== '' ? parseFloat(lat) : null;
-    const numLng = lng !== undefined && lng !== null && lng !== '' ? parseFloat(lng) : null;
-    const numRating = rating !== undefined && rating !== null && rating !== '' ? parseFloat(rating) : 4.5;
-    const numReviews = reviews !== undefined && reviews !== null && reviews !== '' ? parseInt(reviews) : 0;
-    const boolHasOffer = Boolean(has_offer);
-    const numOfferPct = offer_percentage !== undefined && offer_percentage !== null && offer_percentage !== '' ? parseInt(offer_percentage) : 0;
-    const amenitiesArr = Array.isArray(amenities) ? amenities : [];
-    const galleryArr = Array.isArray(gallery) ? gallery : [];
+    // 1. Fetch current gym record
+    const currentGymRes = await query("SELECT * FROM gyms WHERE id::text = $1::text", [targetGymId]);
+    if (currentGymRes.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Gym not found." },
+        { status: 404, headers: corsHeaders }
+      );
+    }
 
-    // 1. Update gyms table
-    await query(
-      `UPDATE gyms 
-       SET name = COALESCE($1, name),
-           location = COALESCE($2, location),
-           lat = $3,
-           lng = $4,
-           description = COALESCE($5, description),
-           rating = $6,
-           reviews = $7,
-           has_offer = $8,
-           offer_percentage = $9,
-           image = COALESCE($10, image),
-           gallery = $11,
-           amenities = $12
-       WHERE id::text = $13::text`,
-      [
-        name,
-        location,
-        numLat,
-        numLng,
-        description,
-        numRating,
-        numReviews,
-        boolHasOffer,
-        numOfferPct,
-        image || null,
-        galleryArr,
-        amenitiesArr,
-        targetGymId
-      ]
-    );
+    const currentGym = currentGymRes.rows[0];
 
-    // 2. Update Pricing Plans if provided
+    const updatedName = name !== undefined ? name.trim() : currentGym.name;
+    const updatedLocation = location !== undefined ? location.trim() : currentGym.location;
+    const updatedLat = lat !== undefined && lat !== "" ? parseFloat(lat) : currentGym.lat;
+    const updatedLng = lng !== undefined && lng !== "" ? parseFloat(lng) : currentGym.lng;
+    const updatedRating = rating !== undefined ? parseFloat(rating) : currentGym.rating;
+    const updatedReviews = reviews !== undefined ? parseInt(reviews, 10) : currentGym.reviews;
+    const updatedHasOffer = has_offer !== undefined ? Boolean(has_offer) : currentGym.has_offer;
+    const updatedOfferPercentage = offer_percentage !== undefined ? parseFloat(offer_percentage) : currentGym.offer_percentage;
+    const updatedDesc = description !== undefined ? description.trim() : currentGym.description;
+    const updatedImage = image !== undefined && image !== "" ? image : currentGym.image;
+    const updatedGallery = Array.isArray(gallery) ? gallery : currentGym.gallery;
+    const updatedAmenities = Array.isArray(amenities) ? amenities : currentGym.amenities;
+
+    // 2. Update gym in DB
+    const updateRes = await query(`
+      UPDATE gyms
+      SET 
+        name = $1,
+        location = $2,
+        lat = $3,
+        lng = $4,
+        rating = $5,
+        reviews = $6,
+        has_offer = $7,
+        offer_percentage = $8,
+        description = $9,
+        image = $10,
+        gallery = $11,
+        amenities = $12
+      WHERE id::text = $13::text
+      RETURNING *
+    `, [
+      updatedName,
+      updatedLocation,
+      updatedLat,
+      updatedLng,
+      updatedRating,
+      updatedReviews,
+      updatedHasOffer,
+      updatedOfferPercentage,
+      updatedDesc,
+      updatedImage,
+      updatedGallery,
+      updatedAmenities,
+      targetGymId
+    ]);
+
+    const updatedGym = updateRes.rows[0];
+
+    // 3. Update pricing plans if provided
     if (Array.isArray(plans) && plans.length > 0) {
-      // Clear existing plans for this gym and insert new ones
-      await query('DELETE FROM plans WHERE gym_id::text = $1::text', [targetGymId]);
-      for (const p of plans) {
-        if (p && p.name && p.price) {
-          const rawPrice = String(p.price).replace(/[^0-9.]/g, '');
-          const formattedPrice = `₹${rawPrice || '0'}`;
-          await query(
-            `INSERT INTO plans (gym_id, name, price, popular) VALUES ($1, $2, $3, false)`,
-            [targetGymId, p.name.trim(), formattedPrice]
-          );
+      try {
+        await query("DELETE FROM plans WHERE gym_id::text = $1::text", [targetGymId]);
+        for (const plan of plans) {
+          if (plan.name && plan.price !== undefined) {
+            await query(`
+              INSERT INTO plans (gym_id, name, price)
+              VALUES ($1, $2, $3)
+            `, [targetGymId, plan.name, plan.price.toString()]);
+          }
         }
+      } catch (planErr) {
+        console.warn("Plans update warning:", planErr);
       }
     }
 
-    // 3. Fetch updated gym
-    const updatedGymRes = await query('SELECT * FROM gyms WHERE id::text = $1::text', [targetGymId]);
-    const updatedPlansRes = await query('SELECT * FROM plans WHERE gym_id::text = $1::text', [targetGymId]);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Gym details updated successfully!',
-      gym: {
-        ...updatedGymRes.rows[0],
-        plans: updatedPlansRes.rows
-      }
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Gym profile updated successfully!",
+        gym: updatedGym
+      },
+      { headers: corsHeaders }
+    );
   } catch (error: any) {
-    console.error('Error updating gym profile:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Internal server error' }, { status: 500 });
+    console.error("[Edit Gym API Error]:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to update gym profile." },
+      { status: 500, headers: corsHeaders }
+    );
   }
 }

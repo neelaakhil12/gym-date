@@ -445,8 +445,10 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
               lng: (gym as any).lng ? parseFloat((gym as any).lng) : ((gym as any).longitude ? parseFloat((gym as any).longitude) : 0) 
             },
             facilities: gym.amenities || ['Locker Room', 'Air Conditioned', 'Free Weights'],
-            image: gym.image || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
-            gallery: gym.gallery && gym.gallery.length > 0 ? gym.gallery : ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48'],
+            image: gym.image ? (gym.image.startsWith('http') ? gym.image : `https://gymdate.in${gym.image.startsWith('/') ? '' : '/'}${gym.image}`) : 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
+            gallery: gym.gallery && gym.gallery.length > 0 
+              ? gym.gallery.map((g: string) => g.startsWith('http') ? g : `https://gymdate.in${g.startsWith('/') ? '' : '/'}${g}`) 
+              : ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48'],
             timings: gym.hours || '06:00 AM - 10:00 PM',
             description: gym.description || 'Premium partnered gym offering top-tier training environment.',
             trainers: [

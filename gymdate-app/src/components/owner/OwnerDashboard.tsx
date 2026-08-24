@@ -572,6 +572,7 @@ export const OwnerDashboard: React.FC = () => {
   const handleSaveGymProfile = async () => {
     if (!editGymName.trim()) {
       if (Platform.OS === 'web') alert('Gym name is required');
+      else Alert.alert('Error', 'Gym name is required');
       return;
     }
     setIsSavingEdit(true);
@@ -603,28 +604,54 @@ export const OwnerDashboard: React.FC = () => {
         if (res.gym) {
           setPartnerGym(res.gym);
         }
+        if (Platform.OS !== 'web') {
+          Alert.alert('Success', 'Gym profile updated successfully!');
+        }
         setTimeout(() => {
           setEditSuccessMsg('');
           setActiveTab('overview');
-        }, 1200);
+        }, 1000);
       } else {
-        if (Platform.OS === 'web') alert(res.error || 'Failed to update gym profile');
+        const errText = res?.error || 'Failed to update gym profile';
+        if (Platform.OS === 'web') alert(errText);
+        else Alert.alert('Error', errText);
       }
     } catch (err: any) {
-      if (Platform.OS === 'web') alert(err.message || 'Error updating gym profile');
+      const errText = err?.message || 'Error updating gym profile';
+      if (Platform.OS === 'web') alert(errText);
+      else Alert.alert('Error', errText);
     } finally {
       setIsSavingEdit(false);
     }
   };
 
-  const handleSaveOffer = () => {
+  const handleSaveOffer = async () => {
     setIsUpdatingOffer(true);
-    setTimeout(() => {
-      setIsUpdatingOffer(false);
-      if (Platform.OS === 'web') {
-        alert('Promotional offer updated successfully!');
+    try {
+      const res = await apiService.updateGymProfile({
+        gym_id: partnerGym?.id,
+        email: currentEmail,
+        has_offer: hasOffer,
+        offer_percentage: offerPercentage
+      });
+      if (res && res.success) {
+        if (res.gym) setPartnerGym(res.gym);
+        if (Platform.OS === 'web') {
+          alert('Promotional offer updated successfully!');
+        } else {
+          Alert.alert('Success', 'Promotional offer updated successfully!');
+        }
+      } else {
+        const msg = res?.error || 'Failed to update offer';
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('Error', msg);
       }
-    }, 600);
+    } catch (e: any) {
+      if (Platform.OS === 'web') alert(e.message || 'Error saving offer');
+      else Alert.alert('Error', e.message || 'Error saving offer');
+    } finally {
+      setIsUpdatingOffer(false);
+    }
   };
 
   const handleCopyReferral = async () => {
@@ -998,7 +1025,7 @@ export const OwnerDashboard: React.FC = () => {
             <View style={styles.gymHeroCard}>
               <View style={styles.gymHeroImageContainer}>
                 <Image 
-                  source={{ uri: activeGym?.image || 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png' }} 
+                  source={{ uri: formatImageUrl(activeGym?.image) || 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png' }} 
                   style={styles.gymHeroImage}
                   resizeMode="cover"
                 />
