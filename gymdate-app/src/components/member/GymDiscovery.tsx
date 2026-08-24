@@ -120,6 +120,30 @@ export const GymDiscovery: React.FC = () => {
   // Real Razorpay payment options state — null = closed
   const [paymentOptions, setPaymentOptions] = useState<RazorpayPaymentOptions | null>(null);
 
+  // Fetch live GST and wallet settings on mount
+  useEffect(() => {
+    const fetchLiveConfig = async () => {
+      try {
+        const confRes = await fetch(`${getApiUrl()}/api/admin/referral-config?_t=${Date.now()}`, {
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        const d = await confRes.json();
+        if (d.success && d.config) {
+          if (d.config.max_wallet_per_txn) {
+            setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 10);
+          }
+          if (d.config.gst_percentage !== undefined) {
+            const parsedGst = parseFloat(d.config.gst_percentage);
+            setGstPercentage(isNaN(parsedGst) ? 0 : parsedGst);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load initial platform config:', e);
+      }
+    };
+    fetchLiveConfig();
+  }, []);
+
   const handleGymClick = (id: string) => {
     setSelectedGymId(id);
     setActiveScreen('gym-details');
@@ -165,7 +189,24 @@ export const GymDiscovery: React.FC = () => {
     setBuyerEmail(userProfile.email || loginInput || '');
     setUseWallet(false);
 
-    // Fetch user wallet balance from backend
+    // 1. Fetch live GST percentage & max wallet config with cache busting
+    try {
+      const confRes = await fetch(`${getApiUrl()}/api/admin/referral-config?_t=${Date.now()}`, {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      const d = await confRes.json();
+      if (d.success && d.config) {
+        if (d.config.max_wallet_per_txn) {
+          setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 10);
+        }
+        if (d.config.gst_percentage !== undefined) {
+          const parsedGst = parseFloat(d.config.gst_percentage);
+          setGstPercentage(isNaN(parsedGst) ? 0 : parsedGst);
+        }
+      }
+    } catch (e) {}
+
+    // 2. Fetch user wallet balance from backend
     const targetEmail = (userProfile.email || loginInput || '').trim().toLowerCase();
     if (targetEmail) {
       try {
@@ -184,20 +225,6 @@ export const GymDiscovery: React.FC = () => {
             } catch (e) {}
           }
         }
-
-        // Fetch max wallet per txn & GST percentage config
-        try {
-          const confRes = await fetch(`${getApiUrl()}/api/admin/referral-config`);
-          const d = await confRes.json();
-          if (d.success && d.config) {
-            if (d.config.max_wallet_per_txn) {
-              setMaxWalletPerTxn(parseFloat(d.config.max_wallet_per_txn) || 10);
-            }
-            if (d.config.gst_percentage !== undefined) {
-              setGstPercentage(parseFloat(d.config.gst_percentage));
-            }
-          }
-        } catch (e) {}
       } catch (e) {
         console.warn('Wallet fetch error in checkout:', e);
       }
