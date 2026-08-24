@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useGymDate, Trainer, Gym } from '../../context/GymDateContext';
 import { apiService } from '../../services/apiService';
+import { getApiUrl } from '../../config';
 import { THEME } from '../../theme';
 import { useTheme } from '../../useTheme';
 import { RazorpayCheckout, RazorpayPaymentOptions } from '../RazorpayCheckout';
@@ -251,8 +252,8 @@ export const GymDiscovery: React.FC = () => {
           if ((profRes as any).id) {
             try {
               const wData = await apiService.getWalletData((profRes as any).id);
-              if (wData && wData.balance !== undefined) {
-                setWalletBalance(parseFloat(wData.balance) || wb);
+              if (wData && (wData as any).balance !== undefined) {
+                setWalletBalance(parseFloat((wData as any).balance) || wb);
               }
             } catch (e) {}
           }

@@ -58,6 +58,7 @@ export const Profile: React.FC = () => {
     setActiveScreen, 
     themeMode, 
     setThemeMode, 
+    loginInput,
     setLoginInput,
     setUserCoords
   } = useGymDate();
