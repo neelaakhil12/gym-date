@@ -7,8 +7,10 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, DollarSign, AlignLeft, Plus, X, Image as ImageIcon, Star, Percent } from "lucide-react";
 import { updateGym, getCoordinatesFromGoogle } from "@/actions/gymActions";
 import { getPartnerGym, getGymPricingPlans } from "@/actions/adminActions";
+import { useSession } from "next-auth/react";
 
 export default function PartnerEditGymPage() {
+  const { data: session } = useSession();
   const router = useRouter();
   
   const [gymId, setGymId] = useState<string | null>(null);
@@ -65,44 +67,6 @@ export default function PartnerEditGymPage() {
     );
   };
 
-  // Auto-parse coordinates from Google Maps URLs
-  useEffect(() => {
-    const lookupLocation = async () => {
-      // If the location is cleared, clear the coordinates too
-      if (!location) {
-        setLat("");
-        setLng("");
-        return;
-      }
-
-      if (location.length < 5) return;
-
-      // 1. First try simple regex for long URLs
-      const genericMatch = location.match(/([-+]?\d+\.\d+),\s*([-+]?\d+\.\d+)/);
-      if (genericMatch) {
-        setLat(genericMatch[1]);
-        setLng(genericMatch[2]);
-        return;
-      }
-
-      // 2. If it's a short link or just text, ask Google
-      if (location.includes("maps") || location.length > 10) {
-        setLookupLoading(true);
-        const result = await getCoordinatesFromGoogle(location);
-        if (result.success && result.lat && result.lng) {
-          setLat(result.lat.toString());
-          setLng(result.lng.toString());
-        } else if (result.error) {
-          console.error("Location lookup error:", result.error);
-        }
-        setLookupLoading(false);
-      }
-    };
-
-    const timer = setTimeout(lookupLocation, 1000); // Debounce
-    return () => clearTimeout(timer);
-  }, [location]);
-
   // Pre-defined amenities to check against
   const defaultAmenitiesList = [
     "AC", "Personal Trainer", "Parking", "Locker Room", 
@@ -114,7 +78,17 @@ export default function PartnerEditGymPage() {
   useEffect(() => {
     async function loadGymData() {
       try {
-        const gym = await getPartnerGym();
+        let gym = await getPartnerGym();
+
+        if (!gym && (session?.user as any)?.email) {
+          try {
+            const res = await fetch(`/api/partner/dashboard-data?email=${encodeURIComponent((session.user as any).email)}`);
+            const json = await res.json();
+            if (json.success && json.gym) {
+              gym = json.gym;
+            }
+          } catch (_) {}
+        }
 
         if (!gym) {
           setError("No gym linked to this account.");
@@ -182,30 +156,11 @@ export default function PartnerEditGymPage() {
       }
     }
     loadGymData();
-  }, []);
-
-  const toggleDefaultAmenity = (amenity: string) => {
-    setCheckedDefaultAmenities(prev => 
-      prev.includes(amenity) 
-        ? prev.filter(a => a !== amenity) 
-        : [...prev, amenity]
-    );
-  };
+  }, [session]);
 
   const handleAddCustomAmenity = () => {
     const trimmed = newAmenity.trim();
     if (!trimmed) return;
-
-    // Check if it's already in default list
-    const isDefault = defaultAmenitiesList.some(a => a.toLowerCase() === trimmed.toLowerCase());
-    if (isDefault) {
-      const actualName = defaultAmenitiesList.find(a => a.toLowerCase() === trimmed.toLowerCase())!;
-      if (!checkedDefaultAmenities.includes(actualName)) {
-        setCheckedDefaultAmenities([...checkedDefaultAmenities, actualName]);
-      }
-      setNewAmenity("");
-      return;
-    }
 
     if (!customAmenities.some(a => a.toLowerCase() === trimmed.toLowerCase())) {
       setCustomAmenities([...customAmenities, trimmed]);
@@ -287,7 +242,7 @@ export default function PartnerEditGymPage() {
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -663,7 +618,6 @@ export default function PartnerEditGymPage() {
               <div>
                 <h3 className="text-sm font-bold text-gray-700">Amenities</h3>
               </div>
-              {/* Hidden input to ensure amenities are sent as an array correctly */}
               <input 
                 type="hidden" 
                 name="amenities_json" 

@@ -4,7 +4,10 @@ import React, { useEffect, useState } from "react";
 import { CreditCard, DollarSign, Calendar, Users, ArrowUpRight } from "lucide-react";
 import { getPartnerGym, getPartnerBookings } from "@/actions/adminActions";
 
+import { useSession } from "next-auth/react";
+
 export default function PartnerBookings() {
+  const { data: session } = useSession();
   const [gym, setGym] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -12,7 +15,16 @@ export default function PartnerBookings() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const gymData = await getPartnerGym();
+      let gymData = await getPartnerGym();
+      if (!gymData && (session?.user as any)?.email) {
+        try {
+          const res = await fetch(`/api/partner/dashboard-data?email=${encodeURIComponent((session.user as any).email)}`);
+          const json = await res.json();
+          if (json.success && json.gym) {
+            gymData = json.gym;
+          }
+        } catch (_) {}
+      }
       setGym(gymData);
       
       if (gymData) {
@@ -22,7 +34,7 @@ export default function PartnerBookings() {
       setLoading(false);
     }
     loadData();
-  }, []);
+  }, [session]);
 
   if (loading) {
     return (

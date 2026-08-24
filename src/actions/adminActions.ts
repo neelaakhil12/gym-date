@@ -121,13 +121,36 @@ export async function getGyms() {
   }
 }
 
+import { cookies } from "next/headers";
+import { decode } from "next-auth/jwt";
+
 export async function getPartnerGym() {
   try {
-    const session = await getServerSession(partnerAuthOptions);
-    if (!session?.user) return null;
-    
-    const userId = (session.user as any).id;
-    const userEmail = (session.user as any).email?.trim().toLowerCase();
+    let session = await getServerSession(partnerAuthOptions);
+    let userId = (session?.user as any)?.id;
+    let userEmail = (session?.user as any)?.email?.trim().toLowerCase();
+
+    // Fallback: If session was missed by server action, decode gymdate.partner-token cookie directly
+    if (!userId && !userEmail) {
+      try {
+        const cookieStore = await cookies();
+        const partnerTokenCookie = cookieStore.get("gymdate.partner-token")?.value || cookieStore.get("__Secure-gymdate.partner-token")?.value;
+        if (partnerTokenCookie) {
+          const decoded = await decode({
+            token: partnerTokenCookie,
+            secret: process.env.NEXTAUTH_SECRET || "",
+          });
+          if (decoded) {
+            userId = (decoded.id as string) || userId;
+            userEmail = (decoded.email as string)?.trim().toLowerCase() || userEmail;
+          }
+        }
+      } catch (cookieErr) {
+        console.warn("Direct partner token decode fallback error:", cookieErr);
+      }
+    }
+
+    if (!userId && !userEmail) return null;
 
     let gymResult = await query(
       `SELECT g.* FROM gyms g
@@ -138,7 +161,7 @@ export async function getPartnerGym() {
             SELECT id::text FROM partner_users WHERE LOWER(email) = $2
           )
        LIMIT 1`,
-      [userId, userEmail || '']
+      [userId || '', userEmail || '']
     );
     let gym = gymResult.rows[0] || null;
 

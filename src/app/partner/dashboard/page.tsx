@@ -36,7 +36,10 @@ import { updateGymStatus, updateGymOffer } from "@/actions/gymActions";
 import { generateInvoicePDF } from "@/lib/invoice";
 import { supabase } from "@/lib/supabase";
 
+import { useSession } from "next-auth/react";
+
 export default function PartnerDashboard() {
+  const { data: session } = useSession();
   const [gym, setGym] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -76,7 +79,22 @@ export default function PartnerDashboard() {
   async function loadGym() {
     setLoading(true);
     try {
-      const data = await getPartnerGym();
+      let data = await getPartnerGym();
+      
+      // Fallback: If server action didn't resolve, fetch from dashboard-data endpoint
+      if (!data) {
+        const partnerEmail = (session?.user as any)?.email;
+        if (partnerEmail) {
+          try {
+            const res = await fetch(`/api/partner/dashboard-data?email=${encodeURIComponent(partnerEmail)}`, { cache: 'no-store' });
+            const json = await res.json();
+            if (json.success && json.gym) {
+              data = json.gym;
+            }
+          } catch (_) {}
+        }
+      }
+
       setGym(data);
       
       if (data) {
@@ -132,7 +150,7 @@ export default function PartnerDashboard() {
 
   useEffect(() => {
     loadGym();
-  }, []);
+  }, [session]);
 
   const handleRefWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();

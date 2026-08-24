@@ -30,10 +30,21 @@ export default function PartnerWallet() {
     qrCodePreview: ""
   });
 
+  const { data: session } = useSession();
+
   useEffect(() => {
     async function loadWalletData() {
       setLoading(true);
-      const gymData = await getPartnerGym();
+      let gymData = await getPartnerGym();
+      if (!gymData && (session?.user as any)?.email) {
+        try {
+          const res = await fetch(`/api/partner/dashboard-data?email=${encodeURIComponent((session.user as any).email)}`);
+          const json = await res.json();
+          if (json.success && json.gym) {
+            gymData = json.gym;
+          }
+        } catch (_) {}
+      }
       setGym(gymData);
       
       if (gymData) {
@@ -74,7 +85,7 @@ export default function PartnerWallet() {
       setLoading(false);
     }
     loadWalletData();
-  }, []);
+  }, [session]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
