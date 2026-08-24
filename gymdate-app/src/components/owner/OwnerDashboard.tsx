@@ -2045,7 +2045,7 @@ export const OwnerDashboard: React.FC = () => {
         onRequestClose={() => setShowWithdrawModal(false)}
       >
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <View style={styles.inFrameModalOverlay}>
@@ -2054,7 +2054,7 @@ export const OwnerDashboard: React.FC = () => {
               activeOpacity={1} 
               onPress={() => setShowWithdrawModal(false)} 
             />
-            <View style={[styles.inFrameModalBox, { maxHeight: '88%', padding: 0, overflow: 'hidden' }]}>
+            <View style={[styles.inFrameModalBox, { maxHeight: '86%', width: '100%', maxWidth: 360, padding: 0, overflow: 'hidden', zIndex: 1001 }]}>
               {/* Modal Sticky Header */}
               <View style={[styles.modalHeader, { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', backgroundColor: '#FFFFFF' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -2070,9 +2070,10 @@ export const OwnerDashboard: React.FC = () => {
 
               {/* Scrollable Form Body */}
               <ScrollView 
-                style={{ flexGrow: 0 }}
-                contentContainerStyle={{ padding: 16, gap: 10 }}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 220 }}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={true}
               >
                 {/* Wallet Info Summary Box */}
