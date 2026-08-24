@@ -4,8 +4,18 @@ import { DEFAULT_USER_TERMS, DEFAULT_PARTNER_TERMS } from '@/lib/termsData';
 
 export const dynamic = 'force-dynamic';
 
+async function ensurePlatformConfigTextColumns() {
+  try {
+    await query("ALTER TABLE platform_config ALTER COLUMN value TYPE TEXT");
+    await query("ALTER TABLE platform_config ALTER COLUMN description TYPE TEXT");
+  } catch (e: any) {
+    // Ignore if already text
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
+    await ensurePlatformConfigTextColumns();
     const result = await query(
       "SELECT key, value FROM platform_config WHERE key IN ('user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at')"
     );
@@ -38,6 +48,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensurePlatformConfigTextColumns();
     const body = await req.json();
     const { userTerms, partnerTerms, key, value } = body;
 

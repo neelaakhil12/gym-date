@@ -49,6 +49,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Key is required" }, { status: 400 });
     }
 
+    try {
+      await query("ALTER TABLE platform_config ALTER COLUMN value TYPE TEXT");
+      await query("ALTER TABLE platform_config ALTER COLUMN description TYPE TEXT");
+    } catch (e) {}
+
     await query(
       `INSERT INTO platform_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2`,
       [key, String(value ?? '')]
