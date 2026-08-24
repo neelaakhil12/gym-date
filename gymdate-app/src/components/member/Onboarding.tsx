@@ -15,8 +15,10 @@ import {
   Easing,
   Linking,
   Modal,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useGymDate, ActiveScreen } from '../../context/GymDateContext';
@@ -58,6 +60,7 @@ import { DEFAULT_USER_TERMS, DEFAULT_PARTNER_TERMS } from '../../utils/termsData
 const { width, height } = Dimensions.get('window');
 
 export const Onboarding: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { 
     activeScreen, 
     setActiveScreen, 
@@ -1581,11 +1584,17 @@ export const Onboarding: React.FC = () => {
         transparent={false}
         onRequestClose={() => setTermsModalVisible(false)}
       >
-        <View style={{ flex: 1, backgroundColor: isLight ? '#ffffff' : '#0B0C10', paddingTop: Platform.OS === 'ios' ? 44 : 0 }}>
+        <View style={{ 
+          flex: 1, 
+          backgroundColor: isLight ? '#ffffff' : '#0B0C10', 
+          paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 44),
+          paddingBottom: Math.max(insets.bottom, 12)
+        }}>
           {/* Header */}
           <View style={[
             styles.termsModalHeader, 
-            isLight && { backgroundColor: '#F9FAFB', borderBottomColor: '#E5E7EB' }
+            isLight && { backgroundColor: '#F9FAFB', borderBottomColor: '#E5E7EB' },
+            { paddingTop: 14, paddingBottom: 14 }
           ]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -1601,6 +1610,7 @@ export const Onboarding: React.FC = () => {
             <TouchableOpacity 
               onPress={() => setTermsModalVisible(false)}
               style={[styles.termsModalCloseBtn, isLight && { backgroundColor: '#E5E7EB' }]}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <X size={20} color={isLight ? '#374151' : '#ffffff'} />
             </TouchableOpacity>
@@ -1609,7 +1619,7 @@ export const Onboarding: React.FC = () => {
           {/* Scrollable Formatted Content */}
           <ScrollView 
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 110 }}
+            contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
             showsVerticalScrollIndicator={true}
           >
             <View style={[styles.termsTextCard, isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
@@ -1620,7 +1630,11 @@ export const Onboarding: React.FC = () => {
           </ScrollView>
 
           {/* Sticky Accept Button Footer */}
-          <View style={[styles.termsModalFooter, isLight && { backgroundColor: '#ffffff', borderTopColor: '#E5E7EB' }]}>
+          <View style={[
+            styles.termsModalFooter, 
+            isLight && { backgroundColor: '#ffffff', borderTopColor: '#E5E7EB' },
+            { paddingBottom: Math.max(insets.bottom + 12, 20) }
+          ]}>
             <TouchableOpacity
               style={styles.btnPrimary}
               onPress={() => {
