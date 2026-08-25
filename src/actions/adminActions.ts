@@ -986,6 +986,12 @@ export async function createOperationAdmin(data: { email: string; password: stri
 
 export async function getPlatformConfig() {
   try {
+    try {
+      await query("DELETE FROM platform_config WHERE key IN ('terms_user', 'terms_partner')");
+    } catch (e) {
+      // ignore
+    }
+
     const result = await query("SELECT * FROM platform_config ORDER BY key ASC");
     let configs = result.rows || [];
 
@@ -1010,11 +1016,13 @@ export async function getPlatformConfig() {
     }
 
     const updated = await query("SELECT * FROM platform_config ORDER BY key ASC");
-    return (updated.rows || []).map((row: any) => ({
-      key: String(row.key),
-      value: String(row.value || ''),
-      description: String(row.description || '')
-    }));
+    return (updated.rows || [])
+      .filter((row: any) => row && row.key && !['terms_user', 'terms_partner', 'user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at'].includes(row.key) && !String(row.key).includes('terms'))
+      .map((row: any) => ({
+        key: String(row.key),
+        value: String(row.value || ''),
+        description: String(row.description || '')
+      }));
   } catch (error) {
     console.error("Error fetching platform config", error);
     return [];

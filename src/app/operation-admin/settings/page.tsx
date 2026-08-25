@@ -44,7 +44,7 @@ export default function OperationSettings() {
         try {
           const data = await getPlatformConfig();
           if (Array.isArray(data)) {
-            setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'allow_staff_settings' && item.key !== 'signup_bonus'));
+            setConfig(data.filter((item: any) => item && item.key && !['referral_bonus_user', 'allow_staff_settings', 'signup_bonus', 'terms_user', 'terms_partner', 'user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at'].includes(item.key) && !String(item.key).includes('terms')));
           } else {
             setConfig([]);
           }

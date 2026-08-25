@@ -55,23 +55,29 @@ export default function AdminSettings() {
   }, []);
 
   async function loadConfig() {
+    const isEligible = (item: any) => 
+      item && 
+      item.key && 
+      !['referral_bonus_user', 'signup_bonus', 'terms_user', 'terms_partner', 'user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at'].includes(item.key) &&
+      !String(item.key).includes('terms');
+
     setLoading(true);
     try {
       const res = await fetch("/api/admin/settings-config", { cache: "no-store" });
       const json = await res.json();
       if (json.success && Array.isArray(json.configs)) {
-        setConfig(json.configs.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+        setConfig(json.configs.filter(isEligible));
       } else {
         const data = await getPlatformConfig();
         if (Array.isArray(data)) {
-          setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+          setConfig(data.filter(isEligible));
         }
       }
     } catch (e) {
       try {
         const data = await getPlatformConfig();
         if (Array.isArray(data)) {
-          setConfig(data.filter((item: any) => item && item.key && item.key !== 'referral_bonus_user' && item.key !== 'signup_bonus'));
+          setConfig(data.filter(isEligible));
         }
       } catch (err) {
         console.error("Failed to load settings config:", err);
@@ -208,8 +214,8 @@ export default function AdminSettings() {
   };
 
   const staffSettingItem = config.find(item => item && item.key === 'allow_staff_settings');
-  const hiddenKeys = ['allow_staff_settings', 'refer_a_friend', 'user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at'];
-  const generalConfigs = config.filter(item => item && item.key && !hiddenKeys.includes(item.key));
+  const hiddenKeys = ['allow_staff_settings', 'refer_a_friend', 'user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at', 'terms_user', 'terms_partner', 'referral_bonus_user', 'signup_bonus'];
+  const generalConfigs = config.filter(item => item && item.key && !hiddenKeys.includes(item.key) && !String(item.key).includes('terms'));
   const isStaffAccessEnabled = staffSettingItem?.value === 'true' || staffSettingItem?.value === '1';
 
   const currentTermsText = selectedTermsType === "user" ? userTermsText : partnerTermsText;

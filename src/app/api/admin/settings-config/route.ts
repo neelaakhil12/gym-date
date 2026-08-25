@@ -6,6 +6,13 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
+    // Delete any legacy terms keys from platform_config so they never appear in general settings
+    try {
+      await query("DELETE FROM platform_config WHERE key IN ('terms_user', 'terms_partner')");
+    } catch (e) {
+      // ignore
+    }
+
     const result = await query("SELECT key, value, description FROM platform_config ORDER BY key ASC");
     let configs = result.rows || [];
 
@@ -30,11 +37,13 @@ export async function GET() {
     }
 
     const updated = await query("SELECT key, value, description FROM platform_config ORDER BY key ASC");
-    const safeData = (updated.rows || []).map((row: any) => ({
-      key: String(row.key || ''),
-      value: String(row.value ?? ''),
-      description: String(row.description ?? '')
-    }));
+    const safeData = (updated.rows || [])
+      .filter((row: any) => row && row.key && !['terms_user', 'terms_partner', 'user_terms_conditions', 'partner_terms_conditions', 'terms_updated_at'].includes(row.key) && !String(row.key).includes('terms'))
+      .map((row: any) => ({
+        key: String(row.key || ''),
+        value: String(row.value ?? ''),
+        description: String(row.description ?? '')
+      }));
 
     return NextResponse.json({ success: true, configs: safeData }, {
       headers: {
