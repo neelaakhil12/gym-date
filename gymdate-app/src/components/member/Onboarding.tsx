@@ -1698,10 +1698,9 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   cleanBrandLogo: {
-    width: '100%',
-    maxWidth: 400,
-    height: 260,
-    transform: [{ scale: 1.3 }],
+    width: '90%',
+    maxWidth: 360,
+    height: 180,
     resizeMode: 'contain',
   },
   cleanActionButtons: {
