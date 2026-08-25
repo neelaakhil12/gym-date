@@ -475,8 +475,8 @@ export const GymDiscovery: React.FC = () => {
                   >
                     <Image source={{ uri: gym.image }} style={styles.gymImg} />
                     
-                    {/* Status and Offer Badges */}
-                    <View style={{ position: 'absolute', top: 10, left: 10, flexDirection: 'row', gap: 6, zIndex: 10 }}>
+                    {/* Status and Offer Badges on Top Right */}
+                    <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', gap: 6, zIndex: 10 }}>
                       <View style={{ 
                         backgroundColor: (gym.status || '').toLowerCase() === 'closed' ? '#EF4444' : '#10B981', 
                         paddingHorizontal: 8, 
