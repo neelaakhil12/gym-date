@@ -182,17 +182,17 @@ export const OwnerDashboard: React.FC = () => {
 
   const currentEmail = (loginInput || userProfile.email || '').toLowerCase();
   const activeGym = partnerGym || {
-    id: 'loading',
+    id: ownerProfile.gymId || 'loading',
     name: ownerProfile.gymName || userProfile.name || 'Partner Gym',
-    location: 'Loading gym details...',
-    description: 'Fetching partner gym information...',
+    location: 'Loading location...',
+    description: 'Loading details...',
     price_per_day: 0,
     hours: '06:00 AM - 10:00 PM',
     rating: 4.5,
     reviews: 0,
     status: isOpenStatus ? 'Open' : 'Closed',
-    image: 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png',
-    gallery: [],
+    image: ownerProfile.gymImage || '',
+    gallery: ownerProfile.gymImage ? [ownerProfile.gymImage] : [],
     amenities: [],
     plans: []
   };
@@ -443,13 +443,13 @@ export const OwnerDashboard: React.FC = () => {
       setEditOfferPercentage(gymToEdit.offer_percentage ? String(gymToEdit.offer_percentage) : '10');
       setEditDescription(gymToEdit.description || 'Premium fitness facility offering high-energy workouts and state-of-the-art strength gear.');
 
-      const coverImg = formatImageUrl(gymToEdit.image) || 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png';
+      const coverImg = formatImageUrl(gymToEdit.image) || formatImageUrl(ownerProfile.gymImage) || '';
       setEditPrimaryImage(coverImg);
 
       const rawGallery = gymToEdit.gallery || [];
       const formattedGallery = Array.isArray(rawGallery) && rawGallery.length > 0
         ? rawGallery.map((g: string) => formatImageUrl(g))
-        : [coverImg];
+        : (coverImg ? [coverImg] : []);
       setEditGallery(formattedGallery);
 
       const rawAmenities = gymToEdit.amenities || [];
@@ -1054,11 +1054,17 @@ export const OwnerDashboard: React.FC = () => {
             {/* 1. HERO GYM BANNER CARD */}
             <View style={styles.gymHeroCard}>
               <View style={styles.gymHeroImageContainer}>
-                <Image 
-                  source={{ uri: formatImageUrl(activeGym?.image) || 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png' }} 
-                  style={styles.gymHeroImage}
-                  resizeMode="cover"
-                />
+                {activeGym?.image ? (
+                  <Image 
+                    source={{ uri: formatImageUrl(activeGym.image) }} 
+                    style={styles.gymHeroImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.gymHeroImage, { backgroundColor: '#1E293B', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Building2 size={44} color="#94A3B8" />
+                  </View>
+                )}
                 <View style={styles.ratingBadge}>
                   <Star size={12} color="#EAB308" fill="#EAB308" style={{ marginRight: 3 }} />
                   <Text style={styles.ratingBadgeText}>{activeGym?.rating || '4.5'} ({activeGym?.reviews || '0'} reviews)</Text>
@@ -1066,14 +1072,14 @@ export const OwnerDashboard: React.FC = () => {
               </View>
 
               <View style={styles.gymHeroDetails}>
-                <Text style={styles.gymTitleText}>{activeGym?.name || 'cultfit gym'}</Text>
+                <Text style={styles.gymTitleText}>{activeGym?.name || ownerProfile.gymName || 'Partner Gym'}</Text>
                 <TouchableOpacity 
                   style={styles.locationLinkRow}
                   onPress={() => activeGym?.location && activeGym.location.startsWith('http') ? Linking.openURL(activeGym.location) : null}
                 >
                   <MapPin size={13} color="#EF4444" style={{ marginRight: 4 }} />
                   <Text style={styles.locationLinkText} numberOfLines={1}>
-                    {activeGym?.location || 'Hyderabad, Telangana'}
+                    {activeGym?.location || 'Location loading...'}
                   </Text>
                 </TouchableOpacity>
 

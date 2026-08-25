@@ -125,7 +125,9 @@ export interface GymDateNotification {
 }
 
 export interface GymOwnerProfile {
+  gymId?: string;
   gymName: string;
+  gymImage?: string;
   ownerName: string;
   revenue: number;
   totalCheckIns: number;
@@ -680,8 +682,10 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Gym Owner Profile & Operations State
   const [ownerProfile, setOwnerProfile] = useState<GymOwnerProfile>({
-    gymName: 'Partner Gym',
-    ownerName: 'Gym Partner',
+    gymId: '',
+    gymName: '',
+    gymImage: '',
+    ownerName: '',
     revenue: 0,
     totalCheckIns: 0,
     activeMembers: 0,

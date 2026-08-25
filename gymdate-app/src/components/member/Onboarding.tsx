@@ -286,12 +286,15 @@ export const Onboarding: React.FC = () => {
       if (res.user) {
         const detectedGym = res.user.gym;
         const gymName = detectedGym?.name || 'Partner Gym';
+        const gymImage = detectedGym?.image ? (detectedGym.image.startsWith('http') ? detectedGym.image : `https://gymdate.in${detectedGym.image.startsWith('/') ? '' : '/'}${detectedGym.image}`) : '';
         const partnerName = res.user.full_name || res.user.name || gymName;
 
         setOwnerProfile(prev => ({
           ...prev,
+          gymId: detectedGym?.id || '',
           ownerName: partnerName,
           gymName: gymName,
+          gymImage: gymImage
         }));
         setUserProfile(prev => ({
           ...prev,
