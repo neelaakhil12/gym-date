@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -8,12 +8,13 @@ import {
   ScrollView, 
   Image, 
   Modal, 
-  Linking,
-  Alert,
-  Switch,
-  useColorScheme,
-  Platform,
-  BackHandler
+  Linking, 
+  Alert, 
+  Switch, 
+  useColorScheme, 
+  Platform, 
+  BackHandler,
+  Dimensions
 } from 'react-native';
 import { useGymDate, Trainer, Gym } from '../../context/GymDateContext';
 import { apiService } from '../../services/apiService';
@@ -123,6 +124,11 @@ export const GymDiscovery: React.FC = () => {
 
   // Real Razorpay payment options state — null = closed
   const [paymentOptions, setPaymentOptions] = useState<RazorpayPaymentOptions | null>(null);
+
+  // Gallery Carousel State in Gym Detail View
+  const [detailGalleryWidth, setDetailGalleryWidth] = useState<number>(Dimensions.get('window').width);
+  const [activeDetailGalleryIdx, setActiveDetailGalleryIdx] = useState<number>(0);
+  const detailGalleryScrollRef = useRef<ScrollView>(null);
 
   // Fetch live GST and wallet settings on mount
   useEffect(() => {
@@ -491,22 +497,132 @@ export const GymDiscovery: React.FC = () => {
           </View>
 
           <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
-            {/* Cover image */}
-            <View style={styles.coverImageBlock}>
-              <Image source={{ uri: activeGym.image }} style={styles.coverImg} />
-              <View style={styles.coverOverlay}>
-                <Text style={styles.coverName}>{activeGym.name}</Text>
-                <View style={styles.coverMeta}>
-                  <MapPin size={9} color={THEME.COLORS.primary} style={{ marginRight: 2 }} />
-                  <Text style={styles.coverMetaText}>{activeGym.location}</Text>
-                  <Star size={9} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginLeft: 8, marginRight: 2 }} />
-                  <Text style={styles.coverMetaText}>{activeGym.rating} rating</Text>
-                </View>
-              </View>
+            {/* Horizontal Scrollable Gym Gallery Carousel */}
+            <View 
+              style={{ width: '100%', backgroundColor: '#090D16' }}
+              onLayout={(e) => {
+                const width = e.nativeEvent.layout.width;
+                if (width > 0 && Math.abs(width - detailGalleryWidth) > 2) {
+                  setDetailGalleryWidth(width);
+                }
+              }}
+            >
+              {(() => {
+                const allDetailImages = Array.from(
+                  new Set(
+                    [
+                      activeGym.image,
+                      ...(Array.isArray(activeGym.gallery) ? activeGym.gallery : [])
+                    ].filter((img): img is string => Boolean(img && img.trim() !== ''))
+                  )
+                );
+
+                return (
+                  <View style={{ width: detailGalleryWidth, overflow: 'hidden' }}>
+                    <ScrollView 
+                      ref={detailGalleryScrollRef}
+                      horizontal 
+                      pagingEnabled 
+                      showsHorizontalScrollIndicator={false}
+                      snapToInterval={detailGalleryWidth}
+                      decelerationRate="fast"
+                      onMomentumScrollEnd={(e) => {
+                        const newIdx = Math.round(e.nativeEvent.contentOffset.x / (detailGalleryWidth || 1));
+                        setActiveDetailGalleryIdx(Math.max(0, Math.min(newIdx, allDetailImages.length - 1)));
+                      }}
+                      style={{ width: detailGalleryWidth, height: 250 }}
+                    >
+                      {allDetailImages.map((imgUri, imgIdx) => (
+                        <View 
+                          key={imgIdx} 
+                          style={{ 
+                            width: detailGalleryWidth, 
+                            height: 250, 
+                            backgroundColor: '#090D16', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            position: 'relative'
+                          }}
+                        >
+                          <Image 
+                            source={{ uri: imgUri }} 
+                            style={{ width: detailGalleryWidth, height: 250 }}
+                            resizeMode="contain"
+                          />
+                          {allDetailImages.length > 1 && (
+                            <View style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 }}>
+                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                                {imgIdx + 1} / {allDetailImages.length}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </ScrollView>
+
+                    {/* Thumbnail Navigation Strip */}
+                    {allDetailImages.length > 1 && (
+                      <View style={{ backgroundColor: '#090D16', borderTopWidth: 1, borderTopColor: '#1E293B' }}>
+                        <ScrollView 
+                          horizontal 
+                          showsHorizontalScrollIndicator={false} 
+                          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}
+                        >
+                          {allDetailImages.map((thumbUri, tIdx) => {
+                            const isActive = tIdx === activeDetailGalleryIdx;
+                            return (
+                              <TouchableOpacity 
+                                key={tIdx} 
+                                activeOpacity={0.8}
+                                onPress={() => {
+                                  setActiveDetailGalleryIdx(tIdx);
+                                  detailGalleryScrollRef.current?.scrollTo({ x: tIdx * detailGalleryWidth, animated: true });
+                                }}
+                                style={{ 
+                                  width: 54, 
+                                  height: 42, 
+                                  borderRadius: 8, 
+                                  overflow: 'hidden', 
+                                  borderWidth: 2, 
+                                  borderColor: isActive ? THEME.COLORS.primary : '#334155',
+                                  backgroundColor: '#0F172A'
+                                }}
+                              >
+                                <Image source={{ uri: thumbUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
             </View>
 
             {/* Profile body content */}
             <View style={[styles.detailContent, { backgroundColor: bg }]}>
+              {/* Gym Title & Location Header */}
+              <View style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={[styles.coverName, { color: textPrimary, fontSize: 22, fontWeight: '900' }]}>{activeGym.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#FDE68A' }}>
+                    <Star size={12} color="#D97706" fill="#D97706" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                      {activeGym.rating} ({activeGym.reviewsCount || 0} reviews)
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  onPress={() => activeGym.location && activeGym.location.startsWith('http') ? Linking.openURL(activeGym.location) : null}
+                >
+                  <MapPin size={13} color={THEME.COLORS.primary} />
+                  <Text style={{ fontSize: 12, color: textSecondary, flex: 1 }} numberOfLines={1}>
+                    {activeGym.location}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               
               {/* Timings */}
               <View style={[styles.timingCard, { backgroundColor: timingCardBg, borderColor: timingCardBorder }]}>

@@ -726,7 +726,7 @@ export async function deleteGlobalAmenity(id: string) {
 
 export async function getGymPricingPlans(gymId: string) {
   try {
-    const result = await query("SELECT * FROM pricing_plans WHERE gym_id = $1 ORDER BY price ASC", [gymId]);
+    const result = await query("SELECT * FROM pricing_plans WHERE gym_id::text = $1::text ORDER BY price ASC", [gymId]);
     return result.rows || [];
   } catch (error) {
     console.error("Error fetching gym pricing plans", error);

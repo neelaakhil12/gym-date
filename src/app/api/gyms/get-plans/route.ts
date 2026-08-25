@@ -16,7 +16,7 @@ export async function GET(req: Request) {
     }
 
     const result = await query(
-      'SELECT * FROM pricing_plans WHERE gym_id = $1 ORDER BY price ASC',
+      'SELECT * FROM pricing_plans WHERE gym_id::text = $1::text ORDER BY price ASC',
       [gymId]
     );
 

@@ -45,14 +45,27 @@ export async function getGyms() {
             gallery: (extra.gallery && extra.gallery.length > 0) ? extra.gallery : gym.gallery
           };
         }
-        return gym;
+    // Merge pricing_plans
+    try {
+      const plansRes = await query('SELECT * FROM pricing_plans ORDER BY price ASC');
+      const plansMap = new Map<string, any[]>();
+      (plansRes.rows || []).forEach((p: any) => {
+        const key = String(p.gym_id);
+        if (!plansMap.has(key)) plansMap.set(key, []);
+        plansMap.get(key)!.push(p);
       });
+      gyms = gyms.map((gym: any) => ({
+        ...gym,
+        plans: plansMap.get(String(gym.id)) || []
+      }));
     } catch (e) {}
 
     return gyms.map((gym: any) => ({
       ...gym,
       // Convert relative image paths to full URLs so the mobile app can load them
       image: toAbsoluteUrl(gym.image),
+      gallery: Array.isArray(gym.gallery) ? gym.gallery.map(toAbsoluteUrl) : (gym.image ? [toAbsoluteUrl(gym.image)] : []),
+      plans: gym.plans || [],
       commission_rate: (gym.commission_rate === null || gym.commission_rate === undefined) ? platformComm : gym.commission_rate
     }));
   } catch (error) {
@@ -133,7 +146,7 @@ export async function getPricingPlans() {
 export async function getPricingPlansByGymId(gymId: string) {
   try {
     const result = await query(
-      'SELECT * FROM pricing_plans WHERE gym_id = $1 ORDER BY price ASC',
+      'SELECT * FROM pricing_plans WHERE gym_id::text = $1::text ORDER BY price ASC',
       [gymId]
     );
     return result.rows || [];

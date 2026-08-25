@@ -394,43 +394,62 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
           // Fetch actual pricing plans from PostgreSQL database
           let gymPlans: { name: string; price: number; duration: string; features: string[] }[] = [];
-          try {
-            const apiPlans = await apiService.getPlans(gym.id);
-            if (apiPlans && apiPlans.length > 0) {
-              gymPlans = apiPlans.map(plan => {
-                const planPrice = typeof plan.price === 'string'
-                  ? parseFloat(plan.price.replace(/[^0-9.]/g, ''))
-                  : Number(plan.price);
-                
-                let duration = '30 Days';
-                const lowerName = plan.name.toLowerCase();
-                if (lowerName.includes('day') || lowerName.includes('daily') || lowerName.includes('pack') || lowerName.includes('pass')) {
+          const sourcePlans = (gym.plans && Array.isArray(gym.plans) && gym.plans.length > 0) 
+            ? gym.plans 
+            : null;
+
+          if (sourcePlans) {
+            gymPlans = sourcePlans.map(plan => {
+              const planPrice = typeof plan.price === 'string'
+                ? parseFloat(plan.price.replace(/[^0-9.]/g, ''))
+                : Number(plan.price);
+              
+              let duration = '30 Days';
+              const lowerName = (plan.name || '').toLowerCase();
+              if (lowerName.includes('10-day')) duration = '10 Days';
+              else if (lowerName.includes('7-day') || lowerName.includes('weekly') || lowerName.includes('week')) duration = '7 Days';
+              else if (lowerName.includes('day') || lowerName.includes('daily') || lowerName.includes('pack') || lowerName.includes('pass')) duration = '1 Day';
+              else if (lowerName.includes('year') || lowerName.includes('annual') || lowerName.includes('yearly')) duration = '365 Days';
+              
+              return {
+                name: plan.name,
+                price: planPrice || price,
+                duration,
+                features: plan.features && Array.isArray(plan.features) ? plan.features : ['Access to Gym', 'Locker Access', 'Basic Amenities']
+              };
+            });
+          } else {
+            try {
+              const apiPlans = await apiService.getPlans(gym.id);
+              if (apiPlans && apiPlans.length > 0) {
+                gymPlans = apiPlans.map(plan => {
+                  const planPrice = typeof plan.price === 'string'
+                    ? parseFloat(plan.price.replace(/[^0-9.]/g, ''))
+                    : Number(plan.price);
+                  
+                  let duration = '30 Days';
+                  const lowerName = (plan.name || '').toLowerCase();
                   if (lowerName.includes('10-day')) duration = '10 Days';
-                  else if (lowerName.includes('7-day') || lowerName.includes('weekly')) duration = '7 Days';
-                  else duration = '1 Day';
-                } else if (lowerName.includes('week')) {
-                  duration = '7 Days';
-                } else if (lowerName.includes('year') || lowerName.includes('annual') || lowerName.includes('yearly')) {
-                  duration = '365 Days';
-                }
-                
-                return {
-                  name: plan.name,
-                  price: planPrice || price,
-                  duration,
-                  features: plan.features || ['Full Gym Access', 'Locker Room']
-                };
-              });
+                  else if (lowerName.includes('7-day') || lowerName.includes('weekly') || lowerName.includes('week')) duration = '7 Days';
+                  else if (lowerName.includes('day') || lowerName.includes('daily') || lowerName.includes('pack') || lowerName.includes('pass')) duration = '1 Day';
+                  else if (lowerName.includes('year') || lowerName.includes('annual') || lowerName.includes('yearly')) duration = '365 Days';
+                  
+                  return {
+                    name: plan.name,
+                    price: planPrice || price,
+                    duration,
+                    features: plan.features && Array.isArray(plan.features) ? plan.features : ['Access to Gym', 'Locker Access', 'Basic Amenities']
+                  };
+                });
+              }
+            } catch (e) {
+              console.warn(`[Context] Plans load failed for gym ${gym.id}`, e);
             }
-          } catch (e) {
-            console.warn(`[Context] Plans load failed for gym ${gym.id}, using default plans.`, e);
           }
 
           if (gymPlans.length === 0) {
             gymPlans = [
-              { name: 'Daily Pass', price: price, duration: '1 Day', features: ['Full Gym Access', 'Locker Room'] },
-              { name: 'Weekly Pass', price: price * 5, duration: '7 Days', features: ['Full Gym Access', 'Locker Room'] },
-              { name: 'Monthly Pass', price: price * 12, duration: '30 Days', features: ['Unlimited Gym Access', 'Locker Room'] }
+              { name: 'Day Pass', price: price, duration: '1 Day', features: ['Full Gym Access', 'Locker Room'] }
             ];
           }
           
