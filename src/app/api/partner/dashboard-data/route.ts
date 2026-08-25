@@ -120,9 +120,11 @@ export async function GET(req: Request) {
 
       // Fetch pricing plans
       try {
-        const plansRes = await query("SELECT * FROM plans WHERE gym_id::text = $1::text ORDER BY id ASC", [gym.id]);
+        const plansRes = await query("SELECT * FROM pricing_plans WHERE gym_id::text = $1::text ORDER BY price ASC", [gym.id]);
         gym.plans = plansRes.rows || [];
-      } catch (_) {}
+      } catch (_) {
+        gym.plans = [];
+      }
     }
 
     return NextResponse.json(

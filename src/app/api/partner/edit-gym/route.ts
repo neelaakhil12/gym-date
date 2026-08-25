@@ -121,21 +121,62 @@ export async function POST(req: Request) {
 
     const updatedGym = updateRes.rows[0];
 
+    // Sync to gyms_extra table for 100% consistency across all web dashboards
+    try {
+      await query(`
+        INSERT INTO gyms_extra (gym_id, commission_rate, partner_referral_amount, lat, lng, rating, reviews, has_offer, offer_percentage, gallery, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+        ON CONFLICT (gym_id) DO UPDATE SET
+          lat = EXCLUDED.lat,
+          lng = EXCLUDED.lng,
+          rating = EXCLUDED.rating,
+          reviews = EXCLUDED.reviews,
+          has_offer = EXCLUDED.has_offer,
+          offer_percentage = EXCLUDED.offer_percentage,
+          gallery = EXCLUDED.gallery,
+          updated_at = CURRENT_TIMESTAMP
+      `, [
+        targetGymId,
+        currentGym.commission_rate || 10,
+        currentGym.partner_referral_amount || 100,
+        updatedLat,
+        updatedLng,
+        updatedRating,
+        updatedReviews,
+        updatedHasOffer,
+        updatedOfferPercentage,
+        updatedGallery
+      ]);
+    } catch (extraErr) {
+      console.warn("gyms_extra sync warning:", extraErr);
+    }
+
     // 3. Update pricing plans if provided
-    if (Array.isArray(plans) && plans.length > 0) {
+    if (Array.isArray(plans)) {
       try {
-        await query("DELETE FROM plans WHERE gym_id::text = $1::text", [targetGymId]);
-        for (const plan of plans) {
-          if (plan.name && plan.price !== undefined) {
+        await query("DELETE FROM pricing_plans WHERE gym_id::text = $1::text", [targetGymId]);
+        for (let i = 0; i < plans.length; i++) {
+          const plan = plans[i];
+          if (plan && plan.name && plan.price !== undefined && plan.price !== "") {
+            const cleanPrice = plan.price.toString().replace(/[^0-9.]/g, '');
+            const displayPrice = cleanPrice ? `₹${cleanPrice}` : '₹0';
             await query(`
-              INSERT INTO plans (gym_id, name, price)
-              VALUES ($1, $2, $3)
-            `, [targetGymId, plan.name, plan.price.toString()]);
+              INSERT INTO pricing_plans (gym_id, name, price, features, button_text, popular)
+              VALUES ($1, $2, $3, $4, 'Book Now', $5)
+            `, [targetGymId, plan.name.trim(), displayPrice, ["Access to Gym", "Locker Access", "Basic Amenities"], i === 2]);
           }
         }
       } catch (planErr) {
-        console.warn("Plans update warning:", planErr);
+        console.warn("Pricing plans update warning:", planErr);
       }
+    }
+
+    // Fetch refreshed pricing plans to return
+    try {
+      const refreshedPlans = await query("SELECT * FROM pricing_plans WHERE gym_id::text = $1::text ORDER BY price ASC", [targetGymId]);
+      updatedGym.plans = refreshedPlans.rows || [];
+    } catch (_) {
+      updatedGym.plans = [];
     }
 
     return NextResponse.json(

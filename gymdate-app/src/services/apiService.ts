@@ -534,36 +534,50 @@ export const apiService = {
   /**
    * Upload QR Code image for payout
    */
-  async uploadPayoutQrCode(fileOrBase64: any): Promise<{ success: boolean; url?: string; error?: string }> {
+  async uploadPayoutQrCode(fileOrAsset: any): Promise<{ success: boolean; url?: string; error?: string }> {
     const url = `${getApiUrl()}/api/partner/upload-qr`;
     try {
-      if (typeof File !== 'undefined' && fileOrBase64 instanceof File) {
+      if (typeof File !== 'undefined' && fileOrAsset instanceof File) {
         const formData = new FormData();
-        formData.append('file', fileOrBase64);
+        formData.append('file', fileOrAsset);
         const res = await fetch(url, {
           method: 'POST',
           body: formData
         });
         return await res.json();
-      } else if (typeof fileOrBase64 === 'string') {
+      } else if (fileOrAsset && typeof fileOrAsset === 'object' && fileOrAsset.uri) {
+        // React Native Asset object
+        if (fileOrAsset.base64) {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ base64: fileOrAsset.base64 })
+          });
+          return await res.json();
+        }
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fileOrAsset.uri,
+          type: fileOrAsset.type || 'image/jpeg',
+          name: fileOrAsset.fileName || 'upload.jpg',
+        } as any);
         const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64: fileOrBase64 })
+          body: formData,
         });
         return await res.json();
-      } else if (fileOrBase64 && fileOrBase64.base64) {
+      } else if (typeof fileOrAsset === 'string') {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64: fileOrBase64.base64 })
+          body: JSON.stringify({ base64: fileOrAsset })
         });
         return await res.json();
       }
       return { success: false, error: 'No image provided.' };
     } catch (err: any) {
       console.warn('[API Error] uploadPayoutQrCode:', err);
-      return { success: false, error: err.message || 'Failed to upload QR code.' };
+      return { success: false, error: err.message || 'Failed to upload image.' };
     }
   },
 

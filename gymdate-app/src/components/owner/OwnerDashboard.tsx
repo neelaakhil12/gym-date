@@ -242,6 +242,12 @@ export const OwnerDashboard: React.FC = () => {
           setEditGymLocation(data.gym.location || '');
           setEditDescription(data.gym.description || '');
           setEditPrimaryImage(data.gym.image || '');
+          setEditGallery(Array.isArray(data.gym.gallery) ? data.gym.gallery : (data.gym.image ? [data.gym.image] : []));
+          setEditAmenities(Array.isArray(data.gym.amenities) ? data.gym.amenities : []);
+          setEditLat(data.gym.lat ? String(data.gym.lat) : '');
+          setEditLng(data.gym.lng ? String(data.gym.lng) : '');
+          setEditRating(data.gym.rating ? String(data.gym.rating) : '4.5');
+          setEditReviews(data.gym.reviews ? String(data.gym.reviews) : '0');
           setIsOpenStatus(data.gym.status !== 'Closed');
           setHasOffer(Boolean(data.gym.has_offer));
           if (data.gym.offer_percentage) {
@@ -251,7 +257,7 @@ export const OwnerDashboard: React.FC = () => {
             setEditPlans(data.gym.plans.map((p: any) => ({
               id: p.id,
               name: p.name || 'Plan',
-              price: String(p.price || p.price_per_day || '')
+              price: String(p.price || p.price_per_day || '').replace(/[^0-9.]/g, '')
             })));
           }
         }
@@ -494,14 +500,10 @@ export const OwnerDashboard: React.FC = () => {
       });
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          const uploadRes = await apiService.uploadPayoutQrCode(asset.base64);
-          if (uploadRes.success && uploadRes.url) {
-            setEditPrimaryImage(uploadRes.url);
-          } else {
-            setEditPrimaryImage(asset.uri);
-          }
-        } else {
+        const uploadRes = await apiService.uploadPayoutQrCode(asset);
+        if (uploadRes.success && uploadRes.url) {
+          setEditPrimaryImage(uploadRes.url);
+        } else if (asset.uri) {
           setEditPrimaryImage(asset.uri);
         }
       }
@@ -520,14 +522,10 @@ export const OwnerDashboard: React.FC = () => {
       });
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          const uploadRes = await apiService.uploadPayoutQrCode(asset.base64);
-          if (uploadRes.success && uploadRes.url) {
-            setEditGallery(prev => [...prev, uploadRes.url!]);
-          } else {
-            setEditGallery(prev => [...prev, asset.uri]);
-          }
-        } else {
+        const uploadRes = await apiService.uploadPayoutQrCode(asset);
+        if (uploadRes.success && uploadRes.url) {
+          setEditGallery(prev => [...prev, uploadRes.url!]);
+        } else if (asset.uri) {
           setEditGallery(prev => [...prev, asset.uri]);
         }
       }
@@ -601,6 +599,15 @@ export const OwnerDashboard: React.FC = () => {
         setOwnerProfile(prev => ({ ...prev, gymName: editGymName }));
         if (res.gym) {
           setPartnerGym(res.gym);
+          setEditPrimaryImage(res.gym.image || '');
+          setEditGallery(Array.isArray(res.gym.gallery) ? res.gym.gallery : (res.gym.image ? [res.gym.image] : []));
+          if (res.gym.plans && Array.isArray(res.gym.plans)) {
+            setEditPlans(res.gym.plans.map((p: any) => ({
+              id: p.id,
+              name: p.name || 'Plan',
+              price: String(p.price || p.price_per_day || '').replace(/[^0-9.]/g, '')
+            })));
+          }
         }
         if (Platform.OS !== 'web') {
           Alert.alert('Success', 'Gym profile updated successfully!');
@@ -1051,20 +1058,68 @@ export const OwnerDashboard: React.FC = () => {
               </View>
             </View>
 
-            {/* 1. HERO GYM BANNER CARD */}
+            {/* 1. HERO GYM BANNER / GALLERY CAROUSEL */}
             <View style={styles.gymHeroCard}>
               <View style={styles.gymHeroImageContainer}>
-                {activeGym?.image ? (
-                  <Image 
-                    source={{ uri: formatImageUrl(activeGym.image) }} 
-                    style={styles.gymHeroImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.gymHeroImage, { backgroundColor: '#1E293B', alignItems: 'center', justifyContent: 'center' }]}>
-                    <Building2 size={44} color="#94A3B8" />
-                  </View>
-                )}
+                {(() => {
+                  const allImages = Array.from(
+                    new Set(
+                      [
+                        formatImageUrl(activeGym?.image),
+                        ...(Array.isArray(activeGym?.gallery) ? activeGym.gallery.map(formatImageUrl) : [])
+                      ].filter((img): img is string => Boolean(img && img.trim() !== ''))
+                    )
+                  );
+
+                  if (allImages.length === 0) {
+                    return (
+                      <View style={[styles.gymHeroImage, { backgroundColor: '#1E293B', alignItems: 'center', justifyContent: 'center' }]}>
+                        <Building2 size={44} color="#94A3B8" />
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <View style={{ width: '100%' }}>
+                      <ScrollView 
+                        horizontal 
+                        pagingEnabled 
+                        showsHorizontalScrollIndicator={false}
+                        style={{ width: '100%', height: 210 }}
+                      >
+                        {allImages.map((imgUri, imgIdx) => (
+                          <View key={imgIdx} style={{ width: 360, height: 210, backgroundColor: '#0F172A' }}>
+                            <Image 
+                              source={{ uri: imgUri }} 
+                              style={{ width: '100%', height: '100%' }}
+                              resizeMode="cover"
+                            />
+                            {allImages.length > 1 && (
+                              <View style={{ position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
+                                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                                  {imgIdx + 1} / {allImages.length}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </ScrollView>
+                      {allImages.length > 1 && (
+                        <ScrollView 
+                          horizontal 
+                          showsHorizontalScrollIndicator={false} 
+                          contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 8, gap: 8, backgroundColor: '#0F172A' }}
+                        >
+                          {allImages.map((thumbUri, tIdx) => (
+                            <View key={tIdx} style={{ width: 50, height: 38, borderRadius: 6, overflow: 'hidden', borderWidth: 1.5, borderColor: '#334155' }}>
+                              <Image source={{ uri: thumbUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                            </View>
+                          ))}
+                        </ScrollView>
+                      )}
+                    </View>
+                  );
+                })()}
                 <View style={styles.ratingBadge}>
                   <Star size={12} color="#EAB308" fill="#EAB308" style={{ marginRight: 3 }} />
                   <Text style={styles.ratingBadgeText}>{activeGym?.rating || '4.5'} ({activeGym?.reviews || '0'} reviews)</Text>
@@ -2746,13 +2801,13 @@ const styles = StyleSheet.create({
     })
   },
   gymHeroImageContainer: {
-    height: 150,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#0F172A',
     position: 'relative',
+    overflow: 'hidden',
   },
   gymHeroImage: {
     width: '100%',
-    height: '100%',
+    height: 210,
   },
   ratingBadge: {
     position: 'absolute',
