@@ -5,18 +5,18 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function WebSplashScreen() {
-  const [phase, setPhase] = useState<"countdown" | "reveal" | "done">("countdown");
+  const [phase, setPhase] = useState<"countdown" | "reveal">("countdown");
   const [count, setCount] = useState(3);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    // 3 → 2 → 1 countdown
+    // 3 → 2 → 1 countdown (700ms each)
     const t1 = setTimeout(() => setCount(2), 700);
     const t2 = setTimeout(() => setCount(1), 1400);
-    // After 1, reveal the logo
+    // After "1", reveal the logo
     const t3 = setTimeout(() => setPhase("reveal"), 2100);
-    // Then fade out entire splash
-    const t4 = setTimeout(() => setVisible(false), 3400);
+    // Logo stays visible for 3 full seconds after reveal, then fade out
+    const t4 = setTimeout(() => setVisible(false), 2100 + 3000 + 600); // 5700ms total
 
     return () => {
       clearTimeout(t1);
@@ -57,7 +57,7 @@ export default function WebSplashScreen() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.4 }}
                 transition={{ duration: 0.4 }}
-                className="flex flex-col items-center gap-6 select-none"
+                className="flex flex-col items-center gap-6 select-none px-6 w-full max-w-xs mx-auto"
               >
                 {/* Animated number */}
                 <AnimatePresence mode="wait">
@@ -77,9 +77,9 @@ export default function WebSplashScreen() {
                       className="absolute inset-0 rounded-full border-4 border-red-500"
                     />
                     <div
-                      className="w-32 h-32 rounded-full flex items-center justify-center text-white font-black shadow-2xl"
+                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center text-white font-black shadow-2xl"
                       style={{
-                        fontSize: 64,
+                        fontSize: 56,
                         background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
                         boxShadow: "0 0 60px rgba(239,68,68,0.45), 0 4px 32px rgba(0,0,0,0.10)",
                       }}
@@ -114,64 +114,76 @@ export default function WebSplashScreen() {
             {phase === "reveal" && (
               <motion.div
                 key="reveal"
-                initial={{ opacity: 0, scale: 0.6, y: 30 }}
+                initial={{ opacity: 0, scale: 0.75, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 1.1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center gap-6 select-none"
+                className="flex flex-col items-center select-none w-full px-8 sm:px-10"
+                style={{ gap: "20px" }}
               >
-                {/* Logo */}
+                {/* Logo — responsive: full width on mobile, capped on desktop */}
                 <motion.div
-                  initial={{ filter: "blur(12px)", opacity: 0 }}
+                  initial={{ filter: "blur(14px)", opacity: 0 }}
                   animate={{ filter: "blur(0px)", opacity: 1 }}
-                  transition={{ duration: 0.55, delay: 0.1, ease: "easeOut" }}
+                  transition={{ duration: 0.55, delay: 0.05, ease: "easeOut" }}
+                  className="w-full flex items-center justify-center"
                 >
                   <Image
                     src="/gym-logo-transparent.png"
                     alt="GymDate Logo"
-                    width={420}
-                    height={220}
-                    className="object-contain drop-shadow-2xl"
-                    style={{ maxWidth: "min(420px, 80vw)", height: "auto" }}
+                    width={500}
+                    height={260}
+                    className="object-contain drop-shadow-xl"
+                    style={{
+                      width: "100%",
+                      maxWidth: "min(460px, 88vw)",
+                      height: "auto",
+                    }}
                     priority
                   />
                 </motion.div>
 
-                {/* Tagline */}
+                {/* Tagline — centered, full width, wraps on mobile */}
                 <motion.p
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                  className="text-sm font-bold tracking-[0.2em] uppercase"
-                  style={{ color: "#ef4444", letterSpacing: "0.22em" }}
+                  transition={{ duration: 0.4, delay: 0.25 }}
+                  className="text-center font-bold uppercase"
+                  style={{
+                    color: "#ef4444",
+                    fontSize: "clamp(11px, 3vw, 14px)",
+                    letterSpacing: "0.18em",
+                    lineHeight: 1.6,
+                    padding: "0 4px",
+                  }}
                 >
                   Train Anywhere. Stay Fit Everywhere.
                 </motion.p>
 
-                {/* Animated underline */}
+                {/* Animated underline — centered */}
                 <motion.div
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
                   style={{
                     height: 3,
-                    width: 120,
+                    width: 100,
                     borderRadius: 99,
                     background: "linear-gradient(90deg, #ef4444, #fca5a5)",
-                    transformOrigin: "left",
+                    transformOrigin: "center",
                   }}
                 />
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Skip button - always visible */}
+          {/* Skip button */}
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.6 }}
             onClick={() => setVisible(false)}
-            className="absolute bottom-10 text-xs font-bold tracking-widest uppercase text-gray-400 hover:text-red-500 transition-colors px-5 py-2 rounded-full hover:bg-red-50 border border-transparent hover:border-red-100"
+            className="absolute bottom-8 sm:bottom-10 text-xs font-bold tracking-widest uppercase text-gray-400 hover:text-red-500 transition-colors px-5 py-2 rounded-full hover:bg-red-50"
           >
             Skip →
           </motion.button>
