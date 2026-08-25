@@ -99,15 +99,11 @@ function DashboardContent({
         <div className="h-full flex flex-col">
           {/* Sidebar Header */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-white/10">
-            <Link href="/partner/dashboard" className="flex items-center gap-2 min-w-0">
-              <div className="relative flex-shrink-0" style={{ width: 110, height: 36 }}>
-                <img
-                  src="/brand-logo.png"
-                  alt="GymDate Logo"
-                  style={{ width: 110, height: 36, objectFit: "contain", filter: "brightness(0) invert(1)" }}
-                />
-              </div>
-              <span className="text-xs font-black tracking-widest text-white/40 uppercase">Partner</span>
+            <Link href="/partner/dashboard" className="flex flex-col leading-none">
+              <span className="text-xl font-black tracking-tight">
+                <span style={{ color: "#ef4444" }}>Gym</span><span className="text-white">Date</span>
+              </span>
+              <span className="text-[10px] font-bold tracking-[0.2em] text-white/40 uppercase mt-0.5">Partner Panel</span>
             </Link>
             <button 
               onClick={() => setSidebarOpen(false)}
