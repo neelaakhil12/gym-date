@@ -14,7 +14,8 @@ import {
   useColorScheme, 
   Platform, 
   BackHandler,
-  Dimensions
+  Dimensions,
+  RefreshControl
 } from 'react-native';
 import { useGymDate, Trainer, Gym } from '../../context/GymDateContext';
 import { apiService } from '../../services/apiService';
@@ -56,7 +57,23 @@ export const GymDiscovery: React.FC = () => {
     addNotification,
     userCoords,
     loginInput,
+    refreshData
   } = useGymDate();
+
+  // Pull-to-refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshData();
+    } catch (_) {}
+    setIsRefreshing(false);
+  };
+
+  // Auto-refresh when Discovery screen opens or gym is selected
+  useEffect(() => {
+    refreshData().catch(() => {});
+  }, [activeScreen, selectedGymId]);
 
   // Haversine distance
   const getGymDistance = (gym: { coordinates?: { lat: number; lng: number }; distance: number }): string => {
@@ -356,7 +373,18 @@ export const GymDiscovery: React.FC = () => {
       {/* ================= VIEW 1: SEARCH & DISCOVERY LIST ================= */}
       {!selectedGymId || !activeGym ? (
         <View style={{ flex: 1 }}>
-          <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
+          <ScrollView 
+            style={styles.scrollList} 
+            contentContainerStyle={{ paddingBottom: 130 }}
+            refreshControl={
+              <RefreshControl 
+                refreshing={isRefreshing} 
+                onRefresh={onRefresh} 
+                colors={[THEME.COLORS.primary]} 
+                tintColor={THEME.COLORS.primary}
+              />
+            }
+          >
             <View style={[styles.headerBlock, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 20 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.titleText, { color: textPrimary }]}>Find Your Gym</Text>
@@ -496,7 +524,18 @@ export const GymDiscovery: React.FC = () => {
             <View style={{ width: 34 }} />
           </View>
 
-          <ScrollView style={styles.scrollList} contentContainerStyle={{ paddingBottom: 130 }}>
+          <ScrollView 
+            style={styles.scrollList} 
+            contentContainerStyle={{ paddingBottom: 130 }}
+            refreshControl={
+              <RefreshControl 
+                refreshing={isRefreshing} 
+                onRefresh={onRefresh} 
+                colors={[THEME.COLORS.primary]} 
+                tintColor={THEME.COLORS.primary}
+              />
+            }
+          >
             {/* Horizontal Scrollable Gym Gallery Carousel */}
             <View 
               style={{ width: '100%', backgroundColor: '#090D16' }}

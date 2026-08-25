@@ -74,10 +74,15 @@ export const apiService = {
    * Fetch all active gyms listed on your KVM server
    */
   async getGyms(): Promise<ApiGym[]> {
-    const url = `${getApiUrl()}/api/gyms`;
+    const url = `${getApiUrl()}/api/gyms?_t=${Date.now()}`;
     console.log(`[API] Fetching gyms from: ${url}`);
     
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch gyms');
@@ -89,10 +94,15 @@ export const apiService = {
    * Fetch specific pricing plans for a gym from the database
    */
   async getPlans(gymId: string): Promise<ApiPlan[]> {
-    const url = `${getApiUrl()}/api/gyms/get-plans?gymId=${gymId}`;
+    const url = `${getApiUrl()}/api/gyms/get-plans?gymId=${gymId}&_t=${Date.now()}`;
     console.log(`[API] Fetching plans for gym ${gymId} from: ${url}`);
 
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch plans');
