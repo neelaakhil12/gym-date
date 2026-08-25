@@ -45,6 +45,10 @@ export async function getGyms() {
             gallery: (extra.gallery && extra.gallery.length > 0) ? extra.gallery : gym.gallery
           };
         }
+        return gym;
+      });
+    } catch (e) {}
+
     // Merge pricing_plans
     try {
       const plansRes = await query('SELECT * FROM pricing_plans ORDER BY price ASC');
