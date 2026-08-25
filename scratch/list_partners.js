@@ -1,40 +1,21 @@
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ path: '.env.local' });
+const { Pool } = require('pg');
+require('dotenv').config({ path: '/var/www/gymdate/.env.local' });
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
-async function listPartners() {
-  const { data: gyms, error: gymError } = await supabase
-    .from('gyms')
-    .select('name, partner_id');
-  
-  if (gymError) {
-    console.error('Error fetching gyms:', gymError);
-    return;
-  }
+async function run() {
+  const pUsers = await pool.query("SELECT id, email, full_name FROM partner_users");
+  console.log("All partner_users:", pUsers.rows);
 
-  const { data: profiles, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, email, full_name')
-    .eq('role_id', 'partner');
+  const uUsers = await pool.query("SELECT id, email, full_name, role_id FROM users WHERE role_id = 'partner'");
+  console.log("All users (partner):", uUsers.rows);
 
-  if (profileError) {
-    console.error('Error fetching profiles:', profileError);
-    return;
-  }
+  const gyms = await pool.query("SELECT id, name, partner_id FROM gyms");
+  console.log("All gyms:", gyms.rows);
 
-  console.log('--- Gym Partner Email List ---');
-  gyms.forEach(gym => {
-    const partner = profiles.find(p => p.id === gym.partner_id);
-    if (partner) {
-      console.log(`Gym: ${gym.name} -> Partner Email: ${partner.email} (${partner.full_name})`);
-    } else {
-      console.log(`Gym: ${gym.name} -> Partner not found (ID: ${gym.partner_id})`);
-    }
-  });
+  await pool.end();
 }
 
-listPartners();
+run();

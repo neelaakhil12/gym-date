@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LocationGate from "@/components/LocationGate";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import WebSplashScreen from "@/components/WebSplashScreen";
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,6 +24,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
   return (
     <LocationGate>
+      <WebSplashScreen />
       <Navbar />
       <main className="flex-grow">{children}</main>
       <Footer />

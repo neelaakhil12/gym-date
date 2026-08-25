@@ -169,26 +169,26 @@ export default function GymDetailsPage() {
           {/* Left Column */}
           <div className="lg:col-span-2">
             {/* Gallery */}
-            <div className="mb-10">
-              <div className="relative h-[320px] md:h-[480px] rounded-[32px] overflow-hidden mb-4 shadow-sm border border-gray-100 bg-gray-100 flex items-center justify-center">
+            <div className="mb-8">
+              <div className="relative h-[250px] sm:h-[300px] md:h-[350px] rounded-3xl overflow-hidden mb-3.5 shadow-sm border border-gray-200/80 bg-[#0c121e] flex items-center justify-center p-2">
                 <img
                   src={galleryImages[selectedImage] || defaultImage}
                   alt={gym.name}
-                  className="w-full h-full object-cover transition-all duration-300"
+                  className="max-h-full max-w-full w-auto h-auto object-contain transition-all duration-300"
                 />
               </div>
               {galleryImages.length > 1 && (
-                <div className="flex gap-3 overflow-x-auto pb-2">
+                <div className="flex gap-2.5 overflow-x-auto pb-2">
                   {galleryImages.map((img: string, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImage(idx)}
                       className={
-                        "relative w-20 h-16 md:w-28 md:h-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all shadow-sm " +
+                        "relative w-16 h-14 sm:w-20 sm:h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 bg-[#0c121e] p-1 transition-all shadow-sm " +
                         (selectedImage === idx ? "border-primary ring-2 ring-primary/20 scale-105" : "border-transparent opacity-70 hover:opacity-100")
                       }
                     >
-                      <img src={img} alt={"Thumbnail " + idx} className="w-full h-full object-cover" />
+                      <img src={img} alt={"Thumbnail " + idx} className="w-full h-full object-contain" />
                     </button>
                   ))}
                 </div>
