@@ -17,7 +17,8 @@ import {
   Modal,
   KeyboardAvoidingView,
   Keyboard,
-  BackHandler
+  BackHandler,
+  Dimensions
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { CameraView, useCameraPermissions } from 'expo-camera';
