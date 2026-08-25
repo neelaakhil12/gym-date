@@ -65,6 +65,9 @@ export interface Gym {
   timings: string;
   description: string;
   trainers: Trainer[];
+  status?: string;
+  has_offer?: boolean;
+  offer_percentage?: string | number;
   plans: {
     name: string;
     price: number;
@@ -472,6 +475,9 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
               : ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48'],
             timings: gym.hours || '06:00 AM - 10:00 PM',
             description: gym.description || 'Premium partnered gym offering top-tier training environment.',
+            status: gym.status || 'Open',
+            has_offer: Boolean(gym.has_offer),
+            offer_percentage: gym.offer_percentage || '0',
             trainers: [
               { id: 't-1', name: 'Vikram Singh', specialization: 'Strength & Conditioning', rating: 4.9, avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=150', availability: ['07:00 AM - 09:00 AM', '05:00 PM - 07:00 PM'], bio: 'Expert strength conditioning coach.' }
             ],

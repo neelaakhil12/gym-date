@@ -474,6 +474,33 @@ export const GymDiscovery: React.FC = () => {
                     activeOpacity={0.9}
                   >
                     <Image source={{ uri: gym.image }} style={styles.gymImg} />
+                    
+                    {/* Status and Offer Badges */}
+                    <View style={{ position: 'absolute', top: 10, left: 10, flexDirection: 'row', gap: 6, zIndex: 10 }}>
+                      <View style={{ 
+                        backgroundColor: (gym.status || '').toLowerCase() === 'closed' ? '#EF4444' : '#10B981', 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 3, 
+                        borderRadius: 12,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 2,
+                        elevation: 2
+                      }}>
+                        <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' }}>
+                          {(gym.status || '').toLowerCase() === 'closed' ? 'Closed' : 'Open'}
+                        </Text>
+                      </View>
+                      {gym.has_offer && (
+                        <View style={{ backgroundColor: '#E11D48', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 12 }}>
+                          <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900' }}>
+                            {gym.offer_percentage}% OFF
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
                     <View style={styles.distBadge}>
                       <MapPin size={8} color={THEME.COLORS.primary} style={{ marginRight: 2 }} />
                       <Text style={styles.distBadgeText}>{getGymDistance(gym)}</Text>
@@ -487,7 +514,7 @@ export const GymDiscovery: React.FC = () => {
                         <Text style={[styles.gymTitle, { color: textPrimary }]}>{gym.name}</Text>
                         <View style={styles.ratingRow}>
                           <Star size={10} color={THEME.COLORS.warning} fill={THEME.COLORS.warning} style={{ marginRight: 2 }} />
-                          <Text style={styles.ratingText}>{gym.rating}</Text>
+                          <Text style={styles.ratingText}>{gym.rating} ({gym.reviewsCount || 0})</Text>
                         </View>
                       </View>
                       
@@ -644,12 +671,33 @@ export const GymDiscovery: React.FC = () => {
               {/* Gym Title & Location Header */}
               <View style={{ marginBottom: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <Text style={[styles.coverName, { color: textPrimary, fontSize: 22, fontWeight: '900' }]}>{activeGym.name}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#FDE68A' }}>
-                    <Star size={12} color="#D97706" fill="#D97706" style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
-                      {activeGym.rating} ({activeGym.reviewsCount || 0} reviews)
-                    </Text>
+                  <Text style={[styles.coverName, { color: textPrimary, fontSize: 22, fontWeight: '900', flex: 1, marginRight: 8 }]} numberOfLines={1}>
+                    {activeGym.name}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ 
+                      backgroundColor: (activeGym.status || '').toLowerCase() === 'closed' ? '#FEE2E2' : '#DCFCE7', 
+                      paddingHorizontal: 8, 
+                      paddingVertical: 3.5, 
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: (activeGym.status || '').toLowerCase() === 'closed' ? '#FECDD3' : '#BBF7D0'
+                    }}>
+                      <Text style={{ 
+                        color: (activeGym.status || '').toLowerCase() === 'closed' ? '#DC2626' : '#16A34A', 
+                        fontSize: 10, 
+                        fontWeight: '900', 
+                        textTransform: 'uppercase' 
+                      }}>
+                        {(activeGym.status || '').toLowerCase() === 'closed' ? 'Closed' : 'Open'}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#FDE68A' }}>
+                      <Star size={12} color="#D97706" fill="#D97706" style={{ marginRight: 4 }} />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                        {activeGym.rating} ({activeGym.reviewsCount || 0} reviews)
+                      </Text>
+                    </View>
                   </View>
                 </View>
                 <TouchableOpacity 
