@@ -322,7 +322,7 @@ export const HomeDashboard: React.FC = () => {
               marker.bindPopup(
                 '<div class="gym-popup-card">' +
                   '<div class="gym-popup-title">' + g.name + '</div>' +
-                  '<div class="gym-popup-rate">₹' + g.price + '/day • ' + g.rating + ' ★ (' + g.distance + ' km)</div>' +
+                  '<div class="gym-popup-rate">' + g.rating + ' ★ • ' + g.distance + ' km away</div>' +
                   '<button class="gym-popup-btn" onclick="selectGym(\'' + g.id + '\')">View Passes & Gym →</button>' +
                 '</div>'
               );

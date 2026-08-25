@@ -308,17 +308,10 @@ export const NearbyGyms: React.FC = () => {
                 ))}
               </ScrollView>
 
-              {/* Bottom: price + CTA */}
-              <View style={styles.cardBottom}>
-                <View>
-                  <Text style={[styles.priceLabel, { color: textMuted }]}>Day Pass from</Text>
-                  <Text style={[styles.price, { color: THEME.COLORS.primary }]}>
-                    ₹{gym.pricePerDay}
-                    <Text style={[styles.priceSuffix, { color: textMuted }]}>/day</Text>
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => openGym(gym)} style={styles.viewBtn}>
-                  <Text style={styles.viewBtnTxt}>View Gym</Text>
+              {/* Bottom: View Details CTA */}
+              <View style={[styles.cardBottom, { justifyContent: 'flex-end' }]}>
+                <TouchableOpacity onPress={() => openGym(gym)} style={[styles.viewBtn, { flex: 1 }]}>
+                  <Text style={styles.viewBtnTxt}>View Gym Details</Text>
                 </TouchableOpacity>
               </View>
             </View>

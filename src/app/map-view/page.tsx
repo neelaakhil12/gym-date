@@ -147,7 +147,7 @@ function MapContent() {
         const popupContent = `
           <div style="text-align:center;min-width:160px;font-family:sans-serif;padding:4px;">
             <div style="font-size:13px;font-weight:800;color:#0F172A;margin-bottom:2px;">${g.name}</div>
-            <div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:4px;">₹${g.pricePerDay}/day • ${g.rating} ★ (${distKm} km away)</div>
+            <div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:4px;">${g.rating} ★ (${distKm} km away)</div>
             <button 
               id="gym-btn-${g.id}"
               style="background:#FF0000;color:#fff;border:none;padding:8px 14px;border-radius:10px;font-size:11px;font-weight:800;cursor:pointer;width:100%;"

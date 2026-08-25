@@ -505,9 +505,6 @@ export const GymDiscovery: React.FC = () => {
                       <MapPin size={8} color={THEME.COLORS.primary} style={{ marginRight: 2 }} />
                       <Text style={styles.distBadgeText}>{getGymDistance(gym)}</Text>
                     </View>
-                    <View style={styles.priceBadge}>
-                      <Text style={styles.priceBadgeText}>₹{gym.pricePerDay} / day</Text>
-                    </View>
 
                     <View style={styles.gymInfo}>
                       <View style={styles.titleRow}>
