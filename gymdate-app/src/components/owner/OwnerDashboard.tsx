@@ -138,6 +138,11 @@ export const OwnerDashboard: React.FC = () => {
   const [qrCodeFile, setQrCodeFile] = useState<any>(null);
   const [qrCodePreview, setQrCodePreview] = useState<string>('');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  // Gallery Carousel State
+  const [galleryCardWidth, setGalleryCardWidth] = useState<number>(Dimensions.get('window').width > 500 ? 460 : Dimensions.get('window').width - 32);
+  const [activeGalleryIdx, setActiveGalleryIdx] = useState<number>(0);
+  const galleryScrollRef = useRef<ScrollView>(null);
   const [withdrawSuccessMsg, setWithdrawSuccessMsg] = useState('');
   const [walletData, setWalletData] = useState<any>({
     virtual_wallet: {
@@ -1059,7 +1064,15 @@ export const OwnerDashboard: React.FC = () => {
             </View>
 
             {/* 1. HERO GYM BANNER / GALLERY CAROUSEL */}
-            <View style={styles.gymHeroCard}>
+            <View 
+              style={styles.gymHeroCard}
+              onLayout={(e) => {
+                const width = e.nativeEvent.layout.width;
+                if (width > 0 && Math.abs(width - galleryCardWidth) > 2) {
+                  setGalleryCardWidth(width);
+                }
+              }}
+            >
               <View style={styles.gymHeroImageContainer}>
                 {(() => {
                   const allImages = Array.from(
@@ -1073,30 +1086,47 @@ export const OwnerDashboard: React.FC = () => {
 
                   if (allImages.length === 0) {
                     return (
-                      <View style={[styles.gymHeroImage, { backgroundColor: '#1E293B', alignItems: 'center', justifyContent: 'center' }]}>
+                      <View style={[styles.gymHeroImage, { backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center' }]}>
                         <Building2 size={44} color="#94A3B8" />
                       </View>
                     );
                   }
 
                   return (
-                    <View style={{ width: '100%' }}>
+                    <View style={{ width: galleryCardWidth, overflow: 'hidden' }}>
                       <ScrollView 
+                        ref={galleryScrollRef}
                         horizontal 
                         pagingEnabled 
                         showsHorizontalScrollIndicator={false}
-                        style={{ width: '100%', height: 210 }}
+                        snapToInterval={galleryCardWidth}
+                        decelerationRate="fast"
+                        onMomentumScrollEnd={(e) => {
+                          const newIdx = Math.round(e.nativeEvent.contentOffset.x / (galleryCardWidth || 1));
+                          setActiveGalleryIdx(Math.max(0, Math.min(newIdx, allImages.length - 1)));
+                        }}
+                        style={{ width: galleryCardWidth, height: 230 }}
                       >
                         {allImages.map((imgUri, imgIdx) => (
-                          <View key={imgIdx} style={{ width: 360, height: 210, backgroundColor: '#0F172A' }}>
+                          <View 
+                            key={imgIdx} 
+                            style={{ 
+                              width: galleryCardWidth, 
+                              height: 230, 
+                              backgroundColor: '#090D16', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              position: 'relative'
+                            }}
+                          >
                             <Image 
                               source={{ uri: imgUri }} 
-                              style={{ width: '100%', height: '100%' }}
-                              resizeMode="cover"
+                              style={{ width: galleryCardWidth, height: 230 }}
+                              resizeMode="contain"
                             />
                             {allImages.length > 1 && (
-                              <View style={{ position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
-                                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                              <View style={{ position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.75)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 }}>
+                                <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '800' }}>
                                   {imgIdx + 1} / {allImages.length}
                                 </Text>
                               </View>
@@ -1104,30 +1134,61 @@ export const OwnerDashboard: React.FC = () => {
                           </View>
                         ))}
                       </ScrollView>
+
+                      {/* Thumbnail Navigation Strip */}
                       {allImages.length > 1 && (
-                        <ScrollView 
-                          horizontal 
-                          showsHorizontalScrollIndicator={false} 
-                          contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 8, gap: 8, backgroundColor: '#0F172A' }}
-                        >
-                          {allImages.map((thumbUri, tIdx) => (
-                            <View key={tIdx} style={{ width: 50, height: 38, borderRadius: 6, overflow: 'hidden', borderWidth: 1.5, borderColor: '#334155' }}>
-                              <Image source={{ uri: thumbUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                            </View>
-                          ))}
-                        </ScrollView>
+                        <View style={{ backgroundColor: '#090D16', borderTopWidth: 1, borderTopColor: '#1E293B' }}>
+                          <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false} 
+                            contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}
+                          >
+                            {allImages.map((thumbUri, tIdx) => {
+                              const isActive = tIdx === activeGalleryIdx;
+                              return (
+                                <TouchableOpacity 
+                                  key={tIdx} 
+                                  activeOpacity={0.8}
+                                  onPress={() => {
+                                    setActiveGalleryIdx(tIdx);
+                                    galleryScrollRef.current?.scrollTo({ x: tIdx * galleryCardWidth, animated: true });
+                                  }}
+                                  style={{ 
+                                    width: 52, 
+                                    height: 40, 
+                                    borderRadius: 8, 
+                                    overflow: 'hidden', 
+                                    borderWidth: 2, 
+                                    borderColor: isActive ? THEME.COLORS.primary : '#334155',
+                                    backgroundColor: '#0F172A'
+                                  }}
+                                >
+                                  <Image source={{ uri: thumbUri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
                       )}
                     </View>
                   );
                 })()}
-                <View style={styles.ratingBadge}>
-                  <Star size={12} color="#EAB308" fill="#EAB308" style={{ marginRight: 3 }} />
-                  <Text style={styles.ratingBadgeText}>{activeGym?.rating || '4.5'} ({activeGym?.reviews || '0'} reviews)</Text>
-                </View>
               </View>
 
+              {/* Gym Details with Clean Rating Badge */}
               <View style={styles.gymHeroDetails}>
-                <Text style={styles.gymTitleText}>{activeGym?.name || ownerProfile.gymName || 'Partner Gym'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <Text style={[styles.gymTitleText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
+                    {activeGym?.name || ownerProfile.gymName || 'Partner Gym'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#FDE68A' }}>
+                    <Star size={12} color="#D97706" fill="#D97706" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                      {activeGym?.rating || '4.5'} ({activeGym?.reviews || '0'} reviews)
+                    </Text>
+                  </View>
+                </View>
+
                 <TouchableOpacity 
                   style={styles.locationLinkRow}
                   onPress={() => activeGym?.location && activeGym.location.startsWith('http') ? Linking.openURL(activeGym.location) : null}
