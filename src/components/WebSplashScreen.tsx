@@ -37,7 +37,7 @@ export default function WebSplashScreen() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.7, ease: "easeInOut" }}
           className="fixed inset-0 z-[99999] flex flex-col items-center justify-center overflow-hidden"
-          style={{ background: "#fff" }}
+          style={{ background: "#fff", width: "100vw", maxWidth: "100vw" }}
         >
           {/* Subtle red radial glow */}
           <div
@@ -118,15 +118,24 @@ export default function WebSplashScreen() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 1.05 }}
                 transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col items-center select-none w-full px-8 sm:px-10"
-                style={{ gap: "20px" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 20,
+                  width: "100%",
+                  maxWidth: "100vw",
+                  boxSizing: "border-box",
+                  padding: "0 28px",
+                  overflow: "hidden",
+                }}
               >
-                {/* Logo — responsive: full width on mobile, capped on desktop */}
+                {/* Logo */}
                 <motion.div
                   initial={{ filter: "blur(14px)", opacity: 0 }}
                   animate={{ filter: "blur(0px)", opacity: 1 }}
                   transition={{ duration: 0.55, delay: 0.05, ease: "easeOut" }}
-                  className="w-full flex items-center justify-center"
+                  style={{ width: "100%", display: "flex", justifyContent: "center" }}
                 >
                   <Image
                     src="/gym-logo-transparent.png"
@@ -136,43 +145,14 @@ export default function WebSplashScreen() {
                     className="object-contain drop-shadow-xl"
                     style={{
                       width: "100%",
-                      maxWidth: "min(460px, 88vw)",
+                      maxWidth: 460,
                       height: "auto",
                     }}
                     priority
                   />
                 </motion.div>
 
-                {/* Tagline — centered, full width, wraps on mobile */}
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.25 }}
-                  className="text-center font-bold uppercase"
-                  style={{
-                    color: "#ef4444",
-                    fontSize: "clamp(11px, 3vw, 14px)",
-                    letterSpacing: "0.18em",
-                    lineHeight: 1.6,
-                    padding: "0 4px",
-                  }}
-                >
-                  Train Anywhere. Stay Fit Everywhere.
-                </motion.p>
 
-                {/* Animated underline — centered */}
-                <motion.div
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
-                  style={{
-                    height: 3,
-                    width: 100,
-                    borderRadius: 99,
-                    background: "linear-gradient(90deg, #ef4444, #fca5a5)",
-                    transformOrigin: "center",
-                  }}
-                />
               </motion.div>
             )}
           </AnimatePresence>
