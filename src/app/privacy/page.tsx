@@ -56,17 +56,33 @@ export default function PrivacyPolicy() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-bold text-secondary">5. Your Rights</h2>
+              <h2 className="text-xl font-bold text-secondary">5. Account Deletion & Data Retention</h2>
               <p>
-                You have the right to access, correct, or delete your personal information. You can manage your profile 
+                You have the full right to delete your GymDate account and any associated personal data at any time.
+              </p>
+              <h3 className="text-base font-semibold text-secondary pt-2">How to Request Account Deletion:</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>In-App Deletion:</strong> Navigate to your <em>Profile / Settings</em> in the GymDate mobile app, select <em>Account Settings</em>, and click <em>Delete Account</em>.</li>
+                <li><strong>Email Request:</strong> You can send an account deletion request to <a href="mailto:founder@gymdate.in" className="text-primary underline">founder@gymdate.in</a> with your registered email or phone number. We will process your deletion request within 48 hours.</li>
+              </ul>
+              <h3 className="text-base font-semibold text-secondary pt-2">What Data is Deleted:</h3>
+              <p>
+                Upon account deletion, your personal profile information (name, email, phone number, profile photo, workout preferences, buddy connections, and auth tokens) will be permanently deleted from our active databases. Past financial transaction records may be retained only as required by applicable tax and accounting laws.
+              </p>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="text-xl font-bold text-secondary">6. Your Rights</h2>
+              <p>
+                You have the right to access, correct, export, or delete your personal information. You can manage your profile 
                 settings directly in your account dashboard or contact our support team for assistance.
               </p>
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-xl font-bold text-secondary">6. Contact Us</h2>
+              <h2 className="text-xl font-bold text-secondary">7. Contact Us</h2>
               <p>
-                If you have any questions about this Privacy Policy, please reach out to us at:
+                If you have any questions about this Privacy Policy or wish to request data/account deletion, please reach out to us at:
                 <br />
                 <strong>Email:</strong> founder@gymdate.in
                 <br />
@@ -75,7 +91,7 @@ export default function PrivacyPolicy() {
             </section>
 
             <p className="text-xs text-gray-400 pt-8 border-t border-gray-100">
-              Last Updated: May 2, 2026
+              Last Updated: August 26, 2026
             </p>
           </div>
         </div>

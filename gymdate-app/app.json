@@ -11,7 +11,8 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.neelaakhil12.gymdateapp",
+      "package": "com.gymdate.app",
+      "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -30,7 +31,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "student15",
+    "owner": "student16",
     "plugins": [
       "expo-status-bar",
       [
@@ -50,7 +51,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "12af34a3-6dd0-445f-b44f-730029d05fd6"
+        "projectId": "83bdecc3-bb63-4685-8932-322e71a7c7a2"
       }
     }
   }
