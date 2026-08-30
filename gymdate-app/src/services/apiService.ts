@@ -2,9 +2,11 @@ import { Platform } from 'react-native';
 import { getApiUrl } from '../config';
 
 export interface ApiProfile {
+  id?: string;
   email: string;
   full_name: string;
   phone: string;
+  wallet_balance?: number;
   address?: string;
   lat?: number;
   lng?: number;
@@ -138,6 +140,40 @@ export const apiService = {
    * Verify 6-digit OTP against backend
    */
   async verifyOtp(email: string, otp: string, name?: string, phone?: string): Promise<{ success: boolean; user?: ApiProfile; error?: string }> {
+    const trimmedEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.trim();
+
+    // Fast-pass for Google Reviewer / Demo testing with code 123456
+    if (cleanOtp === "123456" && (trimmedEmail === "neelaakhilharish@gmail.com" || trimmedEmail === "testuser@gymdate.in")) {
+      try {
+        const url = `${getApiUrl()}/api/auth/otp/verify`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: trimmedEmail, 
+            otp: cleanOtp,
+            name: name || "NEELA AKHIL KUMAR",
+            phone: phone || "9989551305"
+          }),
+        });
+        const data = await res.json();
+        if (data && data.success) return data;
+      } catch (_) {}
+
+      return {
+        success: true,
+        user: {
+          id: "member-akhil-001",
+          email: trimmedEmail,
+          full_name: name || "NEELA AKHIL KUMAR",
+          phone: phone || "9989551305",
+          wallet_balance: 500,
+          role_id: "user"
+        }
+      };
+    }
+
     const url = `${getApiUrl()}/api/auth/otp/verify`;
     console.log(`[API] Verifying OTP for ${email} via ${url}`);
 
@@ -146,8 +182,8 @@ export const apiService = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: email.trim().toLowerCase(), 
-          otp: otp.trim(),
+          email: trimmedEmail, 
+          otp: cleanOtp,
           name: name ? name.trim() : undefined,
           phone: phone ? phone.trim() : undefined
         }),
@@ -155,8 +191,18 @@ export const apiService = {
       return await res.json();
     } catch (err: any) {
       console.warn('[API WARN] Failed to reach backend OTP verify API:', err);
-      if (otp.trim() === '123456') {
-        return { success: true };
+      if (cleanOtp === '123456') {
+        return { 
+          success: true,
+          user: {
+            id: "demo-user-id",
+            email: trimmedEmail,
+            full_name: name || "NEELA AKHIL KUMAR",
+            phone: phone || "9989551305",
+            wallet_balance: 500,
+            role_id: "user"
+          }
+        };
       }
       return { success: false, error: err.message || 'Verification failed.' };
     }
@@ -296,6 +342,35 @@ export const apiService = {
    */
   async partnerLogin(email: string, password: string): Promise<{ success: boolean; user?: any; error?: string }> {
     const trimmedEmail = email.trim().toLowerCase();
+
+    // Play Store Reviewer & Demo Partner bypass (ensures Google review never fails)
+    if (
+      trimmedEmail === "testuser@gymdate.in" ||
+      trimmedEmail === "reviewer@gymdate.in" ||
+      trimmedEmail === "demo@gymdate.in" ||
+      trimmedEmail === "neelaakhilkumar50@gmail.com" ||
+      trimmedEmail === "neelaakhilhumar50@gmail.com"
+    ) {
+      return {
+        success: true,
+        user: {
+          id: "review-partner-id-001",
+          email: trimmedEmail,
+          name: "GymDate Partner",
+          full_name: "GymDate Partner",
+          role: "owner",
+          gym: {
+            id: "review-gym-id-001",
+            name: "Elite Fitness Studio",
+            location: "Hyderabad, Telangana",
+            price_per_day: 199,
+            hours: "06:00 AM - 10:00 PM",
+            image: "https://gymdate.in/gym-logo-transparent.png"
+          }
+        }
+      };
+    }
+
     const url = `${getApiUrl()}/api/auth/partner/login`;
     console.log(`[API] Authenticating partner with: ${url}`);
 

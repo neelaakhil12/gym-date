@@ -1023,7 +1023,9 @@ export const Profile: React.FC = () => {
                     <View style={[styles.ticketBody, isLight && { backgroundColor: '#ffffff' }]}>
                       <View style={styles.qrContainer}>
                         <Image 
-                          source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrValue)}` }}
+                          source={{ 
+                            uri: (booking as any).qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrValue)}` 
+                          }}
                           style={styles.qrImgMock}
                         />
                       </View>

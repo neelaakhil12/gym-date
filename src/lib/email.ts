@@ -26,15 +26,16 @@ export async function sendBookingConfirmationEmail(booking: any) {
     const shortId = (booking.id ? String(booking.id).slice(0, 8) : "PASS").toUpperCase();
     const qrValue = booking.id ? String(booking.id) : shortId;
 
-    // Generate Base64 Data URL for database storage
-    const qrDataUrl = await QRCode.toDataURL(qrValue, {
-      width: 300,
-      margin: 1,
+    // Generate PNG buffer for inline email attachment & Base64 Data URL for database storage
+    const qrBuffer = await QRCode.toBuffer(qrValue, {
+      width: 360,
+      margin: 2,
       color: {
         dark: '#000000',
         light: '#ffffff'
       }
     });
+    const qrDataUrl = `data:image/png;base64,${qrBuffer.toString('base64')}`;
 
     // 2. Ensure bookings_extra table exists and store QR code in database
     try {
@@ -59,9 +60,8 @@ export async function sendBookingConfirmationEmail(booking: any) {
       console.error("[Email & DB] Error saving QR code to bookings_extra table:", dbErr);
     }
 
-    // 3. Prepare Email Content & Globally Compatible Image Source
-    // Google proxy & mobile email clients reliably render standard HTTPS image URLs
-    const publicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrValue)}&margin=1`;
+    // 3. Prepare Email Content & Guaranteed Inline CID Image
+    const qrCid = `gymdate-pass-qr-${shortId.toLowerCase()}`;
 
     const gymLocationUrl = booking.gyms?.location?.startsWith("http") 
       ? booking.gyms.location 
@@ -103,10 +103,10 @@ export async function sendBookingConfirmationEmail(booking: any) {
               </table>
             </div>
 
-            <!-- Middle Section: Guaranteed Display QR Code -->
+            <!-- Middle Section: Guaranteed Display QR Code (CID Inline) -->
             <div style="padding: 32px 24px; text-align: center; background-color: #ffffff; border-bottom: 2px dashed #f1f5f9;">
               <div style="display: inline-block; padding: 16px; background-color: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 16px; line-height: 0;">
-                <img src="${publicQrUrl}" alt="Access QR Code: ${shortId}" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
+                <img src="cid:${qrCid}" alt="Access QR Code: ${shortId}" width="180" height="180" style="width: 180px; height: 180px; display: block; border-radius: 8px; margin: 0 auto; background-color: #ffffff;" />
               </div>
               
               <div>
@@ -157,11 +157,24 @@ export async function sendBookingConfirmationEmail(booking: any) {
           </div>
 
         </div>
-      `
+      `,
+      attachments: [
+        {
+          filename: `ticket-${shortId}.png`,
+          content: qrBuffer,
+          contentType: 'image/png',
+          cid: qrCid,
+          contentDisposition: 'inline' as const,
+          headers: {
+            'Content-ID': `<${qrCid}>`,
+            'X-Attachment-Id': qrCid
+          }
+        }
+      ]
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Confirmation email sent: %s", info.messageId);
+    const info: any = await transporter.sendMail(mailOptions);
+    console.log("Confirmation email sent: %s", info?.messageId || "OK");
     return true;
   } catch (error) {
     console.error("Error sending confirmation email:", error);
