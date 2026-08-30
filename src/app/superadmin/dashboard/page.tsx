@@ -797,7 +797,6 @@ export default function AdminDashboard() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-bold text-secondary">{gym.name}</div>
-                          <div className="text-xs text-gray-500">{gym.price_per_day ? `₹${gym.price_per_day}/day` : 'No price set'}</div>
                         </div>
                       </div>
                     </td>
