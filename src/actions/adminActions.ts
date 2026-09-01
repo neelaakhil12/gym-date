@@ -912,31 +912,106 @@ export async function deleteAccount(id: string, role: string) {
     if (!id) return { error: "ID is required" };
 
     if (role === "partner") {
-      // For partners, find their gym and delete associated data
-      const gymRes = await query("SELECT id FROM gyms WHERE partner_id::text = $1::text", [id]);
-      if (gymRes.rows.length > 0) {
-        const gymId = gymRes.rows[0].id;
-        try { await query("DELETE FROM pricing_plans WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
-        try { await query("DELETE FROM payout_requests WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
-        try { await query("DELETE FROM bookings WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
-        try { await query("DELETE FROM gyms_extra WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
-        try { await query("DELETE FROM gyms WHERE id::text = $1::text", [gymId]); } catch (e) {}
+      // 1. Fetch partner email and details before deleting
+      let partnerEmail: string | null = null;
+      try {
+        const uRes = await query(
+          "SELECT email FROM users WHERE id::text = $1::text UNION SELECT email FROM partner_users WHERE id::text = $1::text LIMIT 1",
+          [id]
+        );
+        if (uRes.rows.length > 0) partnerEmail = uRes.rows[0].email;
+      } catch (e) {}
+
+      const pmail = partnerEmail ? partnerEmail.toLowerCase() : null;
+
+      // 2. Find any gyms belonging to this partner and delete them
+      try {
+        let gymRes;
+        if (pmail) {
+          gymRes = await query(
+            "SELECT id::text as id FROM gyms WHERE partner_id::text = $1::text OR partner_id::text IN (SELECT id::text FROM users WHERE LOWER(email) = $2)",
+            [id, pmail]
+          );
+        } else {
+          gymRes = await query("SELECT id::text as id FROM gyms WHERE partner_id::text = $1::text", [id]);
+        }
+
+        if (gymRes && gymRes.rows.length > 0) {
+          for (const gym of gymRes.rows) {
+            const gymId = gym.id;
+            try { await query("DELETE FROM pricing_plans WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+            try { await query("DELETE FROM payout_requests WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+            try { await query("DELETE FROM bookings WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+            try { await query("DELETE FROM gyms_extra WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+            try { await query("DELETE FROM gyms WHERE id::text = $1::text", [gymId]); } catch (e) {}
+          }
+        }
+      } catch (e) {
+        console.warn("deleteAccount gyms cleanup warning:", e);
       }
-      try { await query("DELETE FROM partner_users WHERE id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM users WHERE id::text = $1::text", [id]); } catch (e) {}
+
+      // 3. Clean up dependent user/partner records
+      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text OR referee_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM wallets WHERE user_id::text = $1::text OR partner_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM user_profiles WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM payout_requests WHERE partner_id::text = $1::text", [id]); } catch (e) {}
+
+      if (pmail) {
+        try { await query("DELETE FROM partner_requests WHERE LOWER(email) = $1", [pmail]); } catch (e) {}
+        try { await query("DELETE FROM password_resets WHERE LOWER(email) = $1", [pmail]); } catch (e) {}
+        try { await query("DELETE FROM user_profiles WHERE LOWER(email) = $1", [pmail]); } catch (e) {}
+      }
+
+      // 4. Delete from partner_users
+      try {
+        if (pmail) {
+          await query("DELETE FROM partner_users WHERE id::text = $1::text OR LOWER(email) = $2", [id, pmail]);
+        } else {
+          await query("DELETE FROM partner_users WHERE id::text = $1::text", [id]);
+        }
+      } catch (e) {}
+
+      // 5. Delete from users
+      try {
+        if (pmail) {
+          await query("DELETE FROM users WHERE id::text = $1::text OR LOWER(email) = $2", [id, pmail]);
+        } else {
+          await query("DELETE FROM users WHERE id::text = $1::text", [id]);
+        }
+      } catch (e) {}
+
     } else if (role === "super_admin") {
       try { await query("DELETE FROM admin_users WHERE id::text = $1::text", [id]); } catch (e) {}
     } else if (role === "operation_admin") {
       try { await query("DELETE FROM staff_users WHERE id::text = $1::text", [id]); } catch (e) {}
     } else {
       // Customer user deletion
+      let userEmail: string | null = null;
+      try {
+        const uRes = await query("SELECT email FROM users WHERE id::text = $1::text LIMIT 1", [id]);
+        if (uRes.rows.length > 0) userEmail = uRes.rows[0].email;
+      } catch (e) {}
+
+      const umail = userEmail ? userEmail.toLowerCase() : null;
+
       try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text OR referee_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM wallets WHERE user_id::text = $1::text", [id]); } catch (e) {}
       try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM users WHERE id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM user_profiles WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      if (umail) {
+        try { await query("DELETE FROM password_resets WHERE LOWER(email) = $1", [umail]); } catch (e) {}
+        try { await query("DELETE FROM user_profiles WHERE LOWER(email) = $1", [umail]); } catch (e) {}
+        await query("DELETE FROM users WHERE id::text = $1::text OR LOWER(email) = $2", [id, umail]);
+      } else {
+        await query("DELETE FROM users WHERE id::text = $1::text", [id]);
+      }
     }
 
     revalidatePath("/superadmin/users");
+    revalidatePath("/superadmin/gyms");
     revalidatePath("/superadmin");
     return { success: true };
   } catch (error: any) {

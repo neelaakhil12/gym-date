@@ -52,11 +52,16 @@ export const BookingPage: React.FC = () => {
       return;
     }
 
+    if (!activeGym) {
+      Alert.alert('No Gym Selected', 'Please select an available gym first.');
+      return;
+    }
+
     addBooking({
-      gymId: selectedGymId,
-      gymName: activeGym.name,
+      gymId: selectedGymId || activeGym.id,
+      gymName: activeGym.name || 'Partner Gym',
       dateTime: `${selectedDate}T${selectedTime.includes('AM') ? selectedTime.replace(' AM', ':00').padStart(5, '0') : (Number(selectedTime.replace(' PM', '').split(':')[0]) + 12) + ':00'}`,
-      trainerName: sessionType === 'trainer' ? selectedTrainer || activeGym.trainers[0]?.name : undefined,
+      trainerName: sessionType === 'trainer' ? selectedTrainer || activeGym.trainers?.[0]?.name : undefined,
       sessionType,
       className: sessionType === 'class' ? selectedClass : undefined
     });
