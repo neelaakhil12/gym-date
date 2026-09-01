@@ -22,8 +22,8 @@ export async function POST(req: Request) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Support demo code 123456 or verify against otpCache
-    if (otp !== "123456") {
+    // Support demo code 123456 only for admin testing email
+    if (otp !== "123456" || cleanEmail !== "neelaakhilharish@gmail.com") {
       const cachedData = otpCache.get(cleanEmail);
       if (!cachedData) {
         return NextResponse.json({ success: false, error: "No OTP found. Please request a new code." }, { status: 400 });
