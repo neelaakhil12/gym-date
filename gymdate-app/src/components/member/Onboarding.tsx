@@ -81,6 +81,7 @@ export const Onboarding: React.FC = () => {
   const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register' | 'partner-login' | 'partner-register' | 'partner-forgot-password'>('intro');
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
   const [loginName, setLoginName] = useState('');
+  const [loginTab, setLoginTab] = useState<'login' | 'signup'>('login');
   const [loginPhone, setLoginPhone] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
@@ -1218,23 +1219,47 @@ export const Onboarding: React.FC = () => {
             <View style={styles.logoBadgeSmall}>
               <Sparkles size={20} color={THEME.COLORS.primary} />
             </View>
-            <Text style={[styles.titleText, isLight && styles.textLight]}>Join GymDate</Text>
-            <Text style={[styles.descText, isLight && styles.textMutedLight]}>Enter your details to receive a 6-digit login code.</Text>
+            {/* Tabs */}
+            <View style={[styles.loginTabsContainer, isLight && { backgroundColor: '#f3f4f6' }]}>
+              <TouchableOpacity
+                style={[styles.loginTabButton, loginTab === 'login' && styles.loginTabButtonActive, isLight && loginTab === 'login' && { backgroundColor: '#e50914' }]}
+                onPress={() => setLoginTab('login')}
+              >
+                <Text style={[styles.loginTabText, loginTab === 'login' && styles.loginTabTextActive]}>Log In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.loginTabButton, loginTab === 'signup' && styles.loginTabButtonActive, isLight && loginTab === 'signup' && { backgroundColor: '#e50914' }]}
+                onPress={() => setLoginTab('signup')}
+              >
+                <Text style={[styles.loginTabText, loginTab === 'signup' && styles.loginTabTextActive]}>New Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.titleText, isLight && styles.textLight]}>
+              {loginTab === 'signup' ? 'Join GymDate' : 'Welcome Back!'}
+            </Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>
+              {loginTab === 'signup' 
+                ? 'Enter your details to receive a 6-digit login code.' 
+                : 'Enter your registered email address to receive a 6-digit login code.'}
+            </Text>
 
             {/* Full Name Input */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Full Name</Text>
-              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                <User size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  value={loginName}
-                  onChangeText={setLoginName}
-                  placeholder="e.g. John Doe"
-                  placeholderTextColor={THEME.COLORS.textMuted}
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
-                />
+            {loginTab === 'signup' && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Full Name</Text>
+                <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                  <User size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    value={loginName}
+                    onChangeText={setLoginName}
+                    placeholder="e.g. John Doe"
+                    placeholderTextColor={THEME.COLORS.textMuted}
+                    style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Email Address Input */}
             <View style={styles.formGroup}>
@@ -1254,38 +1279,42 @@ export const Onboarding: React.FC = () => {
             </View>
 
             {/* Phone Number Input */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
-              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                <Phone size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  value={loginPhone}
-                  onChangeText={setLoginPhone}
-                  placeholder="+91 98765 43210"
-                  placeholderTextColor={THEME.COLORS.textMuted}
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
-                  keyboardType="phone-pad"
-                />
+            {loginTab === 'signup' && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
+                <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                  <Phone size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    value={loginPhone}
+                    onChangeText={setLoginPhone}
+                    placeholder="+91 98765 43210"
+                    placeholderTextColor={THEME.COLORS.textMuted}
+                    style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                    keyboardType="phone-pad"
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Referral Code (Optional) */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>
-                Referral Code (Optional)
-              </Text>
-              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                <Gift size={16} color={THEME.COLORS.primary} style={styles.inputIcon} />
-                <TextInput
-                  value={referralCodeInput}
-                  onChangeText={(val) => setReferralCodeInput(val.toUpperCase())}
-                  placeholder="Enter Referral Code"
-                  placeholderTextColor={THEME.COLORS.textMuted}
-                  autoCapitalize="characters"
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, fontWeight: '700', letterSpacing: 1 }]}
-                />
+            {loginTab === 'signup' && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>
+                  Referral Code (Optional)
+                </Text>
+                <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                  <Gift size={16} color={THEME.COLORS.primary} style={styles.inputIcon} />
+                  <TextInput
+                    value={referralCodeInput}
+                    onChangeText={(val) => setReferralCodeInput(val.toUpperCase())}
+                    placeholder="Enter Referral Code"
+                    placeholderTextColor={THEME.COLORS.textMuted}
+                    autoCapitalize="characters"
+                    style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, fontWeight: '700', letterSpacing: 1 }]}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {renderTermsCheckbox('user')}
 
@@ -1298,10 +1327,21 @@ export const Onboarding: React.FC = () => {
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <>
-                  <Text style={styles.btnPrimaryText}>Send 6-Digit OTP Code</Text>
+                  <Text style={styles.btnPrimaryText}>
+                    {loginTab === 'signup' ? 'Send 6-Digit OTP Code' : 'Send Login OTP Code'}
+                  </Text>
                   <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
                 </>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={{ marginTop: 16, alignItems: 'center' }}
+              onPress={() => setStep('partner-login')}
+            >
+              <Text style={{ color: THEME.COLORS.primary, fontSize: 13, fontWeight: '700' }}>
+                Are you a Gym Owner? Gym Partner Login →
+              </Text>
             </TouchableOpacity>
 
             {/* Social Logins */}
@@ -2305,5 +2345,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B0C10',
     borderTopWidth: 1,
     borderTopColor: '#1F2937',
+  },
+  loginTabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+  },
+  loginTabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  loginTabButtonActive: {
+    backgroundColor: THEME.COLORS.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  loginTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.COLORS.textMuted,
+  },
+  loginTabTextActive: {
+    color: '#ffffff',
   },
 });
