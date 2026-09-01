@@ -1371,7 +1371,11 @@ export const Onboarding: React.FC = () => {
               activeOpacity={0.85}
             >
               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#4285F4' }}>G</Text>
+                <Image 
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} 
+                  style={{ width: 16, height: 16 }} 
+                  resizeMode="contain"
+                />
               </View>
               <Text style={[styles.socialBtnText, isLight && styles.textLight, { fontSize: 13, fontWeight: '700' }]}>
                 Continue with Google
