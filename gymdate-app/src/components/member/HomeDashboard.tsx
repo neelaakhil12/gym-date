@@ -19,11 +19,7 @@ import {
   Star, 
   Bell, 
   ChevronRight,
-  Menu,
-  Globe,
-  Target,
-  Map,
-  List
+  Menu
 } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { getCurrentLocation, reverseGeocode } from '../../utils/location';
@@ -436,11 +432,11 @@ export const HomeDashboard: React.FC = () => {
       {/* 4. Radius Distance Filter Pills */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.radiusScroll}>
         {[
-          { label: 'All', icon: Globe, value: 'all' as const },
-          { label: '1 km', icon: Target, value: 1 },
-          { label: '5 km', icon: Target, value: 5 },
-          { label: '10 km', icon: Target, value: 10 },
-          { label: '25 km', icon: Target, value: 25 },
+          { label: '🌐 All', value: 'all' as const },
+          { label: '🎯 1 km', value: 1 },
+          { label: '🎯 5 km', value: 5 },
+          { label: '🎯 10 km', value: 10 },
+          { label: '🎯 25 km', value: 25 },
         ].map((item, idx) => {
           const isSelected = selectedRadius === item.value;
           return (
@@ -454,16 +450,13 @@ export const HomeDashboard: React.FC = () => {
               ]}
               activeOpacity={0.8}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <item.icon size={12} color={isSelected ? '#ffffff' : (isLight ? '#475569' : '#94A3B8')} />
-                <Text style={[
-                  styles.radiusChipText,
-                  isLight && { color: '#475569' },
-                  isSelected && { color: '#ffffff', fontWeight: '800' }
-                ]}>
-                  {item.label}
-                </Text>
-              </View>
+              <Text style={[
+                styles.radiusChipText,
+                isLight && { color: '#475569' },
+                isSelected && { color: '#ffffff', fontWeight: '800' }
+              ]}>
+                {item.label}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -482,16 +475,13 @@ export const HomeDashboard: React.FC = () => {
             ]}
             activeOpacity={0.8}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Map size={14} color={viewMode === 'map' ? '#ffffff' : (isLight ? '#475569' : '#94A3B8')} />
-              <Text style={[
-                styles.viewSwitchText, 
-                isLight && { color: '#475569' },
-                viewMode === 'map' && styles.viewSwitchTextActive
-              ]}>
-                Live Map View ({filteredGyms.length})
-              </Text>
-            </View>
+            <Text style={[
+              styles.viewSwitchText, 
+              isLight && { color: '#475569' },
+              viewMode === 'map' && styles.viewSwitchTextActive
+            ]}>
+              🗺️ Live Map View ({filteredGyms.length})
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -503,16 +493,13 @@ export const HomeDashboard: React.FC = () => {
             ]}
             activeOpacity={0.8}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <List size={14} color={viewMode === 'list' ? '#ffffff' : (isLight ? '#475569' : '#94A3B8')} />
-              <Text style={[
-                styles.viewSwitchText, 
-                isLight && { color: '#475569' },
-                viewMode === 'list' && styles.viewSwitchTextActive
-              ]}>
-                List View ({filteredGyms.length})
-              </Text>
-            </View>
+            <Text style={[
+              styles.viewSwitchText, 
+              isLight && { color: '#475569' },
+              viewMode === 'list' && styles.viewSwitchTextActive
+            ]}>
+              📋 List View ({filteredGyms.length})
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -793,7 +780,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   radiusChip: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#F8FAFC',
@@ -847,8 +834,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   viewSwitchBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',

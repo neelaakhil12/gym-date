@@ -41,10 +41,7 @@ import {
   Phone,
   Mail,
   CheckCircle2,
-  Tag,
-  Globe,
-  Target,
-  Dumbbell
+  Tag
 } from 'lucide-react-native';
 
 export const GymDiscovery: React.FC = () => {
@@ -431,11 +428,11 @@ export const GymDiscovery: React.FC = () => {
               contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginTop: 4, marginBottom: 14 }}
             >
               {[
-                { label: 'All', icon: Globe, value: 'all' as const },
-                { label: '1 km', icon: Target, value: 1 },
-                { label: '5 km', icon: Target, value: 5 },
-                { label: '10 km', icon: Target, value: 10 },
-                { label: '25 km', icon: Target, value: 25 },
+                { label: '🌐 All', value: 'all' as const },
+                { label: '🎯 1 km', value: 1 },
+                { label: '🎯 5 km', value: 5 },
+                { label: '🎯 10 km', value: 10 },
+                { label: '🎯 25 km', value: 25 },
               ].map((item, idx) => {
                 const isSelected = selectedRadius === item.value;
                 return (
@@ -444,8 +441,8 @@ export const GymDiscovery: React.FC = () => {
                     onPress={() => setSelectedRadius(item.value)}
                     style={[
                       {
-                        paddingHorizontal: 14,
-                        paddingVertical: 7,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
                         borderRadius: 20,
                         backgroundColor: inputBg,
                         borderWidth: 1,
@@ -454,15 +451,13 @@ export const GymDiscovery: React.FC = () => {
                       isSelected && { backgroundColor: THEME.COLORS.primary, borderColor: THEME.COLORS.primary }
                     ]}
                     activeOpacity={0.8}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <item.icon size={12} color={isSelected ? '#ffffff' : textSecondary} />
-                      <Text style={[
-                        { fontSize: 11, fontWeight: '700', color: textSecondary },
-                        isSelected && { color: '#ffffff', fontWeight: '800' }
-                      ]}>
-                        {item.label}
-                      </Text>
-                    </View>
+                  >
+                    <Text style={[
+                      { fontSize: 11, fontWeight: '700', color: textSecondary },
+                      isSelected && { color: '#ffffff', fontWeight: '800' }
+                    ]}>
+                      {item.label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -534,7 +529,7 @@ export const GymDiscovery: React.FC = () => {
                 ))
               ) : (
                 <View style={styles.emptyContainer}>
-                  <Dumbbell size={48} color={textMuted} style={{ marginBottom: 16 }} />
+                  <Text style={styles.emptyIcon}>🏋️‍♀️</Text>
                   <Text style={[styles.emptyText, { color: textMuted }]}>No gyms match your active search filter.</Text>
                 </View>
               )}
