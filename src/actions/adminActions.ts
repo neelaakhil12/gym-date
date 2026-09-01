@@ -951,10 +951,8 @@ export async function deleteAccount(id: string, role: string) {
       }
 
       // 3. Clean up dependent user/partner records
-      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text OR referee_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM wallets WHERE user_id::text = $1::text OR partner_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text", [id]); } catch (e) {}
       try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM user_profiles WHERE user_id::text = $1::text", [id]); } catch (e) {}
       try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [id]); } catch (e) {}
       try { await query("DELETE FROM payout_requests WHERE partner_id::text = $1::text", [id]); } catch (e) {}
 
@@ -974,13 +972,11 @@ export async function deleteAccount(id: string, role: string) {
       } catch (e) {}
 
       // 5. Delete from users
-      try {
-        if (pmail) {
-          await query("DELETE FROM users WHERE id::text = $1::text OR LOWER(email) = $2", [id, pmail]);
-        } else {
-          await query("DELETE FROM users WHERE id::text = $1::text", [id]);
-        }
-      } catch (e) {}
+      if (pmail) {
+        await query("DELETE FROM users WHERE id::text = $1::text OR LOWER(email) = $2", [id, pmail]);
+      } else {
+        await query("DELETE FROM users WHERE id::text = $1::text", [id]);
+      }
 
     } else if (role === "super_admin") {
       try { await query("DELETE FROM admin_users WHERE id::text = $1::text", [id]); } catch (e) {}
@@ -997,10 +993,8 @@ export async function deleteAccount(id: string, role: string) {
       const umail = userEmail ? userEmail.toLowerCase() : null;
 
       try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text OR referee_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM wallets WHERE user_id::text = $1::text", [id]); } catch (e) {}
+      try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text", [id]); } catch (e) {}
       try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [id]); } catch (e) {}
-      try { await query("DELETE FROM user_profiles WHERE user_id::text = $1::text", [id]); } catch (e) {}
       if (umail) {
         try { await query("DELETE FROM password_resets WHERE LOWER(email) = $1", [umail]); } catch (e) {}
         try { await query("DELETE FROM user_profiles WHERE LOWER(email) = $1", [umail]); } catch (e) {}

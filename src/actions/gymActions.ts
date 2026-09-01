@@ -541,10 +541,8 @@ export async function deleteGym(gymId: string) {
 
       // Clean dependent user records that might block foreign key constraints
       if (pid) {
-        try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text OR referee_id::text = $1::text", [pid]); } catch (e) {}
-        try { await query("DELETE FROM wallets WHERE user_id::text = $1::text OR partner_id::text = $1::text", [pid]); } catch (e) {}
+        try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text", [pid]); } catch (e) {}
         try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [pid]); } catch (e) {}
-        try { await query("DELETE FROM user_profiles WHERE user_id::text = $1::text", [pid]); } catch (e) {}
         try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [pid]); } catch (e) {}
         try { await query("DELETE FROM payout_requests WHERE partner_id::text = $1::text", [pid]); } catch (e) {}
       }
