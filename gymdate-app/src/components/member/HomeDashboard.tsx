@@ -831,9 +831,10 @@ const styles = StyleSheet.create({
   viewSwitcherRow: {
     flexDirection: 'row',
     gap: 10,
+    justifyContent: 'center',
   },
   viewSwitchBtn: {
-    flex: 1,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
