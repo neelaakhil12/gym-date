@@ -19,9 +19,7 @@ import {
   Star, 
   Bell, 
   ChevronRight,
-  Menu,
-  Map,
-  List
+  Menu
 } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { getCurrentLocation, reverseGeocode } from '../../utils/location';
@@ -362,7 +360,7 @@ export const HomeDashboard: React.FC = () => {
             )}
           </TouchableOpacity>
           <View style={{ flexShrink: 1 }}>
-            <Text style={[styles.welcomeText, isLight && { color: '#111827' }]}>Hello, {userProfile.name?.split(' ')[0] || 'User'}</Text>
+            <Text style={[styles.welcomeText, isLight && { color: '#111827' }]}>Hello, {userProfile.name?.split(' ')[0] || 'User'} 👋</Text>
             <Text style={[styles.subGreetingText, isLight && { color: THEME.COLORS.primary }]} numberOfLines={1}>Find nearby premium gyms & passes</Text>
           </View>
         </View>
@@ -412,7 +410,7 @@ export const HomeDashboard: React.FC = () => {
               {isLocating ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <Text style={styles.changePinBtnText}>Change Pin</Text>
+                <Text style={styles.changePinBtnText}>Change Pin 🎯</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -434,11 +432,11 @@ export const HomeDashboard: React.FC = () => {
       {/* 4. Radius Distance Filter Pills */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.radiusScroll}>
         {[
-          { label: 'All', value: 'all' as const },
-          { label: '1 km', value: 1 },
-          { label: '5 km', value: 5 },
-          { label: '10 km', value: 10 },
-          { label: '25 km', value: 25 },
+          { label: '🌐 All', value: 'all' as const },
+          { label: '🎯 1 km', value: 1 },
+          { label: '🎯 5 km', value: 5 },
+          { label: '🎯 10 km', value: 10 },
+          { label: '🎯 25 km', value: 25 },
         ].map((item, idx) => {
           const isSelected = selectedRadius === item.value;
           return (
@@ -473,18 +471,16 @@ export const HomeDashboard: React.FC = () => {
             style={[
               styles.viewSwitchBtn, 
               isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-              viewMode === 'map' && styles.viewSwitchBtnActive,
-              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }
+              viewMode === 'map' && styles.viewSwitchBtnActive
             ]}
             activeOpacity={0.8}
           >
-            <Map size={14} color={viewMode === 'map' ? '#ffffff' : (isLight ? '#475569' : '#94A3B8')} />
             <Text style={[
               styles.viewSwitchText, 
               isLight && { color: '#475569' },
               viewMode === 'map' && styles.viewSwitchTextActive
             ]}>
-              Live Map View ({filteredGyms.length})
+              🗺️ Live Map View ({filteredGyms.length})
             </Text>
           </TouchableOpacity>
 
@@ -493,18 +489,16 @@ export const HomeDashboard: React.FC = () => {
             style={[
               styles.viewSwitchBtn, 
               isLight && { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-              viewMode === 'list' && styles.viewSwitchBtnActive,
-              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }
+              viewMode === 'list' && styles.viewSwitchBtnActive
             ]}
             activeOpacity={0.8}
           >
-            <List size={14} color={viewMode === 'list' ? '#ffffff' : (isLight ? '#475569' : '#94A3B8')} />
             <Text style={[
               styles.viewSwitchText, 
               isLight && { color: '#475569' },
               viewMode === 'list' && styles.viewSwitchTextActive
             ]}>
-              List View ({filteredGyms.length})
+              📋 List View ({filteredGyms.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -606,8 +600,7 @@ export const HomeDashboard: React.FC = () => {
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
                     <Text style={{ fontSize: 10, color: '#F59E0B', fontWeight: '700' }}>★ {gym.rating} ({gym.reviewsCount})</Text>
                     <View style={styles.listCardDistBadge}>
-                      <MapPin size={9} color="#10B981" style={{ marginRight: 2 }} />
-                      <Text style={styles.listCardDistText}>{getGymDistance(gym)}</Text>
+                      <Text style={styles.listCardDistText}>📍 {getGymDistance(gym)}</Text>
                     </View>
                   </View>
                 </View>

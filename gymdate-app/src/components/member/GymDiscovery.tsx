@@ -428,11 +428,11 @@ export const GymDiscovery: React.FC = () => {
               contentContainerStyle={{ flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginTop: 4, marginBottom: 14 }}
             >
               {[
-                { label: 'All', value: 'all' as const },
-                { label: '1 km', value: 1 },
-                { label: '5 km', value: 5 },
-                { label: '10 km', value: 10 },
-                { label: '25 km', value: 25 },
+                { label: '🌐 All', value: 'all' as const },
+                { label: '🎯 1 km', value: 1 },
+                { label: '🎯 5 km', value: 5 },
+                { label: '🎯 10 km', value: 10 },
+                { label: '🎯 25 km', value: 25 },
               ].map((item, idx) => {
                 const isSelected = selectedRadius === item.value;
                 return (

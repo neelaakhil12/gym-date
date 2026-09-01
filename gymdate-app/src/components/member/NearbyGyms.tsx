@@ -147,7 +147,7 @@ export const NearbyGyms: React.FC = () => {
             {locationStatus === 'loading'
               ? 'Detecting your location…'
               : locationStatus === 'found'
-              ? `${locationSource} · ${filteredGyms.length} gym${filteredGyms.length !== 1 ? 's' : ''} found`
+              ? `📍 ${locationSource} · ${filteredGyms.length} gym${filteredGyms.length !== 1 ? 's' : ''} found`
               : 'Location unavailable — enable GPS'}
           </Text>
         </View>

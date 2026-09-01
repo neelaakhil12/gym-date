@@ -206,57 +206,7 @@ export interface GymDateContextType {
 
 const GymDateContext = createContext<GymDateContextType | undefined>(undefined);
 
-// Live AWS Server Gym Database
-const INITIAL_GYMS: Gym[] = [
-  {
-    id: '16ae957c-1bd2-450c-85b7-411991dbe41b',
-    name: 'cultfit gym',
-    rating: 4.8,
-    reviewsCount: 142,
-    distance: 1.2,
-    pricePerDay: 350,
-    location: 'Hyderabad, Telangana',
-    coordinates: { lat: 17.3208917, lng: 78.562233 },
-    facilities: ['AC', 'Free Weights', 'Cardio Ring', 'Locker Room', 'Smart Entry System'],
-    image: 'https://gymdate.in/uploads/gyms/1787212199835-j01we.png',
-    gallery: [
-      'https://gymdate.in/uploads/gyms/1787212199835-j01we.png',
-      'https://gymdate.in/uploads/gyms/1787212199836-prfgq.png'
-    ],
-    timings: '06:00 AM - 10:00 PM',
-    description: 'Cultfit gym offers premium training equipment, dedicated strength racks, high-energy group workouts, and expert conditioning coaches.',
-    trainers: [
-      { id: 't-1', name: 'Vikram Singh', specialization: 'Strength & Conditioning', rating: 4.9, avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=150', availability: ['07:00 AM - 09:00 AM', '05:00 PM - 07:00 PM'], bio: 'Expert strength conditioning coach.' }
-    ],
-    plans: [
-      { name: '1-Day Pass', price: 350, duration: '1 Day', features: ['Full Gym Access', 'Locker Room', 'Cardio Grid'] },
-      { name: 'Monthly Unlimited', price: 3500, duration: '30 Days', features: ['Unlimited Gym Access', 'Lockers & Saunas', 'Diet Consultation'] }
-    ]
-  },
-  {
-    id: 'a66bdb3d-cc49-45f6-a547-5df796a51db7',
-    name: 'national',
-    rating: 4.6,
-    reviewsCount: 88,
-    distance: 2.5,
-    pricePerDay: 250,
-    location: 'Hyderabad, Telangana',
-    coordinates: { lat: 17.161922, lng: 78.658058 },
-    facilities: ['Locker Room', 'Steam Room', 'Personal Training', 'Air Conditioned'],
-    image: 'https://gymdate.in/uploads/gyms/1787218281420-bhigjr.png',
-    gallery: [
-      'https://gymdate.in/uploads/gyms/1787218281420-bhigjr.png'
-    ],
-    timings: '06:00 AM - 10:30 PM',
-    description: 'National fitness center provides top mechanical gear, cardio zones, and heavyweight zones.',
-    trainers: [
-      { id: 't-2', name: 'Riya Sharma', specialization: 'HIIT & Weight Loss', rating: 4.7, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150', availability: ['08:00 AM - 10:00 AM', '06:00 PM - 08:00 PM'], bio: 'Specialist in dynamic caloric burners.' }
-    ],
-    plans: [
-      { name: '1-Day Pass', price: 250, duration: '1 Day', features: ['Full Gym Access', 'Locker Room'] }
-    ]
-  }
-];
+const INITIAL_GYMS: Gym[] = [];
 
 export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isRestored = React.useRef(false);
@@ -319,33 +269,14 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
     bmi: 24.1,
     goal: 'Build Muscle',
     avatar: '',
-    savedGyms: ['gym-1'],
+    savedGyms: [],
     membershipType: 'none',
     membershipExpiry: null,
     qrCodeValue: 'GD-MEMBER-NEW'
   });
 
   // Bookings list state
-  const [bookings, setBookings] = useState<Booking[]>([
-    {
-      id: 'b-1',
-      gymId: 'gym-1',
-      gymName: 'Gold\'s Gym Elite',
-      dateTime: '2026-05-29T08:00:00',
-      trainerName: 'Vikram Singh',
-      sessionType: 'trainer',
-      status: 'confirmed'
-    },
-    {
-      id: 'b-2',
-      gymId: 'gym-3',
-      gymName: 'Cult.fit Premium Center',
-      dateTime: '2026-05-27T18:00:00',
-      sessionType: 'class',
-      className: 'HRX Strength & Conditioning',
-      status: 'completed'
-    }
-  ]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
   // Simulator background theme Mode
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
@@ -388,7 +319,11 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setLoading(true);
       console.log("[Context] Fetching live gym listings from KVM PostgreSQL database...");
       const apiGyms = await apiService.getGyms();
-      if (apiGyms && apiGyms.length > 0) {
+      if (Array.isArray(apiGyms)) {
+        if (apiGyms.length === 0) {
+          setGyms([]);
+          return;
+        }
         const mappedGyms: Gym[] = await Promise.all(apiGyms.map(async gym => {
           let price = 290;
           if (gym.price_per_day) {
@@ -487,7 +422,7 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setGyms(mappedGyms);
       }
     } catch (error) {
-      console.warn("[Context] Live KVM gyms load failed, using mock data.", error);
+      console.warn("[Context] Live KVM gyms load failed.", error);
     } finally {
       setLoading(false);
     }
