@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.gymdate.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
