@@ -199,12 +199,7 @@ export const Onboarding: React.FC = () => {
   const isLight = themeMode === 'light';
   const inputRefs = useRef<Array<any>>([]);
 
-  const goalsList = [
-    { title: 'Build Muscle', desc: 'Power routines & raw strength lifting grids', icon: '💪' },
-    { title: 'Lose Weight', desc: 'High-intensity calorie burner intervals', icon: '🔥' },
-    { title: 'Get Fit & Tone', desc: 'Core definitions, agility, & yoga flex', icon: '⚡' },
-    { title: 'Mind & Body Balance', desc: 'Stretching, yogic flows, & recovery posture', icon: '🧘' }
-  ];
+
 
   const renderTermsCheckbox = (type: 'user' | 'partner') => {
     const isUser = type === 'user';
@@ -428,8 +423,6 @@ export const Onboarding: React.FC = () => {
     } else if (step === 'otp') {
       setStep('login');
     } else if (step === 'login') {
-      setStep('goals');
-    } else if (step === 'goals') {
       setStep('intro');
     } else if (step === 'register') {
       setStep('otp');
@@ -462,14 +455,7 @@ export const Onboarding: React.FC = () => {
     return () => sub.remove();
   }, [termsModalVisible, showGoogleModal, step]);
 
-  const handleSelectGoal = (goal: string) => {
-    setSelectedGoal(goal);
-  };
 
-  const handleConfirmGoal = () => {
-    setUserProfile(prev => ({ ...prev, goal: selectedGoal }));
-    setStep('login');
-  };
 
   const handleOtpChange = (index: number, value: string) => {
     if (isNaN(Number(value))) return;
@@ -1160,54 +1146,7 @@ export const Onboarding: React.FC = () => {
         </View>
       )}
 
-      {/* STEP 2: FIT GOALS SELECTOR */}
-      {step === 'goals' && (
-        <View style={styles.contentWrapper}>
-          <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
-            <ChevronLeft size={16} color="#1a1a1a" />
-          </TouchableOpacity>
-          <View style={styles.headerRow}>
-            <Goal size={14} color={THEME.COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.headerRowLabel}>Select Focus</Text>
-          </View>
-          
-          <Text style={[styles.titleText, isLight && styles.textLight]}>What's your fitness goal?</Text>
-          <Text style={[styles.descText, isLight && styles.textMutedLight]}>We will customize gym discovery and tracker limits based on this focus.</Text>
 
-          <View style={styles.goalsContainer}>
-            {goalsList.map(goal => (
-              <TouchableOpacity
-                key={goal.title}
-                onPress={() => handleSelectGoal(goal.title)}
-                style={[
-                  styles.goalCard, 
-                  isLight && styles.goalCardLight,
-                  selectedGoal === goal.title && styles.goalCardActive,
-                  selectedGoal === goal.title && {
-                    backgroundColor: isLight ? '#FFF5F5' : 'rgba(229, 9, 20, 0.15)',
-                  }
-                ]}
-              >
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalIcon}>{goal.icon}</Text>
-                  <View>
-                    <Text style={[styles.goalTitle, isLight && styles.textLight]}>{goal.title}</Text>
-                    <Text style={[styles.goalDesc, isLight && styles.textMutedLight]}>{goal.desc}</Text>
-                  </View>
-                </View>
-                <View style={[styles.radioOuter, selectedGoal === goal.title && styles.radioOuterActive]}>
-                  {selectedGoal === goal.title && <Check size={10} color="#ffffff" strokeWidth={3} />}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.btnPrimary} onPress={handleConfirmGoal}>
-            <Text style={styles.btnPrimaryText}>Confirm Goal</Text>
-            <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* STEP 3: LOGIN FORM SCREEN */}
       {step === 'login' && (
