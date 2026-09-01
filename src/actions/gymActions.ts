@@ -504,47 +504,85 @@ export async function deleteGym(gymId: string) {
   try {
     if (!gymId) return { error: "No gym ID provided." };
     
-    const gymResult = await query("SELECT partner_id FROM gyms WHERE id = $1", [gymId]);
+    // 1. Fetch gym info and partner details before deleting
+    const gymResult = await query("SELECT id, name, partner_id FROM gyms WHERE id::text = $1::text", [gymId]);
     if (gymResult.rows.length === 0) return { error: "Gym not found." };
     
     const partnerId = gymResult.rows[0].partner_id;
+    let partnerEmail: string | null = null;
 
-    // 1. Delete dependent records safely
-    console.log(`Cleaning up dependent records for gym: ${gymId}`);
-    
-    try {
-      await query("DELETE FROM pricing_plans WHERE gym_id = $1", [gymId]);
-    } catch (e) {
-      console.warn("pricing_plans delete skipped:", e);
-    }
-
-    try {
-      await query("DELETE FROM payout_requests WHERE gym_id = $1", [gymId]);
-    } catch (e) {
-      console.warn("payout_requests delete skipped or table absent:", e);
-    }
-
-    try {
-      await query("DELETE FROM bookings WHERE gym_id = $1", [gymId]);
-    } catch (e) {
-      console.warn("bookings delete skipped or table absent:", e);
-    }
-
-    // 2. Delete the gym
-    await query("DELETE FROM gyms WHERE id = $1", [gymId]);
-
-    // 3. Delete the partner account from both tables if it exists
     if (partnerId) {
       try {
-        await query("DELETE FROM partner_users WHERE id = $1", [partnerId]);
+        const pRes = await query(
+          "SELECT email FROM users WHERE id::text = $1::text UNION SELECT email FROM partner_users WHERE id::text = $1::text LIMIT 1",
+          [partnerId]
+        );
+        if (pRes.rows.length > 0) {
+          partnerEmail = pRes.rows[0].email;
+        }
       } catch (e) {}
+    }
 
+    console.log(`Cleaning up dependent records for gym: ${gymId}, partnerId: ${partnerId}, email: ${partnerEmail}`);
+
+    // 2. Delete gym dependent records
+    try { await query("DELETE FROM pricing_plans WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+    try { await query("DELETE FROM payout_requests WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+    try { await query("DELETE FROM bookings WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+    try { await query("DELETE FROM gyms_extra WHERE gym_id::text = $1::text", [gymId]); } catch (e) {}
+
+    // 3. Delete the gym
+    await query("DELETE FROM gyms WHERE id::text = $1::text", [gymId]);
+
+    // 4. Delete the partner account and dependent rows if partner exists
+    if (partnerId || partnerEmail) {
+      const pid = partnerId ? String(partnerId) : null;
+      const pmail = partnerEmail ? partnerEmail.toLowerCase() : null;
+
+      // Clean dependent user records that might block foreign key constraints
+      if (pid) {
+        try { await query("DELETE FROM referral_transactions WHERE referrer_id::text = $1::text", [pid]); } catch (e) {}
+        try { await query("DELETE FROM users_extra WHERE user_id::text = $1::text", [pid]); } catch (e) {}
+        try { await query("DELETE FROM bookings WHERE user_id::text = $1::text", [pid]); } catch (e) {}
+        try { await query("DELETE FROM payout_requests WHERE partner_id::text = $1::text", [pid]); } catch (e) {}
+      }
+
+      if (pmail) {
+        try { await query("DELETE FROM partner_requests WHERE LOWER(email) = $1", [pmail]); } catch (e) {}
+        try { await query("DELETE FROM password_resets WHERE LOWER(email) = $1", [pmail]); } catch (e) {}
+        try { await query("DELETE FROM user_profiles WHERE LOWER(email) = $1", [pmail]); } catch (e) {}
+      }
+
+      // Delete from partner_users
       try {
-        await query("DELETE FROM users WHERE id = $1", [partnerId]);
-      } catch (e) {}
+        if (pid && pmail) {
+          await query("DELETE FROM partner_users WHERE id::text = $1::text OR LOWER(email) = $2", [pid, pmail]);
+        } else if (pid) {
+          await query("DELETE FROM partner_users WHERE id::text = $1::text", [pid]);
+        } else if (pmail) {
+          await query("DELETE FROM partner_users WHERE LOWER(email) = $1", [pmail]);
+        }
+      } catch (e) {
+        console.warn("partner_users delete warning:", e);
+      }
+
+      // Delete from users
+      try {
+        if (pid && pmail) {
+          await query("DELETE FROM users WHERE id::text = $1::text OR LOWER(email) = $2", [pid, pmail]);
+        } else if (pid) {
+          await query("DELETE FROM users WHERE id::text = $1::text", [pid]);
+        } else if (pmail) {
+          await query("DELETE FROM users WHERE LOWER(email) = $1", [pmail]);
+        }
+      } catch (e) {
+        console.warn("users partner delete warning:", e);
+      }
     }
     
     revalidatePath("/superadmin/gyms");
+    revalidatePath("/superadmin/users");
+    revalidatePath("/superadmin");
     revalidatePath("/operation-admin/gyms");
     revalidatePath("/admin/gyms");
     revalidatePath("/explore");
