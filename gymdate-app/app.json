@@ -8,7 +8,17 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gymdate.app",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "GymDate requires camera access to scan QR passes at gym locations and take profile photos.",
+        "NSLocationWhenInUseUsageDescription": "GymDate requires location access to discover nearby gyms and workout partners near you.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "GymDate requires location access to discover nearby gyms and workout partners near you.",
+        "NSPhotoLibraryUsageDescription": "GymDate requires access to your photo library to let you choose and upload a profile photo or gym image.",
+        "NSPhotoLibraryAddUsageDescription": "GymDate requires permission to save gym pass QR images to your photo library.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.gymdate.app",

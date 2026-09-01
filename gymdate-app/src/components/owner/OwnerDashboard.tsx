@@ -1739,7 +1739,7 @@ export const OwnerDashboard: React.FC = () => {
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    <View style={{ width: '100%', maxWidth: 300, height: 300, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000000', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }}>
+                    <View style={{ width: '100%', maxWidth: 300, height: 300, borderRadius: 20, overflow: 'hidden', backgroundColor: '#090D16', borderWidth: 2, borderColor: THEME.COLORS.primary, position: 'relative' }}>
                       <CameraView
                         style={StyleSheet.absoluteFill}
                         facing="back"
@@ -1760,6 +1760,33 @@ export const OwnerDashboard: React.FC = () => {
                           await handleTerminalScanWithCode(bookingId);
                         }}
                       />
+                      
+                      {/* Viewfinder Frame & Scanner Overlay */}
+                      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }]}>
+                        {/* Target Reticle */}
+                        <View style={{ width: 180, height: 180, borderRadius: 16, borderWidth: 2, borderColor: '#EF4444', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                          <View style={{ width: '100%', height: 2, backgroundColor: '#EF4444', opacity: 0.8 }} />
+                        </View>
+                        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 12, fontWeight: '600', textAlign: 'center', paddingHorizontal: 16 }}>
+                          Position QR code inside reticle
+                        </Text>
+                        
+                        {/* Simulator Quick Scan Helper Button */}
+                        <TouchableOpacity
+                          onPress={async () => {
+                            setIsLiveCameraScanning(false);
+                            const sampleCode = 'GD-884920';
+                            setTerminalInput(sampleCode);
+                            await handleTerminalScanWithCode(sampleCode);
+                          }}
+                          style={{ marginTop: 14, backgroundColor: 'rgba(239, 68, 68, 0.25)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#EF4444' }}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                            ⚡ Tap to Test QR Scan (Demo Code)
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )
                 ) : (
