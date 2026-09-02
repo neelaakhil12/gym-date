@@ -446,13 +446,16 @@ export const GymDateProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       if (profile) {
+        const cleanName = (profile.full_name && profile.full_name !== 'undefined' && profile.full_name !== 'null' && profile.full_name !== 'Gym Member' && profile.full_name !== 'User') ? profile.full_name : '';
+        const cleanPhone = (profile.phone && !profile.phone.includes('undefined') && !profile.phone.includes('null')) ? profile.phone : '';
+
         setUserProfile(prev => ({
           ...prev,
-          name: profile.full_name || prev.name,
-          phone: profile.phone || prev.phone,
+          name: cleanName || prev.name || 'Gym Member',
+          phone: cleanPhone || prev.phone || '',
           email: profile.email || prev.email,
-          avatar: (profile as any).image || (profile as any).avatar || '',
-          address: (profile as any).address || (profile as any).location || ''
+          avatar: (profile as any).image || (profile as any).avatar || prev.avatar || '',
+          address: (profile as any).address || (profile as any).location || prev.address || ''
         }));
       }
 

@@ -2,6 +2,31 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 export const dynamic = 'force-dynamic';
 
+function cleanStr(v: any): string | null {
+  if (typeof v !== 'string') return null;
+  const trimmed = v.trim();
+  if (
+    !trimmed || 
+    trimmed === 'undefined' || 
+    trimmed === 'null' || 
+    trimmed.toLowerCase() === 'undefined' || 
+    trimmed.toLowerCase() === 'null'
+  ) {
+    return null;
+  }
+  return trimmed;
+}
+
+function cleanPhoneStr(p: any): string | null {
+  if (typeof p !== 'string') return null;
+  const stripped = p.replace('undefined', '').replace('null', '').trim();
+  const digits = stripped.replace(/\D/g, '');
+  if (digits.length >= 10) {
+    return `+91${digits.slice(-10)}`;
+  }
+  return null;
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -31,8 +56,8 @@ export async function GET(req: Request) {
       const profileRow = await query('SELECT * FROM user_profiles WHERE LOWER(email) = $1', [normEmail]);
       if (profileRow.rows.length > 0) {
         photoFromProfiles = profileRow.rows[0].image || profileRow.rows[0].avatar || null;
-        nameFromProfiles = profileRow.rows[0].full_name || null;
-        phoneFromProfiles = profileRow.rows[0].phone || null;
+        nameFromProfiles = cleanStr(profileRow.rows[0].full_name);
+        phoneFromProfiles = cleanPhoneStr(profileRow.rows[0].phone);
       }
     } catch (e) {}
 
@@ -61,10 +86,10 @@ export async function GET(req: Request) {
             const extra = extraRes.rows[0];
             profile = {
               ...profile,
-              wallet_balance: extra.wallet_balance !== undefined && extra.wallet_balance !== null ? parseFloat(extra.wallet_balance) : 0,
-              referral_code: extra.referral_code || null,
-              referred_by: extra.referred_by || null,
-              address: extra.address || profile.address || profile.location,
+              wallet_balance: extra.wallet_balance !== undefined && extra.wallet_balance !== null ? parseFloat(extra.wallet_balance) : (profile.wallet_balance ? parseFloat(profile.wallet_balance) : 0),
+              referral_code: extra.referral_code || profile.referral_code || null,
+              referred_by: extra.referred_by || profile.referred_by || null,
+              address: cleanStr(extra.address) || cleanStr(profile.address) || cleanStr(profile.location),
               latitude: extra.latitude ?? profile.latitude ?? profile.lat,
               longitude: extra.longitude ?? profile.longitude ?? profile.lng,
               image: photoFromProfiles || profile.image || extra.image || profile.avatar || extra.avatar || null,
@@ -77,11 +102,15 @@ export async function GET(req: Request) {
       const userImage = photoFromProfiles || profile.image || profile.avatar || null;
       profile.image = userImage;
       profile.avatar = userImage;
-      if (nameFromProfiles && !profile.full_name) profile.full_name = nameFromProfiles;
-      if (phoneFromProfiles && !profile.phone) profile.phone = phoneFromProfiles;
+
+      const validDbName = cleanStr(profile.full_name);
+      profile.full_name = validDbName || nameFromProfiles || "Gym Member";
+
+      const validDbPhone = cleanPhoneStr(profile.phone);
+      profile.phone = validDbPhone || phoneFromProfiles || null;
 
       if (!profile.address && profile.location) {
-        profile.address = profile.location;
+        profile.address = cleanStr(profile.location);
       }
       if (!profile.latitude && profile.lat) {
         profile.latitude = profile.lat;
@@ -89,11 +118,24 @@ export async function GET(req: Request) {
       if (!profile.longitude && profile.lng) {
         profile.longitude = profile.lng;
       }
+
+      // Auto-heal DB if it had corrupted values
+      if (profile.full_name && profile.full_name !== 'undefined' && profile.id) {
+        try {
+          if (validDbName && validDbName !== result.rows[0]?.full_name) {
+            await query('UPDATE users SET full_name = $1 WHERE id = $2', [validDbName, profile.id]);
+          }
+          if (profile.phone && profile.phone !== result.rows[0]?.phone) {
+            await query('UPDATE users SET phone = $1 WHERE id = $2', [profile.phone, profile.id]);
+          }
+        } catch (_) {}
+      }
     }
 
     return NextResponse.json({ 
       success: true, 
-      profile: profile || null
+      profile: profile || null,
+      hasLocation: Boolean(profile?.latitude && profile?.longitude)
     }, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',

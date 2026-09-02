@@ -132,13 +132,15 @@ export const Profile: React.FC = () => {
           if (dbAvatar) {
             setUserProfile(prev => ({ ...prev, avatar: dbAvatar }));
           }
-          if (profileData.full_name) {
-            setUserProfile(prev => ({ ...prev, name: profileData.full_name }));
-            setNameVal(profileData.full_name);
+          const cleanName = (profileData.full_name && profileData.full_name !== 'undefined' && profileData.full_name !== 'null' && profileData.full_name !== 'Gym Member' && profileData.full_name !== 'User') ? profileData.full_name : '';
+          if (cleanName) {
+            setUserProfile(prev => ({ ...prev, name: cleanName }));
+            setNameVal(cleanName);
           }
-          if (profileData.phone) {
-            setUserProfile(prev => ({ ...prev, phone: profileData.phone }));
-            setPhoneVal(profileData.phone);
+          const cleanPhone = (profileData.phone && !profileData.phone.includes('undefined') && !profileData.phone.includes('null')) ? profileData.phone : '';
+          if (cleanPhone) {
+            setUserProfile(prev => ({ ...prev, phone: cleanPhone }));
+            setPhoneVal(cleanPhone);
           }
           if ((profileData as any).id) {
             const wData = await apiService.getWalletData((profileData as any).id);

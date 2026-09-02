@@ -143,20 +143,24 @@ export default function AccountPage() {
           const pendingName = localStorage.getItem('pending_name');
           const pendingPhone = localStorage.getItem('pending_phone');
           
-          if (pendingName || pendingPhone) {
+          const validPendingName = pendingName && pendingName !== 'undefined' && pendingName !== 'null' && pendingName.trim() !== '' ? pendingName.trim() : null;
+          const validPendingPhone = pendingPhone && pendingPhone !== 'undefined' && pendingPhone !== 'null' && pendingPhone.trim() !== '' ? pendingPhone.trim() : null;
+
+          if (validPendingName || validPendingPhone) {
             await fetch('/api/user/sync-profile', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                 email, 
-                name: pendingName, 
-                phone: pendingPhone 
+                name: validPendingName, 
+                phone: validPendingPhone 
               })
             });
-            localStorage.removeItem('pending_name');
-            localStorage.removeItem('pending_phone');
           }
-          // 1. Fetch profile with fresh timestamp to ensure real-time photo sync
+          localStorage.removeItem('pending_name');
+          localStorage.removeItem('pending_phone');
+
+          // 1. Fetch profile with fresh timestamp to ensure real-time sync
           const profileRes = await fetch(`/api/user/get-profile?email=${encodeURIComponent(email)}&_t=${Date.now()}`, {
             cache: 'no-store',
             headers: { 'Cache-Control': 'no-cache' }
@@ -172,12 +176,24 @@ export default function AccountPage() {
               setProfilePhoto(null);
               localStorage.removeItem(`gymdate_photo_${email}`);
             }
-            setEditName(profileResult.profile.full_name || nextAuthSession?.user?.name || "");
-            const rawP = profileResult.profile.phone || "";
-            setEditPhone(rawP.replace(/^\+91/, '').trim());
+
+            const cleanDbName = profileResult.profile.full_name && 
+              profileResult.profile.full_name !== 'undefined' && 
+              profileResult.profile.full_name !== 'null' && 
+              profileResult.profile.full_name !== 'Gym Member' && 
+              profileResult.profile.full_name !== 'User'
+                ? profileResult.profile.full_name 
+                : (nextAuthSession?.user?.name && nextAuthSession.user.name !== 'undefined' && nextAuthSession.user.name !== 'User' ? nextAuthSession.user.name : '');
+
+            setEditName(cleanDbName);
+
+            const rawP = profileResult.profile.phone || '';
+            const cleanDigits = rawP.replace('undefined', '').replace('null', '').replace(/\D/g, '');
+            const finalP = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : '';
+            setEditPhone(finalP);
 
             // If phone number is missing, prompt user to complete profile
-            if (!profileResult.profile.phone) {
+            if (!finalP) {
               setIsEditProfileOpen(true);
             }
 
@@ -251,22 +267,47 @@ export default function AccountPage() {
       : Infinity
   })).sort((a, b) => a.calculatedDistance - b.calculatedDistance);
 
-  // Prioritize real database name over NextAuth session default "User"
-  const displayName = (supabaseUser?.full_name && supabaseUser.full_name !== "User" && supabaseUser.full_name !== "Gym Member") 
-    ? supabaseUser.full_name 
-    : (nextAuthSession?.user?.name && nextAuthSession.user.name !== "User" && nextAuthSession.user.name !== "Gym Member")
-      ? nextAuthSession.user.name
-      : (supabaseUser?.full_name || "Gym Lover");
+  // Helper to get first valid non-empty, non-undefined string
+  const getValidName = (...items: any[]) => {
+    for (const it of items) {
+      if (typeof it === 'string') {
+        const trimmed = it.trim();
+        if (
+          trimmed && 
+          trimmed !== 'undefined' && 
+          trimmed !== 'null' && 
+          trimmed.toLowerCase() !== 'undefined' && 
+          trimmed.toLowerCase() !== 'null' && 
+          trimmed !== 'User' && 
+          trimmed !== 'Gym Member'
+        ) {
+          return trimmed;
+        }
+      }
+    }
+    return '';
+  };
+
+  const displayName = getValidName(
+    supabaseUser?.full_name,
+    supabaseUser?.name,
+    nextAuthSession?.user?.name,
+    'Gym Lover'
+  );
   const displayEmail = nextAuthSession?.user?.email || supabaseUser?.email;
-  const rawPhone = supabaseUser?.phone || "";
   
-  // Format phone to avoid double +91 if database already has it
-  const formattedPhone = rawPhone.startsWith('+91') ? rawPhone : `+91 - ${rawPhone}`;
-  const displayPhone = rawPhone ? formattedPhone : "Not provided";
+  // Format clean phone
+  const rawPhoneDigits = (supabaseUser?.phone || '')
+    .replace('undefined', '')
+    .replace('null', '')
+    .replace(/\D/g, '');
+  const displayPhone = rawPhoneDigits.length >= 10 
+    ? `+91 ${rawPhoneDigits.slice(-10)}` 
+    : "Not provided";
 
   const getInitials = (name: string) => {
-    if (!name) return "GY";
-    const parts = name.split(' ');
+    if (!name || name === 'undefined' || name === 'null') return "GL";
+    const parts = name.split(' ').filter(Boolean);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
   };
