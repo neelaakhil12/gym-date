@@ -671,11 +671,9 @@ export const Onboarding: React.FC = () => {
           setLoginTab('signup');
           return;
         }
-        if (fullCode !== '123456' || emailTrimmed !== 'neelaakhilharish@gmail.com') {
-          setOtpError(verifyRes.error || 'Invalid OTP Code.');
-          setTimeout(() => setOtpError(''), 3000);
-          return;
-        }
+        setOtpError(verifyRes.error || 'Invalid OTP Code. Please check your email.');
+        setTimeout(() => setOtpError(''), 4000);
+        return;
       }
 
       const existingProfile = verifyRes.user || (await apiService.getProfile(emailTrimmed));
@@ -701,21 +699,8 @@ export const Onboarding: React.FC = () => {
       setIsLoggedIn(true);
       setActiveScreen('home');
     } catch (err: any) {
-      if (fullCode === '123456' && emailTrimmed === 'neelaakhilharish@gmail.com') {
-        setLoginInput(emailTrimmed);
-        setUserProfile(prev => ({
-          ...prev,
-          name: loginName || 'NEELA AKHIL HARISH',
-          email: emailTrimmed,
-          phone: loginPhone || '',
-          avatar: '',
-        }));
-        setIsLoggedIn(true);
-        setActiveScreen('home');
-      } else {
-        setOtpError(err.message || 'Invalid OTP Code.');
-        setTimeout(() => setOtpError(''), 3000);
-      }
+      setOtpError(err.message || 'Invalid OTP Code.');
+      setTimeout(() => setOtpError(''), 4000);
     }
   };
 

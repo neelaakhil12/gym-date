@@ -90,18 +90,16 @@ export const authOptions = {
 
         // 2. OTP Login (Customer)
         if (otp) {
-          // Support demo code 123456 only for admin testing email
-          if (otp !== "123456" || cleanEmail !== "neelaakhilharish@gmail.com") {
-            const cachedData = otpCache.get(cleanEmail);
-            if (!cachedData) throw new Error("No OTP found. Please send a new one.");
-            if (cachedData.otp !== otp) throw new Error("Invalid OTP code");
-            if (Date.now() > cachedData.expires) {
-              otpCache.delete(cleanEmail);
-              throw new Error("OTP has expired");
-            }
-
+          // Strictly verify OTP from otpCache for all users
+          const cachedData = otpCache.get(cleanEmail);
+          if (!cachedData) throw new Error("No OTP found. Please send a new one.");
+          if (cachedData.otp !== otp.trim()) throw new Error("Invalid OTP code. Please enter the valid code sent to your email.");
+          if (Date.now() > cachedData.expires) {
             otpCache.delete(cleanEmail);
+            throw new Error("OTP has expired. Please request a new code.");
           }
+
+          otpCache.delete(cleanEmail);
 
           const phoneFormatted = phone ? (phone.startsWith("+91") ? phone : `+91${phone}`) : null;
           let userResult = await query("SELECT * FROM users WHERE email = $1", [cleanEmail]);

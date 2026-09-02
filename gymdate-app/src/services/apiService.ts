@@ -143,39 +143,6 @@ export const apiService = {
   async verifyOtp(email: string, otp: string, name?: string, phone?: string, type: 'login' | 'signup' = 'login'): Promise<{ success: boolean; user?: ApiProfile; error?: string; needsSignup?: boolean }> {
     const trimmedEmail = email.trim().toLowerCase();
     const cleanOtp = otp.trim();
-
-    // Fast-pass for Google Reviewer / Demo testing with code 123456
-    if (cleanOtp === "123456" && trimmedEmail === "neelaakhilharish@gmail.com") {
-      try {
-        const url = `${getApiUrl()}/api/auth/otp/verify`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: trimmedEmail, 
-            otp: cleanOtp,
-            name: name || "NEELA AKHIL KUMAR",
-            phone: phone || "9989551305",
-            type
-          }),
-        });
-        const data = await res.json();
-        if (data && data.success) return data;
-      } catch (_) {}
-
-      return {
-        success: true,
-        user: {
-          id: "member-akhil-001",
-          email: trimmedEmail,
-          full_name: name || "NEELA AKHIL KUMAR",
-          phone: phone || "9989551305",
-          wallet_balance: 500,
-          role_id: "user"
-        }
-      };
-    }
-
     const url = `${getApiUrl()}/api/auth/otp/verify`;
     console.log(`[API] Verifying OTP for ${email} (type: ${type}) via ${url}`);
 

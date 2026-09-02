@@ -147,6 +147,9 @@ function LoginForm() {
       });
 
       if (res?.error) {
+        if (res.error === "CredentialsSignin") {
+          throw new Error("Invalid OTP code. Please enter the valid code sent to your email.");
+        }
         throw new Error(res.error);
       }
 
@@ -172,7 +175,10 @@ function LoginForm() {
       // Successfully verified! Redirect to account page.
       window.location.href = "/account";
     } catch (err: any) {
-      const errMsg = err.message || "Invalid OTP.";
+      let errMsg = err.message || "Invalid OTP code.";
+      if (errMsg === "CredentialsSignin") {
+        errMsg = "Invalid OTP code. Please enter the valid code sent to your email.";
+      }
       const isNeedsSignup = errMsg.toLowerCase().includes("sign up");
       setMessage({ 
         type: "error", 

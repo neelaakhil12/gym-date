@@ -23,21 +23,28 @@ export async function POST(req: Request) {
     const cleanEmail = email.trim().toLowerCase();
     const actionType = type === "signup" ? "signup" : "login";
 
-    // Support demo code 123456 only for admin testing email
-    if (otp !== "123456" || cleanEmail !== "neelaakhilharish@gmail.com") {
-      const cachedData = otpCache.get(cleanEmail);
-      if (!cachedData) {
-        return NextResponse.json({ success: false, error: "No OTP found. Please request a new code." }, { status: 400 });
-      }
-      if (cachedData.otp !== otp) {
-        return NextResponse.json({ success: false, error: "Invalid OTP code" }, { status: 400 });
-      }
-      if (Date.now() > cachedData.expires) {
-        otpCache.delete(cleanEmail);
-        return NextResponse.json({ success: false, error: "OTP has expired. Please request a new code." }, { status: 400 });
-      }
-      otpCache.delete(cleanEmail);
+    // Strictly verify OTP from otpCache for all users
+    const cachedData = otpCache.get(cleanEmail);
+    if (!cachedData) {
+      return NextResponse.json(
+        { success: false, error: "No OTP found. Please request a new code." }, 
+        { status: 400, headers: corsHeaders }
+      );
     }
+    if (cachedData.otp !== otp.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Invalid OTP code. Please enter the valid code sent to your email." }, 
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    if (Date.now() > cachedData.expires) {
+      otpCache.delete(cleanEmail);
+      return NextResponse.json(
+        { success: false, error: "OTP has expired. Please request a new code." }, 
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    otpCache.delete(cleanEmail);
 
     // OTP Verified! Check user in database
     let userResult = await query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
