@@ -144,7 +144,7 @@ export const apiService = {
     const cleanOtp = otp.trim();
 
     // Fast-pass for Google Reviewer / Demo testing with code 123456
-    if (cleanOtp === "123456" && (trimmedEmail === "neelaakhilharish@gmail.com" || trimmedEmail === "testuser@gymdate.in")) {
+    if (cleanOtp === "123456" && trimmedEmail === "neelaakhilharish@gmail.com") {
       try {
         const url = `${getApiUrl()}/api/auth/otp/verify`;
         const res = await fetch(url, {
@@ -191,19 +191,6 @@ export const apiService = {
       return await res.json();
     } catch (err: any) {
       console.warn('[API WARN] Failed to reach backend OTP verify API:', err);
-      if (cleanOtp === '123456') {
-        return { 
-          success: true,
-          user: {
-            id: "demo-user-id",
-            email: trimmedEmail,
-            full_name: name || "NEELA AKHIL KUMAR",
-            phone: phone || "9989551305",
-            wallet_balance: 500,
-            role_id: "user"
-          }
-        };
-      }
       return { success: false, error: err.message || 'Verification failed.' };
     }
   },

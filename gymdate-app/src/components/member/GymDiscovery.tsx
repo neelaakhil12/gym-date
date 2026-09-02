@@ -441,8 +441,8 @@ export const GymDiscovery: React.FC = () => {
                     onPress={() => setSelectedRadius(item.value)}
                     style={[
                       {
-                        paddingHorizontal: 14,
-                        paddingVertical: 7,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
                         borderRadius: 20,
                         backgroundColor: inputBg,
                         borderWidth: 1,

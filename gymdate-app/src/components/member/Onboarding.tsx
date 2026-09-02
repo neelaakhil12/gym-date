@@ -81,6 +81,7 @@ export const Onboarding: React.FC = () => {
   const [step, setStep] = useState<Omit<ActiveScreen, 'home'> | 'goals' | 'intro' | 'register' | 'partner-login' | 'partner-register' | 'partner-forgot-password'>('intro');
   const [selectedGoal, setSelectedGoal] = useState<string>('Build Muscle');
   const [loginName, setLoginName] = useState('');
+  const [loginTab, setLoginTab] = useState<'login' | 'signup'>('login');
   const [loginPhone, setLoginPhone] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
@@ -198,12 +199,7 @@ export const Onboarding: React.FC = () => {
   const isLight = themeMode === 'light';
   const inputRefs = useRef<Array<any>>([]);
 
-  const goalsList = [
-    { title: 'Build Muscle', desc: 'Power routines & raw strength lifting grids', icon: '💪' },
-    { title: 'Lose Weight', desc: 'High-intensity calorie burner intervals', icon: '🔥' },
-    { title: 'Get Fit & Tone', desc: 'Core definitions, agility, & yoga flex', icon: '⚡' },
-    { title: 'Mind & Body Balance', desc: 'Stretching, yogic flows, & recovery posture', icon: '🧘' }
-  ];
+
 
   const renderTermsCheckbox = (type: 'user' | 'partner') => {
     const isUser = type === 'user';
@@ -427,8 +423,6 @@ export const Onboarding: React.FC = () => {
     } else if (step === 'otp') {
       setStep('login');
     } else if (step === 'login') {
-      setStep('goals');
-    } else if (step === 'goals') {
       setStep('intro');
     } else if (step === 'register') {
       setStep('otp');
@@ -461,14 +455,7 @@ export const Onboarding: React.FC = () => {
     return () => sub.remove();
   }, [termsModalVisible, showGoogleModal, step]);
 
-  const handleSelectGoal = (goal: string) => {
-    setSelectedGoal(goal);
-  };
 
-  const handleConfirmGoal = () => {
-    setUserProfile(prev => ({ ...prev, goal: selectedGoal }));
-    setStep('login');
-  };
 
   const handleOtpChange = (index: number, value: string) => {
     if (isNaN(Number(value))) return;
@@ -1159,54 +1146,7 @@ export const Onboarding: React.FC = () => {
         </View>
       )}
 
-      {/* STEP 2: FIT GOALS SELECTOR */}
-      {step === 'goals' && (
-        <View style={styles.contentWrapper}>
-          <TouchableOpacity onPress={handleBack} style={[styles.backButton, { alignSelf: 'flex-start' }]}>
-            <ChevronLeft size={16} color="#1a1a1a" />
-          </TouchableOpacity>
-          <View style={styles.headerRow}>
-            <Goal size={14} color={THEME.COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.headerRowLabel}>Select Focus</Text>
-          </View>
-          
-          <Text style={[styles.titleText, isLight && styles.textLight]}>What's your fitness goal?</Text>
-          <Text style={[styles.descText, isLight && styles.textMutedLight]}>We will customize gym discovery and tracker limits based on this focus.</Text>
 
-          <View style={styles.goalsContainer}>
-            {goalsList.map(goal => (
-              <TouchableOpacity
-                key={goal.title}
-                onPress={() => handleSelectGoal(goal.title)}
-                style={[
-                  styles.goalCard, 
-                  isLight && styles.goalCardLight,
-                  selectedGoal === goal.title && styles.goalCardActive,
-                  selectedGoal === goal.title && {
-                    backgroundColor: isLight ? '#FFF5F5' : 'rgba(229, 9, 20, 0.15)',
-                  }
-                ]}
-              >
-                <View style={styles.goalInfo}>
-                  <Text style={styles.goalIcon}>{goal.icon}</Text>
-                  <View>
-                    <Text style={[styles.goalTitle, isLight && styles.textLight]}>{goal.title}</Text>
-                    <Text style={[styles.goalDesc, isLight && styles.textMutedLight]}>{goal.desc}</Text>
-                  </View>
-                </View>
-                <View style={[styles.radioOuter, selectedGoal === goal.title && styles.radioOuterActive]}>
-                  {selectedGoal === goal.title && <Check size={10} color="#ffffff" strokeWidth={3} />}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.btnPrimary} onPress={handleConfirmGoal}>
-            <Text style={styles.btnPrimaryText}>Confirm Goal</Text>
-            <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* STEP 3: LOGIN FORM SCREEN */}
       {step === 'login' && (
@@ -1218,23 +1158,47 @@ export const Onboarding: React.FC = () => {
             <View style={styles.logoBadgeSmall}>
               <Sparkles size={20} color={THEME.COLORS.primary} />
             </View>
-            <Text style={[styles.titleText, isLight && styles.textLight]}>Join GymDate</Text>
-            <Text style={[styles.descText, isLight && styles.textMutedLight]}>Enter your details to receive a 6-digit login code.</Text>
+            {/* Tabs */}
+            <View style={[styles.loginTabsContainer, isLight && { backgroundColor: '#f3f4f6' }]}>
+              <TouchableOpacity
+                style={[styles.loginTabButton, loginTab === 'login' && styles.loginTabButtonActive, isLight && loginTab === 'login' && { backgroundColor: '#e50914' }]}
+                onPress={() => setLoginTab('login')}
+              >
+                <Text style={[styles.loginTabText, loginTab === 'login' && styles.loginTabTextActive]}>Log In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.loginTabButton, loginTab === 'signup' && styles.loginTabButtonActive, isLight && loginTab === 'signup' && { backgroundColor: '#e50914' }]}
+                onPress={() => setLoginTab('signup')}
+              >
+                <Text style={[styles.loginTabText, loginTab === 'signup' && styles.loginTabTextActive]}>New Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.titleText, isLight && styles.textLight]}>
+              {loginTab === 'signup' ? 'Join GymDate' : 'Welcome Back!'}
+            </Text>
+            <Text style={[styles.descText, isLight && styles.textMutedLight]}>
+              {loginTab === 'signup' 
+                ? 'Enter your details to receive a 6-digit login code.' 
+                : 'Enter your registered email address to receive a 6-digit login code.'}
+            </Text>
 
             {/* Full Name Input */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Full Name</Text>
-              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                <User size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  value={loginName}
-                  onChangeText={setLoginName}
-                  placeholder="e.g. John Doe"
-                  placeholderTextColor={THEME.COLORS.textMuted}
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
-                />
+            {loginTab === 'signup' && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Full Name</Text>
+                <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                  <User size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    value={loginName}
+                    onChangeText={setLoginName}
+                    placeholder="e.g. John Doe"
+                    placeholderTextColor={THEME.COLORS.textMuted}
+                    style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Email Address Input */}
             <View style={styles.formGroup}>
@@ -1254,38 +1218,42 @@ export const Onboarding: React.FC = () => {
             </View>
 
             {/* Phone Number Input */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
-              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                <Phone size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  value={loginPhone}
-                  onChangeText={setLoginPhone}
-                  placeholder="+91 98765 43210"
-                  placeholderTextColor={THEME.COLORS.textMuted}
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
-                  keyboardType="phone-pad"
-                />
+            {loginTab === 'signup' && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>Phone Number</Text>
+                <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                  <Phone size={16} color={THEME.COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    value={loginPhone}
+                    onChangeText={setLoginPhone}
+                    placeholder="+91 98765 43210"
+                    placeholderTextColor={THEME.COLORS.textMuted}
+                    style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13 }]}
+                    keyboardType="phone-pad"
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Referral Code (Optional) */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>
-                Referral Code (Optional)
-              </Text>
-              <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
-                <Gift size={16} color={THEME.COLORS.primary} style={styles.inputIcon} />
-                <TextInput
-                  value={referralCodeInput}
-                  onChangeText={(val) => setReferralCodeInput(val.toUpperCase())}
-                  placeholder="Enter Referral Code"
-                  placeholderTextColor={THEME.COLORS.textMuted}
-                  autoCapitalize="characters"
-                  style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, fontWeight: '700', letterSpacing: 1 }]}
-                />
+            {loginTab === 'signup' && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.inputLabel, isLight && styles.textMutedLight]}>
+                  Referral Code (Optional)
+                </Text>
+                <View style={[styles.inputWrapper, isLight && styles.inputWrapperLight]}>
+                  <Gift size={16} color={THEME.COLORS.primary} style={styles.inputIcon} />
+                  <TextInput
+                    value={referralCodeInput}
+                    onChangeText={(val) => setReferralCodeInput(val.toUpperCase())}
+                    placeholder="Enter Referral Code"
+                    placeholderTextColor={THEME.COLORS.textMuted}
+                    autoCapitalize="characters"
+                    style={[styles.textInput, isLight && { color: '#1a1a1a' }, { fontSize: 13, fontWeight: '700', letterSpacing: 1 }]}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             {renderTermsCheckbox('user')}
 
@@ -1298,10 +1266,21 @@ export const Onboarding: React.FC = () => {
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <>
-                  <Text style={styles.btnPrimaryText}>Send 6-Digit OTP Code</Text>
+                  <Text style={styles.btnPrimaryText}>
+                    {loginTab === 'signup' ? 'Send 6-Digit OTP Code' : 'Send Login OTP Code'}
+                  </Text>
                   <ArrowRight size={14} color="#ffffff" style={{ marginLeft: 6 }} />
                 </>
               )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={{ marginTop: 16, alignItems: 'center' }}
+              onPress={() => setStep('partner-login')}
+            >
+              <Text style={{ color: THEME.COLORS.primary, fontSize: 13, fontWeight: '700' }}>
+                Are you a Gym Owner? Gym Partner Login →
+              </Text>
             </TouchableOpacity>
 
             {/* Social Logins */}
@@ -1331,7 +1310,11 @@ export const Onboarding: React.FC = () => {
               activeOpacity={0.85}
             >
               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#4285F4' }}>G</Text>
+                <Image 
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png' }} 
+                  style={{ width: 16, height: 16 }} 
+                  resizeMode="contain"
+                />
               </View>
               <Text style={[styles.socialBtnText, isLight && styles.textLight, { fontSize: 13, fontWeight: '700' }]}>
                 Continue with Google
@@ -2305,5 +2288,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B0C10',
     borderTopWidth: 1,
     borderTopColor: '#1F2937',
+  },
+  loginTabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+  },
+  loginTabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  loginTabButtonActive: {
+    backgroundColor: THEME.COLORS.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  loginTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.COLORS.textMuted,
+  },
+  loginTabTextActive: {
+    color: '#ffffff',
   },
 });

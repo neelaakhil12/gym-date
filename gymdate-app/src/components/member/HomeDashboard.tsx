@@ -780,7 +780,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   radiusChip: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#F8FAFC',
@@ -831,10 +831,11 @@ const styles = StyleSheet.create({
   viewSwitcherRow: {
     flexDirection: 'row',
     gap: 10,
+    justifyContent: 'center',
   },
   viewSwitchBtn: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
