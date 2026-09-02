@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { getAdminStats, getAllBookings, getUniqueUsersCount, getPlatformStats, updatePlatformStats, addPlatformStat, deletePlatformStat, addCity, updateCity, deleteCity, getSectionVisibility, updateSectionVisibility, deleteBooking, getGlobalAmenities, addGlobalAmenity, deleteGlobalAmenity } from "@/actions/adminActions";
 import { getGyms, getCities } from "@/actions/publicActions";
 import { generateInvoicePDF } from "@/lib/invoice";
-import { Coins, Eye, TrendingUp, Wallet, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2, PlusCircle } from "lucide-react";
+import { Coins, Eye, TrendingUp, Wallet, Users, CheckCircle2, Clock, ArrowUpRight, Percent, IndianRupee, X, FileDown, Save, BarChart3, MapPin, Plus, Trash2, Edit2, PlusCircle, Store, ExternalLink } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 // Platform Analytics Dashboard Refresh Fix
@@ -26,6 +26,28 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [savingStats, setSavingStats] = useState(false);
   const [showModal, setShowModal] = useState<'commission' | 'revenue' | 'users' | 'cities' | 'amenities' | null>(null);
+  const [openingPartnerId, setOpeningPartnerId] = useState<string | null>(null);
+
+  const handleOpenPartnerPanel = async (gymId: string) => {
+    setOpeningPartnerId(gymId);
+    try {
+      const res = await fetch("/api/admin/impersonate-partner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gymId }),
+      });
+      const data = await res.json();
+      if (data.success && data.redirectUrl) {
+        window.open(data.redirectUrl, "_blank");
+      } else {
+        alert(data.error || "Failed to open partner panel.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to switch to partner panel.");
+    } finally {
+      setOpeningPartnerId(null);
+    }
+  };
   
   // City Form State
   const [cityForm, setCityForm] = useState({ id: '', name: '', is_featured: true, is_coming_soon: false });
@@ -765,12 +787,13 @@ export default function AdminDashboard() {
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rating</th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {recentGyms.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                     No gyms found.
                   </td>
                 </tr>
@@ -813,6 +836,23 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {gym.rating ? `${gym.rating} ⭐` : 'New'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPartnerPanel(gym.id)}
+                        disabled={openingPartnerId === gym.id}
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/70 rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+                        title="View Partner Admin Panel in New Tab"
+                      >
+                        {openingPartnerId === gym.id ? (
+                          <div className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-1" />
+                        ) : (
+                          <Store className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                        )}
+                        <span>Partner Panel</span>
+                        <ExternalLink className="w-3 h-3 ml-0.5 opacity-60" />
+                      </button>
                     </td>
                   </tr>
                 ))

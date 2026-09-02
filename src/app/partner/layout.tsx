@@ -43,7 +43,7 @@ function DashboardContent({
     }
 
     // Role check - ensure they are a partner if they are in protected routes
-    if (session.user?.role !== "partner" && !pathname.startsWith("/partner/login")) {
+    if ((session?.user as any)?.role !== "partner" && !pathname.startsWith("/partner/login")) {
       const protectedPartnerRoutes = ["/partner/dashboard", "/partner/bookings", "/partner/wallet", "/partner/gym/edit", "/partner/scan", "/partner/settings"];
       
       if (protectedPartnerRoutes.some(route => pathname.startsWith(route))) {
@@ -162,6 +162,26 @@ function DashboardContent({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Super Admin Impersonation Notice Banner */}
+        {(session?.user as any)?.isImpersonated && (
+          <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-4 py-2.5 flex items-center justify-between shadow-md z-30 shrink-0">
+            <div className="flex items-center space-x-2 text-xs md:text-sm font-bold">
+              <span className="bg-black/30 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-black">
+                Super Admin Mode
+              </span>
+              <span className="truncate max-w-[200px] md:max-w-none">
+                Viewing Partner Panel{(session?.user as any)?.gymName ? `: ${(session?.user as any)?.gymName}` : ""}
+              </span>
+            </div>
+            <Link
+              href="/superadmin/gyms"
+              className="bg-white text-gray-900 px-3 py-1 rounded-lg text-xs font-black hover:bg-gray-100 transition-all shadow-sm flex items-center space-x-1 shrink-0 ml-2"
+            >
+              <span>← Return to Super Admin</span>
+            </Link>
+          </div>
+        )}
+
         {/* Top Header (Mobile) */}
         <header className="lg:hidden h-16 bg-white border-b border-gray-200 flex items-center px-4 justify-between">
           <span className="text-lg font-bold text-slate-900">Partner Admin</span>

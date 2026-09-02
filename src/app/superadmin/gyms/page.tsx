@@ -14,7 +14,9 @@ import {
   Edit,
   Trash2,
   Percent,
-  LayoutDashboard
+  LayoutDashboard,
+  Store,
+  ExternalLink
 } from "lucide-react";
 import { getGyms } from "@/actions/publicActions";
 import { deleteGym, updateGymOffer } from "@/actions/gymActions";
@@ -28,6 +30,7 @@ export default function AdminGyms() {
   const [gyms, setGyms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [openingPartnerId, setOpeningPartnerId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadGyms() {
@@ -43,6 +46,27 @@ export default function AdminGyms() {
     gym.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     gym.location?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleOpenPartnerPanel = async (gymId: string) => {
+    setOpeningPartnerId(gymId);
+    try {
+      const res = await fetch("/api/admin/impersonate-partner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gymId }),
+      });
+      const data = await res.json();
+      if (data.success && data.redirectUrl) {
+        window.open(data.redirectUrl, "_blank");
+      } else {
+        alert(data.error || "Failed to open partner panel.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to switch to partner panel.");
+    } finally {
+      setOpeningPartnerId(null);
+    }
+  };
 
   const handleDelete = async (gymId: string) => {
     if (window.confirm("Are you sure you want to delete this gym? This action cannot be undone and will delete all associated pricing plans.")) {
@@ -186,11 +210,30 @@ export default function AdminGyms() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
+                          {/* Direct Partner Admin Panel Button */}
+                          {!isOpAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPartnerPanel(gym.id)}
+                              disabled={openingPartnerId === gym.id}
+                              className="inline-flex items-center space-x-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/70 rounded-xl text-xs font-bold transition-all shadow-xs disabled:opacity-50"
+                              title="View Partner Admin Panel in New Tab"
+                            >
+                              {openingPartnerId === gym.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-1" />
+                              ) : (
+                                <Store className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                              )}
+                              <span>Partner Panel</span>
+                              <ExternalLink className="w-3 h-3 ml-0.5 opacity-60" />
+                            </button>
+                          )}
+
                           {!isOpAdmin && (
                             <Link 
                               href={`/superadmin/gyms/${gym.id}/dashboard`}
                               className="text-gray-400 hover:text-secondary transition-colors p-2 rounded-lg hover:bg-gray-100"
-                              title="View Dashboard"
+                              title="View Gym Analytics"
                             >
                               <LayoutDashboard className="w-4 h-4" />
                             </Link>

@@ -82,6 +82,8 @@ export const partnerAuthOptions = {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        if ((user as any).isImpersonated) token.isImpersonated = true;
+        if ((user as any).gymName) token.gymName = (user as any).gymName;
       }
       return token;
     },
@@ -89,6 +91,8 @@ export const partnerAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        (session.user as any).isImpersonated = !!token.isImpersonated;
+        (session.user as any).gymName = token.gymName;
       }
       return session;
     },

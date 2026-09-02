@@ -21,7 +21,9 @@ import {
   Users,
   Eye,
   X,
-  FileText
+  FileText,
+  Store,
+  ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -39,6 +41,7 @@ export default function AdminGymDashboard() {
   const [gym, setGym] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [openingPartner, setOpeningPartner] = useState(false);
   
   // Data states
   const [bookings, setBookings] = useState<any[]>([]);
@@ -55,38 +58,65 @@ export default function AdminGymDashboard() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedPayout, setSelectedPayout] = useState<any>(null);
 
+  const handleOpenPartnerPanel = async () => {
+    setOpeningPartner(true);
+    try {
+      const res = await fetch("/api/admin/impersonate-partner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gymId }),
+      });
+      const data = await res.json();
+      if (data.success && data.redirectUrl) {
+        window.open(data.redirectUrl, "_blank");
+      } else {
+        alert(data.error || "Failed to open partner panel.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to switch to partner panel.");
+    } finally {
+      setOpeningPartner(false);
+    }
+  };
+
   useEffect(() => {
     async function loadData() {
       if (!gymId) return;
       setLoading(true);
       
       try {
-        const gymData = await getGymById(gymId);
-        setGym(gymData);
+        const [gymData, bookingData, payoutData] = await Promise.all([
+          getGymById(gymId),
+          getPartnerBookings(gymId),
+          getPartnerPayoutRequests(gymId)
+        ]);
         
         if (gymData) {
-          // Fetch Bookings
-          const bookingData = await getPartnerBookings(gymId);
+          setGym(gymData);
           setBookings(bookingData || []);
+          setPayouts(payoutData || []);
           
-          // Fetch Payouts
-          const payoutHistory = await getPartnerPayoutRequests(gymId);
-          setPayouts(payoutHistory || []);
-          
-          // Calculate Stats
-          const commissionRate = gymData.commission_rate || 10;
+          // Calculate summary stats
           let gross = 0;
           let net = 0;
           const userSet = new Set();
           
           bookingData?.forEach((b: any) => {
-            const amount = Number(b.amount) || Number(b.total_price) || 0;
+            const amount = parseFloat(b.final_amount || b.amount || b.total_price || 0);
             gross += amount;
-            net += (amount * (1 - commissionRate / 100));
-            if (b.user_id) userSet.add(b.user_id);
+            
+            // Calc net (Gross minus commission)
+            const commRate = gymData.commission_rate ?? 10;
+            const comm = (amount * commRate) / 100;
+            net += (amount - comm);
+            
+            if (b.user_email || b.user_id) userSet.add(b.user_email || b.user_id);
           });
 
-          const totalWithdrawn = payoutHistory?.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0) || 0;
+          // Calculate completed payouts for available balance
+          const totalWithdrawn = payoutData
+            ?.filter((p: any) => p.status === 'completed')
+            ?.reduce((sum: number, p: any) => sum + parseFloat(p.amount || 0), 0) || 0;
           
           setStats({
             totalGross: Math.floor(gross),
@@ -112,9 +142,6 @@ export default function AdminGymDashboard() {
     if (result.success) {
       setPayouts(payouts.map(p => p.id === id ? { ...p, status: newStatus } : p));
       if (selectedPayout?.id === id) setSelectedPayout({ ...selectedPayout, status: newStatus });
-      
-      // If we mark as completed, it's already deducted from "available balance" in our calc 
-      // but let's re-verify logic if needed. Actually, availableBalance calc uses ALL payouts.
     }
     setUpdatingId(null);
   };
@@ -161,35 +188,55 @@ export default function AdminGymDashboard() {
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="bg-gray-100 p-1 rounded-2xl flex self-start md:self-auto">
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+          {/* Direct Partner Portal Button */}
           <button
-            onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${
-              activeTab === "overview" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-            }`}
+            type="button"
+            onClick={handleOpenPartnerPanel}
+            disabled={openingPartner}
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50"
+            title="Open Partner Admin Panel in New Tab"
           >
-            <LayoutDashboard className="w-4 h-4" />
-            <span className="hidden sm:inline">Overview</span>
+            {openingPartner ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+            ) : (
+              <Store className="w-4 h-4 mr-1" />
+            )}
+            <span>Open Partner Portal</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
           </button>
-          <button
-            onClick={() => setActiveTab("transactions")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${
-              activeTab === "transactions" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span className="hidden sm:inline">Transactions</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("finance")}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${
-              activeTab === "finance" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            <Wallet className="w-4 h-4" />
-            <span className="hidden sm:inline">Finance</span>
-          </button>
+
+          {/* Tab Switcher */}
+          <div className="bg-gray-100 p-1 rounded-2xl flex">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${
+                activeTab === "overview" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("transactions")}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${
+                activeTab === "transactions" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span className="hidden sm:inline">Transactions</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("finance")}
+              className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center space-x-2 ${
+                activeTab === "finance" ? "bg-white text-slate-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              <Wallet className="w-4 h-4" />
+              <span className="hidden sm:inline">Finance</span>
+            </button>
+          </div>
         </div>
       </div>
 
