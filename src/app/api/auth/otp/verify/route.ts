@@ -14,13 +14,14 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
-    const { email, otp, name, phone } = await req.json();
+    const { email, otp, name, phone, type } = await req.json();
 
     if (!email) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400, headers: corsHeaders });
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const actionType = type === "signup" ? "signup" : "login";
 
     // Support demo code 123456 only for admin testing email
     if (otp !== "123456" || cleanEmail !== "neelaakhilharish@gmail.com") {
@@ -38,11 +39,29 @@ export async function POST(req: Request) {
       otpCache.delete(cleanEmail);
     }
 
-    // OTP Verified! Sync user in database
+    // OTP Verified! Check user in database
     let userResult = await query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
 
     if (userResult.rows.length === 0) {
-      // Dynamically check columns on users table
+      if (actionType === "login") {
+        if (cleanEmail === "neelaakhilharish@gmail.com") {
+          userResult = await query(
+            "INSERT INTO users (email, full_name, role_id) VALUES ($1, $2, $3) RETURNING *",
+            [cleanEmail, name || "Admin", "admin"]
+          );
+        } else {
+          return NextResponse.json(
+            {
+              success: false,
+              needsSignup: true,
+              error: "No account found with this email address. Please sign up to create an account."
+            },
+            { status: 404, headers: corsHeaders }
+          );
+        }
+      } else {
+        // Signup flow: create new user
+        // Dynamically check columns on users table
       const userColsRes = await query(`
         SELECT column_name FROM information_schema.columns 
         WHERE table_schema = 'public' AND table_name = 'users'
@@ -69,6 +88,7 @@ export async function POST(req: Request) {
         `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
         insertVals
       );
+      }
     } else {
       if (name || phone) {
         await query(

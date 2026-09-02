@@ -115,9 +115,9 @@ export const apiService = {
   /**
    * Send 6-digit OTP to user email address via backend SMTP
    */
-  async sendOtp(email: string, name?: string, phone?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async sendOtp(email: string, name?: string, phone?: string, type: 'login' | 'signup' = 'login'): Promise<{ success: boolean; message?: string; error?: string; needsSignup?: boolean; alreadyRegistered?: boolean }> {
     const url = `${getApiUrl()}/api/auth/otp/send`;
-    console.log(`[API] Sending OTP email to ${email} via ${url}`);
+    console.log(`[API] Sending OTP email to ${email} (type: ${type}) via ${url}`);
 
     try {
       const res = await fetch(url, {
@@ -126,7 +126,8 @@ export const apiService = {
         body: JSON.stringify({ 
           email: email.trim().toLowerCase(),
           name: name ? name.trim() : undefined,
-          phone: phone ? phone.trim() : undefined
+          phone: phone ? phone.trim() : undefined,
+          type
         }),
       });
       return await res.json();
@@ -139,7 +140,7 @@ export const apiService = {
   /**
    * Verify 6-digit OTP against backend
    */
-  async verifyOtp(email: string, otp: string, name?: string, phone?: string): Promise<{ success: boolean; user?: ApiProfile; error?: string }> {
+  async verifyOtp(email: string, otp: string, name?: string, phone?: string, type: 'login' | 'signup' = 'login'): Promise<{ success: boolean; user?: ApiProfile; error?: string; needsSignup?: boolean }> {
     const trimmedEmail = email.trim().toLowerCase();
     const cleanOtp = otp.trim();
 
@@ -154,7 +155,8 @@ export const apiService = {
             email: trimmedEmail, 
             otp: cleanOtp,
             name: name || "NEELA AKHIL KUMAR",
-            phone: phone || "9989551305"
+            phone: phone || "9989551305",
+            type
           }),
         });
         const data = await res.json();
@@ -175,7 +177,7 @@ export const apiService = {
     }
 
     const url = `${getApiUrl()}/api/auth/otp/verify`;
-    console.log(`[API] Verifying OTP for ${email} via ${url}`);
+    console.log(`[API] Verifying OTP for ${email} (type: ${type}) via ${url}`);
 
     try {
       const res = await fetch(url, {
@@ -185,7 +187,8 @@ export const apiService = {
           email: trimmedEmail, 
           otp: cleanOtp,
           name: name ? name.trim() : undefined,
-          phone: phone ? phone.trim() : undefined
+          phone: phone ? phone.trim() : undefined,
+          type
         }),
       });
       return await res.json();

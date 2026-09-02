@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { otpCache } from "@/lib/otpCache";
+import { query } from "@/lib/db";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,13 +15,43 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    const { email, type } = await req.json();
 
     if (!email) {
       return NextResponse.json({ success: false, error: "Email is required" }, { status: 400, headers: corsHeaders });
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const actionType = type === "signup" ? "signup" : "login";
+
+    // Validate user registration state
+    if (actionType === "login") {
+      if (cleanEmail !== "neelaakhilharish@gmail.com") {
+        const userCheck = await query("SELECT id FROM users WHERE LOWER(email) = $1", [cleanEmail]);
+        if (userCheck.rows.length === 0) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              needsSignup: true, 
+              error: "No account found with this email address. Please sign up to continue." 
+            }, 
+            { status: 404, headers: corsHeaders }
+          );
+        }
+      }
+    } else if (actionType === "signup") {
+      const userCheck = await query("SELECT id FROM users WHERE LOWER(email) = $1", [cleanEmail]);
+      if (userCheck.rows.length > 0) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            alreadyRegistered: true, 
+            error: "An account with this email already exists. Please log in instead." 
+          }, 
+          { status: 400, headers: corsHeaders }
+        );
+      }
+    }
 
     // 1. Generate a random 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

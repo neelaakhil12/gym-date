@@ -21,6 +21,9 @@ import { signIn } from "next-auth/react";
 import { DEFAULT_USER_TERMS } from "@/lib/termsData";
 
 function LoginForm() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "signup" ? "signup" : "login";
+  const [tab, setTab] = useState<"login" | "signup">(initialTab);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,11 +31,10 @@ function LoginForm() {
   const [referralCode, setReferralCode] = useState("");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [message, setMessage] = useState({ type: "", text: "", action: "" });
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [termsText, setTermsText] = useState(DEFAULT_USER_TERMS);
-  const searchParams = useSearchParams();
 
   // Load latest active user terms
   useEffect(() => {
@@ -45,6 +47,14 @@ function LoginForm() {
       })
       .catch(() => {});
   }, []);
+
+  // Sync tab param if it changes
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "signup" || tabParam === "login") {
+      setTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Save referral code from URL to localStorage, sessionStorage & cookie
   useEffect(() => {
@@ -60,28 +70,62 @@ function LoginForm() {
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreedTerms) {
-      setMessage({ type: "error", text: "Please review and agree to the GymDate User Terms & Conditions before requesting an OTP." });
+      setMessage({ type: "error", text: "Please review and agree to the GymDate User Terms & Conditions before requesting an OTP.", action: "" });
       return;
     }
 
+    if (tab === "signup") {
+      if (!name.trim()) {
+        setMessage({ type: "error", text: "Please enter your full name to sign up.", action: "" });
+        return;
+      }
+      if (phone.replace(/\D/g, '').length < 10) {
+        setMessage({ type: "error", text: "Please enter a valid 10-digit phone number to sign up.", action: "" });
+        return;
+      }
+    }
+
     setLoading(true);
-    setMessage({ type: "", text: "" });
+    setMessage({ type: "", text: "", action: "" });
 
     try {
       const response = await fetch("/api/auth/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, phone }),
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), 
+          name: tab === "signup" ? name.trim() : undefined, 
+          phone: tab === "signup" ? phone.trim() : undefined,
+          type: tab
+        }),
       });
 
       const result = await response.json();
 
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        if (result.needsSignup) {
+          setMessage({ 
+            type: "error", 
+            text: "No account found with this email address. Please sign up to create a new account.",
+            action: "signup"
+          });
+          return;
+        }
+        if (result.alreadyRegistered) {
+          setMessage({ 
+            type: "error", 
+            text: "An account with this email already exists. Please sign in instead.",
+            action: "login"
+          });
+          return;
+        }
+        throw new Error(result.error || "Failed to send OTP.");
+      }
 
       setStep("otp");
-      setMessage({ type: "success", text: "OTP sent to your email!" });
+      setMessage({ type: "success", text: "OTP sent to your email! Please check your inbox.", action: "" });
     } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Failed to send OTP." });
+      setMessage({ type: "error", text: err.message || "Failed to send OTP.", action: "" });
     } finally {
       setLoading(false);
     }
@@ -90,15 +134,16 @@ function LoginForm() {
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage({ type: "", text: "" });
+    setMessage({ type: "", text: "", action: "" });
 
     try {
       const res = await signIn("credentials", {
         redirect: false,
-        email,
+        email: email.trim().toLowerCase(),
         otp,
-        name,
-        phone,
+        name: tab === "signup" ? name.trim() : undefined,
+        phone: tab === "signup" ? phone.trim() : undefined,
+        type: tab
       });
 
       if (res?.error) {
@@ -127,22 +172,27 @@ function LoginForm() {
       // Successfully verified! Redirect to account page.
       window.location.href = "/account";
     } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Invalid OTP." });
+      const errMsg = err.message || "Invalid OTP.";
+      const isNeedsSignup = errMsg.toLowerCase().includes("sign up");
+      setMessage({ 
+        type: "error", 
+        text: errMsg, 
+        action: isNeedsSignup ? "signup" : "" 
+      });
     } finally {
       setLoading(false);
     }
   };
 
-
   const handleGoogleLogin = async () => {
     if (!agreedTerms) {
-      setMessage({ type: "error", text: "Please review and agree to the GymDate User Terms & Conditions before continuing with Google." });
+      setMessage({ type: "error", text: "Please review and agree to the GymDate User Terms & Conditions before continuing with Google.", action: "" });
       return;
     }
     try {
       await signIn('google', { callbackUrl: '/account' });
     } catch (err: any) {
-      setMessage({ type: "error", text: err.message });
+      setMessage({ type: "error", text: err.message, action: "" });
     }
   };
 
@@ -156,7 +206,7 @@ function LoginForm() {
 
       <div className="max-w-md w-full relative z-10">
         <div className="bg-white rounded-[48px] p-10 md:p-14 shadow-2xl border border-white relative">
-          <Link href="/" className="flex items-center justify-center space-x-2 mb-12">
+          <Link href="/" className="flex items-center justify-center space-x-2 mb-10">
             <div className="bg-primary p-2 rounded-2xl shadow-lg shadow-primary/20">
               <GymLogoIcon className="h-6 w-6 text-white" />
             </div>
@@ -165,64 +215,122 @@ function LoginForm() {
             </span>
           </Link>
 
-          <div className="text-center mb-10">
+          {/* Tab Switcher for Sign In vs New Sign Up */}
+          {step === "email" && (
+            <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-8 border border-gray-200/60">
+              <button
+                type="button"
+                onClick={() => { setTab("login"); setMessage({ type: "", text: "", action: "" }); }}
+                className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${tab === "login" ? "bg-white text-secondary shadow-md" : "text-gray-500 hover:text-secondary"}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTab("signup"); setMessage({ type: "", text: "", action: "" }); }}
+                className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${tab === "signup" ? "bg-white text-secondary shadow-md" : "text-gray-500 hover:text-secondary"}`}
+              >
+                New Sign Up
+              </button>
+            </div>
+          )}
+
+          <div className="text-center mb-8">
             <h1 className="text-3xl font-black text-secondary tracking-tight">
-              {step === "email" ? "Login / Join" : "Verify Email"}
+              {step === "otp" 
+                ? "Verify Email" 
+                : (tab === "signup" ? "Create Account" : "Welcome Back!")}
             </h1>
             <p className="text-gray-400 text-sm mt-2 font-medium">
-              {step === "email" 
-                ? "Enter your details to receive a secure login code." 
-                : `We've sent a 6-digit code to ${email}`}
+              {step === "otp"
+                ? `We've sent a 6-digit code to ${email}`
+                : (tab === "signup" 
+                    ? "Enter your details to create your GymDate account." 
+                    : "Enter your registered email address to receive a secure login code.")}
             </p>
           </div>
 
           {message.text && (
-            <div className={`mb-8 p-4 rounded-2xl flex items-center space-x-3 border animate-in fade-in duration-300 ${
+            <div className={`mb-6 p-4 rounded-2xl flex flex-col gap-2 border animate-in fade-in duration-300 ${
               message.type === "success" 
                 ? "bg-green-50 border-green-100 text-green-700" 
                 : "bg-red-50 border-red-100 text-red-700"
             }`}>
-              {message.type === "success" ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-              <span className="text-xs font-bold">{message.text}</span>
+              <div className="flex items-center space-x-3">
+                {message.type === "success" ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+                <span className="text-xs font-bold leading-relaxed">{message.text}</span>
+              </div>
+              {message.action === "signup" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab("signup");
+                    setStep("email");
+                    setMessage({ type: "", text: "", action: "" });
+                  }}
+                  className="mt-1 self-start px-3 py-1.5 bg-primary text-white text-xs font-black rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Switch to Sign Up →
+                </button>
+              )}
+              {message.action === "login" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab("login");
+                    setStep("email");
+                    setMessage({ type: "", text: "", action: "" });
+                  }}
+                  className="mt-1 self-start px-3 py-1.5 bg-secondary text-white text-xs font-black rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  Switch to Sign In →
+                </button>
+              )}
             </div>
           )}
 
           <form onSubmit={step === "email" ? handleSendOTP : handleVerifyOTP} className="space-y-4">
             {step === "email" ? (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
-                    <input
-                      required
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm"
-                      placeholder="Your full name"
-                    />
-                  </div>
-                </div>
+                {tab === "signup" && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name <span className="text-red-500">*</span></label>
+                      <div className="relative group">
+                        <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+                        <input
+                          required
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm"
+                          placeholder="Your full name"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number <span className="text-red-500">*</span></label>
+                      <div className="relative group">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400 group-focus-within:text-primary transition-colors">+91</span>
+                        <input
+                          required
+                          type="tel"
+                          maxLength={10}
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                          className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm tracking-wide"
+                          placeholder="10-digit mobile number"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number <span className="text-red-500">*</span></label>
-                  <div className="relative group">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-xs font-black text-gray-400 group-focus-within:text-primary transition-colors">+91</span>
-                    <input
-                      required
-                      type="tel"
-                      maxLength={10}
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-bold text-secondary text-sm tracking-wide"
-                      placeholder="10-digit mobile number"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Email Address <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">
+                    {tab === "login" ? "Registered Email Address" : "Email Address"} <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative group">
                     <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                     <input
@@ -236,26 +344,28 @@ function LoginForm() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Referral Code (Optional)</label>
-                  <div className="relative group">
-                    <Gift className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
-                    <input
-                      type="text"
-                      value={referralCode}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        setReferralCode(val);
-                        if (val) {
-                          localStorage.setItem("referral_code", val);
-                          sessionStorage.setItem("referral_code", val);
-                        }
-                      }}
-                      className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-mono font-bold text-secondary text-sm tracking-widest uppercase"
-                      placeholder="Enter Referral Code"
-                    />
+                {tab === "signup" && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Referral Code (Optional)</label>
+                    <div className="relative group">
+                      <Gift className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          setReferralCode(val);
+                          if (val) {
+                            localStorage.setItem("referral_code", val);
+                            sessionStorage.setItem("referral_code", val);
+                          }
+                        }}
+                        className="w-full pl-14 pr-5 py-4 rounded-[20px] bg-gray-50 border border-gray-100 outline-none transition-all focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/5 font-mono font-bold text-secondary text-sm tracking-widest uppercase"
+                        placeholder="Enter Referral Code"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Terms and conditions checkbox */}
                 <div className="flex items-start gap-3 pt-2 text-left">
@@ -298,14 +408,26 @@ function LoginForm() {
             )}
 
             <button
-              disabled={loading || (step === "email" && (!email || !name || phone.length < 10 || !agreedTerms)) || (step === "otp" && !otp)}
+              disabled={
+                loading || 
+                (step === "email" && (
+                  !email || 
+                  (tab === "signup" && (!name || phone.replace(/\D/g, '').length < 10)) || 
+                  !agreedTerms
+                )) || 
+                (step === "otp" && !otp)
+              }
               className="w-full py-5 bg-secondary text-white rounded-[24px] font-black text-lg hover:bg-slate-800 transition-all transform active:scale-95 flex items-center justify-center space-x-3 shadow-xl shadow-secondary/20 disabled:opacity-30 disabled:cursor-not-allowed mt-4"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
               ) : (
                 <>
-                  <span>{step === "email" ? "Send Code" : "Verify & Login"}</span>
+                  <span>
+                    {step === "email" 
+                      ? (tab === "signup" ? "Create Account & Send Code" : "Send Login Code") 
+                      : "Verify & Login"}
+                  </span>
                   <ArrowRight className="h-5 w-5" />
                 </>
               )}
@@ -332,10 +454,10 @@ function LoginForm() {
 
           {step === "otp" && (
             <button 
-              onClick={() => setStep("email")}
+              onClick={() => { setStep("email"); setMessage({ type: "", text: "", action: "" }); }}
               className="w-full mt-6 text-sm font-bold text-gray-400 hover:text-primary transition-colors"
             >
-              Back to Email
+              ← Back to Email
             </button>
           )}
         </div>

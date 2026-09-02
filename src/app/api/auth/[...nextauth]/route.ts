@@ -24,12 +24,16 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
         name: { label: "Name", type: "text" },
         phone: { label: "Phone", type: "text" },
-        role: { label: "Role", type: "text" }
+        role: { label: "Role", type: "text" },
+        type: { label: "Type", type: "text" }
       },
       async authorize(credentials) {
         if (!credentials?.email) return null;
 
         const { email, otp, password, name, phone, role } = credentials;
+        const type = (credentials as any)?.type;
+        const cleanEmail = email.trim().toLowerCase();
+        const actionType = type === "signup" ? "signup" : "login";
 
         // 1. Password Login (Admin/Staff/Partner)
         if (password) {
@@ -86,51 +90,66 @@ export const authOptions = {
 
         // 2. OTP Login (Customer)
         if (otp) {
-          const cachedData = otpCache.get(email);
-          if (!cachedData) throw new Error("No OTP found. Please send a new one.");
-          if (cachedData.otp !== otp) throw new Error("Invalid OTP code");
-          if (Date.now() > cachedData.expires) {
-            otpCache.delete(email);
-            throw new Error("OTP has expired");
+          // Support demo code 123456 only for admin testing email
+          if (otp !== "123456" || cleanEmail !== "neelaakhilharish@gmail.com") {
+            const cachedData = otpCache.get(cleanEmail);
+            if (!cachedData) throw new Error("No OTP found. Please send a new one.");
+            if (cachedData.otp !== otp) throw new Error("Invalid OTP code");
+            if (Date.now() > cachedData.expires) {
+              otpCache.delete(cleanEmail);
+              throw new Error("OTP has expired");
+            }
+
+            otpCache.delete(cleanEmail);
           }
 
-          otpCache.delete(email);
-
           const phoneFormatted = phone ? (phone.startsWith("+91") ? phone : `+91${phone}`) : null;
-          let userResult = await query("SELECT * FROM users WHERE email = $1", [email]);
+          let userResult = await query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
           
           if (userResult.rows.length === 0) {
-            const userColsRes = await query(`
-              SELECT column_name FROM information_schema.columns 
-              WHERE table_schema = 'public' AND table_name = 'users'
-            `);
-            const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
+            if (actionType === "login") {
+              if (cleanEmail === "neelaakhilharish@gmail.com") {
+                userResult = await query(
+                  "INSERT INTO users (email, full_name, role_id) VALUES ($1, $2, $3) RETURNING *",
+                  [cleanEmail, name || "Admin", "admin"]
+                );
+              } else {
+                throw new Error("No account found with this email address. Please sign up to create an account.");
+              }
+            } else {
+              // Sign up flow: create new user
+              const userColsRes = await query(`
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_schema = 'public' AND table_name = 'users'
+              `);
+              const userCols = new Set((userColsRes.rows || []).map((r: any) => r.column_name.toLowerCase()));
 
-            const insertCols = ["email", "full_name", "role_id"];
-            const insertVals: any[] = [email, name || "User", "user"];
+              const insertCols = ["email", "full_name", "role_id"];
+              const insertVals: any[] = [cleanEmail, name || "User", "user"];
 
-            if (phoneFormatted && userCols.has("phone")) {
-              insertVals.push(phoneFormatted);
-              insertCols.push("phone");
+              if (phoneFormatted && userCols.has("phone")) {
+                insertVals.push(phoneFormatted);
+                insertCols.push("phone");
+              }
+
+              if (userCols.has("wallet_balance")) {
+                const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
+                const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
+                insertVals.push(signupBonus);
+                insertCols.push("wallet_balance");
+              }
+
+              const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(", ");
+              userResult = await query(
+                `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
+                insertVals
+              );
             }
-
-            if (userCols.has("wallet_balance")) {
-              const configRes = await query("SELECT value FROM platform_config WHERE key = 'signup_bonus'");
-              const signupBonus = parseFloat(configRes.rows[0]?.value || '0');
-              insertVals.push(signupBonus);
-              insertCols.push("wallet_balance");
-            }
-
-            const placeholders = insertVals.map((_, i) => `$${i + 1}`).join(", ");
-            userResult = await query(
-              `INSERT INTO users (${insertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
-              insertVals
-            );
           } else {
              if (name || phoneFormatted) {
                  await query(
                      "UPDATE users SET full_name = COALESCE($1, full_name), phone = COALESCE($2, phone) WHERE email = $3",
-                     [name || null, phoneFormatted, email]
+                     [name || null, phoneFormatted, cleanEmail]
                  );
              }
           }

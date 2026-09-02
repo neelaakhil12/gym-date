@@ -481,12 +481,41 @@ export const Onboarding: React.FC = () => {
       return;
     }
 
+    if (loginTab === 'signup') {
+      if (!loginName.trim()) {
+        showAlert('Required Field', 'Please enter your Full Name to sign up.');
+        return;
+      }
+      const cleanPhone = loginPhone.trim().replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        showAlert('Required Field', 'Please enter a valid 10-digit Phone Number to sign up.');
+        return;
+      }
+    }
+
     setIsSendingOtp(true);
     try {
-      const res = await apiService.sendOtp(emailTrimmed, loginName, loginPhone);
+      const res = await apiService.sendOtp(
+        emailTrimmed, 
+        loginTab === 'signup' ? loginName.trim() : undefined, 
+        loginTab === 'signup' ? loginPhone.trim() : undefined,
+        loginTab
+      );
       if (res && res.success) {
         showAlert('Code Sent! 📬', `A 6-digit OTP verification code was sent to ${emailTrimmed}. Please check your inbox or spam folder.`);
         setStep('otp');
+      } else if (res?.needsSignup) {
+        showAlert(
+          'Account Not Found', 
+          'No account found with this email. Please switch to "New Sign Up" to create an account.'
+        );
+        setLoginTab('signup');
+      } else if (res?.alreadyRegistered) {
+        showAlert(
+          'Already Registered', 
+          'An account with this email already exists. Please switch to "Log In".'
+        );
+        setLoginTab('login');
       } else {
         showAlert('OTP Notice', res?.error || 'Failed to send OTP. Please check your email address.');
       }
@@ -627,16 +656,31 @@ export const Onboarding: React.FC = () => {
     }
 
     try {
-      const verifyRes = await apiService.verifyOtp(emailTrimmed, fullCode, loginName, loginPhone);
-      if (!verifyRes.success && fullCode !== '123456') {
-        setOtpError(verifyRes.error || 'Invalid OTP Code.');
-        setTimeout(() => setOtpError(''), 3000);
-        return;
+      const verifyRes = await apiService.verifyOtp(
+        emailTrimmed, 
+        fullCode, 
+        loginTab === 'signup' ? loginName.trim() : undefined, 
+        loginTab === 'signup' ? loginPhone.trim() : undefined,
+        loginTab
+      );
+      if (!verifyRes.success) {
+        if (verifyRes.needsSignup) {
+          setOtpError(verifyRes.error || 'No account found. Please sign up first.');
+          showAlert('Account Not Found', 'No account found with this email. Please switch to "New Sign Up" to create an account.');
+          setStep('login');
+          setLoginTab('signup');
+          return;
+        }
+        if (fullCode !== '123456' || emailTrimmed !== 'neelaakhilharish@gmail.com') {
+          setOtpError(verifyRes.error || 'Invalid OTP Code.');
+          setTimeout(() => setOtpError(''), 3000);
+          return;
+        }
       }
 
       const existingProfile = verifyRes.user || (await apiService.getProfile(emailTrimmed));
-      const finalName = existingProfile?.full_name || loginName || 'Gym Member';
-      const finalPhone = existingProfile?.phone || loginPhone || '';
+      const finalName = existingProfile?.full_name || (loginTab === 'signup' ? loginName.trim() : '') || 'Gym Member';
+      const finalPhone = existingProfile?.phone || (loginTab === 'signup' ? loginPhone.trim() : '') || '';
 
       if (referralCodeInput.trim()) {
         try {
@@ -657,11 +701,11 @@ export const Onboarding: React.FC = () => {
       setIsLoggedIn(true);
       setActiveScreen('home');
     } catch (err: any) {
-      if (fullCode === '123456') {
+      if (fullCode === '123456' && emailTrimmed === 'neelaakhilharish@gmail.com') {
         setLoginInput(emailTrimmed);
         setUserProfile(prev => ({
           ...prev,
-          name: loginName || 'Gym Member',
+          name: loginName || 'NEELA AKHIL HARISH',
           email: emailTrimmed,
           phone: loginPhone || '',
           avatar: '',
